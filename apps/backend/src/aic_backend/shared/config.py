@@ -1,3 +1,5 @@
+"""Backend configuration."""
+
 from enum import StrEnum
 from functools import lru_cache
 
@@ -11,12 +13,7 @@ class Environment(StrEnum):
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="AIC_",
-        case_sensitive=False,
-        extra="ignore",
-    )
-
+    model_config = SettingsConfigDict(env_prefix="AIC_", case_sensitive=False, extra="ignore")
     environment: Environment = Environment.DEVELOPMENT
     log_level: str = "INFO"
     database_url: str | None = None

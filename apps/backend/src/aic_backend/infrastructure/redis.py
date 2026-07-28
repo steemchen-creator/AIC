@@ -1,6 +1,8 @@
+"""Redis connectivity verification."""
+
 from redis.asyncio import Redis
 
-from core.exceptions import ConfigurationError
+from aic_backend.shared import ConfigurationError
 
 
 def create_redis_client(redis_url: str | None) -> Redis:

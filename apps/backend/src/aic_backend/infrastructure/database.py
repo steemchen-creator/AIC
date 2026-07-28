@@ -1,7 +1,9 @@
+"""PostgreSQL connectivity verification."""
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from core.exceptions import ConfigurationError
+from aic_backend.shared import ConfigurationError
 
 
 def create_database_engine(database_url: str | None) -> AsyncEngine:

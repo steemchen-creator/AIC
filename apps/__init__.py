@@ -1,1 +1,0 @@
-"""AIC application entry points."""

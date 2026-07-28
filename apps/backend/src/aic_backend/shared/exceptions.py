@@ -1,3 +1,6 @@
+"""Shared technical exceptions."""
+
+
 class AICError(Exception):
     """Base exception for expected AIC application errors."""
 
