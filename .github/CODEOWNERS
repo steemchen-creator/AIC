@@ -1,0 +1,8 @@
+# Default ownership for all repository changes.
+* @steemchen-creator
+
+# Governance and documentation ownership.
+/.github/ @steemchen-creator
+/docs/ @steemchen-creator
+/AGENTS.md @steemchen-creator
+/CONTRIBUTING.md @steemchen-creator
