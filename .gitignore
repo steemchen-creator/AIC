@@ -14,12 +14,14 @@
 logs/
 
 # Caches and temporary files
+.venv/
 .cache/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 __pycache__/
 *.py[cod]
+*.egg-info/
 node_modules/
 .npm/
 .yarn/cache/
@@ -34,6 +36,8 @@ dist/
 coverage/
 .coverage
 htmlcov/
+bin/
+obj/
 
 # Local tools and editors
 .idea/
