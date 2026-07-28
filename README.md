@@ -8,34 +8,33 @@ This GitHub repository is the Single Source of Truth for AIC. Development takes 
 
 Detailed development and security rules are maintained in [AGENTS.md](AGENTS.md). Project changes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
-## Repository structure
+## Data Foundation architecture
+
+The backend follows inward Clean Architecture dependencies:
 
 ```text
-AIC/
-|-- .github/
-|   |-- ISSUE_TEMPLATE/       # Feature, bug, and improvement intake
-|   |-- workflows/            # Continuous integration definitions
-|   |-- CODEOWNERS            # Review ownership
-|   `-- PULL_REQUEST_TEMPLATE.md
-|-- docs/
-|   |-- architecture/         # Architecture boundaries and reviews
-|   |-- roadmap/              # Milestones and stage planning
-|   |-- adr/                  # Architecture Decision Records
-|   |-- api/                  # Future interface documentation
-|   |-- database/             # Future data and migration documentation
-|   |-- ui/                   # Future experience and interaction documentation
-|   |-- development/          # Engineering workflow and repository practices
-|   |-- deployment/           # Future release and operations documentation
-|   |-- meeting/              # Decision-oriented meeting records
-|   `-- research/             # Time-boxed investigations
-|-- AGENTS.md                 # AI Development Handbook
-|-- CHANGELOG.md              # Notable project changes
-|-- CONTRIBUTING.md           # Contributor workflow
-|-- PROJECT_ROADMAP.md        # Long-term stage roadmap
-`-- README.md                 # Project entry point
+presentation -> application -> domain
+                    ^
+                    |
+        providers and infrastructure
 ```
 
-Checkpoint 0 establishes governance only. It intentionally contains no business application, API, database, UI, infrastructure, market-data, or AI implementation.
+Concrete adapters are selected only by `bootstrap`. TASK-002 uses a deterministic
+Mock Provider and in-memory Repository, Cache, and Event Bus. It contains no real
+data-source or stock functionality.
+
+```text
+apps/backend/
+|-- src/aic_backend/
+|   |-- presentation/    HTTP boundary
+|   |-- application/     Use cases and outbound ports
+|   |-- domain/          Framework-independent models and events
+|   |-- providers/       Data-source adapters
+|   |-- infrastructure/  Repository, cache, event, and operational adapters
+|   |-- bootstrap/       Dependency composition
+|   `-- shared/          Outer-layer configuration and logging
+`-- tests/               Domain through architecture verification
+```
 
 ## Foundation prerequisites
 
@@ -61,15 +60,16 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -e ".[test]"
 $env:AIC_ENVIRONMENT = "development"
-uvicorn apps.backend.app.main:app --reload
+uvicorn aic_backend.main:app --reload
 ```
 
-The backend exposes only:
+The backend exposes:
 
 - `GET /` -> `{"project":"AIC","status":"running"}`
 - `GET /health` -> `{"status":"healthy"}`
+- `GET /data/sample-1` -> deterministic Mock data record
 
-Run the health test with `pytest`.
+Unknown data identifiers return HTTP 404. Run all backend tests with `pytest`.
 
 ## Start the Docker foundation
 
@@ -82,16 +82,16 @@ docker compose ps
 
 This starts PostgreSQL, Redis, and the backend. The backend verifies both infrastructure connections before serving requests. Stop the environment with `docker compose down`; named data volumes are retained.
 
-## Foundation structure
+## Repository structure
 
 ```text
-apps/       Runnable desktop and backend applications
-core/       Shared configuration, logging, exceptions, and utilities
-shared/     Reserved cross-application contracts; no business objects yet
+apps/       Desktop application and Clean Architecture backend
 configs/    Environment configuration examples
 docker/     Container build definitions
 scripts/    Repository automation
-tests/      Automated verification
 docs/       Architecture and development documentation
 .github/    CI and collaboration workflows
 ```
+
+Detailed Data Foundation contracts are under [docs/architecture](docs/architecture/README.md),
+[docs/api](docs/api/README.md), and [docs/testing](docs/testing/README.md).
