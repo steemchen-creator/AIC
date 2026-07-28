@@ -1,11 +1,15 @@
 from httpx import ASGITransport, AsyncClient
 
+from aic_backend.bootstrap import build_container
 from aic_backend.presentation import create_app
 from aic_backend.shared import Environment, Settings
 
 
 def make_testing_app():
-    return create_app(settings=Settings(environment=Environment.TESTING))
+    return create_app(
+        get_data_record=build_container().get_data_record,
+        settings=Settings(environment=Environment.TESTING),
+    )
 
 
 async def test_existing_foundation_endpoints_remain_compatible() -> None:

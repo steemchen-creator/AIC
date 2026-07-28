@@ -1,18 +1,24 @@
 """FastAPI application factory."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 
-from aic_backend.bootstrap import Container, build_container
-from aic_backend.infrastructure.dependencies import verify_dependencies
+from aic_backend.application.use_cases import GetDataRecord
 from aic_backend.presentation.schemas import DataRecordResponse
 from aic_backend.shared import Settings, configure_logging, get_logger, get_settings
 
 
-def create_app(container: Container | None = None, settings: Settings | None = None) -> FastAPI:
-    resolved_container = container or build_container()
+async def no_startup_check(_: Settings) -> None:
+    """Default no-op for isolated presentation tests."""
+
+
+def create_app(
+    get_data_record: GetDataRecord,
+    settings: Settings | None = None,
+    startup_check: Callable[[Settings], Awaitable[None]] = no_startup_check,
+) -> FastAPI:
     resolved_settings = settings or get_settings()
     configure_logging(resolved_settings.log_level)
     logger = get_logger(__name__)
@@ -21,7 +27,7 @@ def create_app(container: Container | None = None, settings: Settings | None = N
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         logger.info("Starting AIC backend in %s environment", resolved_settings.environment.value)
         if resolved_settings.verify_dependencies:
-            await verify_dependencies(resolved_settings)
+            await startup_check(resolved_settings)
             logger.info("PostgreSQL and Redis connections verified")
         yield
         logger.info("Stopping AIC backend")
@@ -39,7 +45,7 @@ def create_app(container: Container | None = None, settings: Settings | None = N
 
     @app.get("/data/{record_id}", response_model=DataRecordResponse)
     async def get_data(record_id: str) -> DataRecordResponse:
-        record = await resolved_container.get_data_record.execute(record_id)
+        record = await get_data_record.execute(record_id)
         if record is None:
             raise HTTPException(status_code=404, detail="Data record not found")
         return DataRecordResponse(record_id=record.record_id, source=record.source,

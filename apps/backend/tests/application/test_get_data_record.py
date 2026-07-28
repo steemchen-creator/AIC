@@ -60,3 +60,22 @@ async def test_use_case_returns_none_without_side_effects_when_missing() -> None
 
     assert await use_case.execute("missing") is None
     assert event_bus.events == []
+
+
+@pytest.mark.asyncio
+async def test_use_case_uses_repository_before_provider() -> None:
+    record = make_record()
+    repository = InMemoryDataRepository()
+    await repository.save(record)
+    cache = InMemoryDataCache()
+    provider = MockDataProvider()
+    use_case = GetDataRecord(
+        cache=cache,
+        repository=repository,
+        provider=provider,
+        event_bus=InMemoryEventBus(),
+    )
+
+    assert await use_case.execute(record.record_id) is record
+    assert await cache.get(record.record_id) is record
+    assert provider.fetch_count == 0
