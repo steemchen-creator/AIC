@@ -1,0 +1,44 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# Logs
+*.log
+logs/
+
+# Caches and temporary files
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+node_modules/
+.npm/
+.yarn/cache/
+.pnpm-store/
+tmp/
+temp/
+*.tmp
+
+# Build and coverage output
+build/
+dist/
+coverage/
+.coverage
+htmlcov/
+
+# Local tools and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
