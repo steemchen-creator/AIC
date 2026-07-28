@@ -1,0 +1,59 @@
+name: aic
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${AIC_POSTGRES_DB:-aic}
+      POSTGRES_USER: ${AIC_POSTGRES_USER:-aic}
+      POSTGRES_PASSWORD: ${AIC_POSTGRES_PASSWORD:?AIC_POSTGRES_PASSWORD must be set}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    environment:
+      AIC_ENVIRONMENT: development
+      AIC_LOG_LEVEL: INFO
+      AIC_DATABASE_URL: postgresql+asyncpg://${AIC_POSTGRES_USER:-aic}:${AIC_POSTGRES_PASSWORD}@postgres:5432/${AIC_POSTGRES_DB:-aic}
+      AIC_REDIS_URL: redis://redis:6379/0
+      AIC_CELERY_BROKER_URL: redis://redis:6379/1
+      AIC_CELERY_RESULT_BACKEND: redis://redis:6379/2
+      AIC_VERIFY_DEPENDENCIES: "true"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
+  redis-data:

@@ -1,0 +1,1 @@
+"""Shared AIC foundation capabilities."""
