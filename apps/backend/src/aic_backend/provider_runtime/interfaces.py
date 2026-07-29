@@ -1,6 +1,6 @@
 """Protocols owned by the provider runtime boundary."""
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime
 from typing import Any, Protocol
 
@@ -8,6 +8,7 @@ from aic_backend.provider_runtime.models import (
     HealthCheckResult,
     InvocationRecord,
     ProviderCapability,
+    ProviderDefinition,
     ProviderInvocationRequest,
     ProviderInvocationResult,
     ProviderMetadata,
@@ -29,6 +30,9 @@ class Provider(Protocol):
     async def shutdown(self) -> None: ...
 
     async def health_check(self) -> HealthCheckResult: ...
+
+
+ProviderBuilder = Callable[[ProviderDefinition], Provider]
 
 
 class ProviderInvocationHandler(Protocol):

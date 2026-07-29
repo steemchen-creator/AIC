@@ -1,5 +1,7 @@
 """Immutable value models for the provider runtime."""
 
+from __future__ import annotations
+
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -12,6 +14,7 @@ _PROVIDER_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]{2,63}$")
 _CAPABILITY_PATTERN = re.compile(
     r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$"
 )
+_IMPLEMENTATION_PATTERN = re.compile(r"^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$")
 _SEMVER_PATTERN = re.compile(
     r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
     r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
@@ -108,6 +111,34 @@ class ProviderMetadata:
 
 
 @dataclass(frozen=True, slots=True)
+class ProviderDefinition:
+    provider_id: str
+    implementation: str
+    enabled: bool
+    priority: int
+    capabilities: frozenset[ProviderCapability]
+    config: Mapping[str, Any]
+    required: bool = False
+    max_concurrency: int = 1
+    queue_timeout_ms: int = 500
+
+    def __post_init__(self) -> None:
+        if _PROVIDER_ID_PATTERN.fullmatch(self.provider_id) is None:
+            raise ValueError("provider_id must match ^[a-z][a-z0-9_]{2,63}$")
+        if _IMPLEMENTATION_PATTERN.fullmatch(self.implementation) is None:
+            raise ValueError("implementation must use a controlled dotted name")
+        if not 0 <= self.priority <= 1000:
+            raise ValueError("priority must be between 0 and 1000")
+        if not self.capabilities:
+            raise ValueError("capabilities must not be empty")
+        if self.max_concurrency <= 0:
+            raise ValueError("max_concurrency must be positive")
+        if self.queue_timeout_ms <= 0:
+            raise ValueError("queue_timeout_ms must be positive")
+        object.__setattr__(self, "config", _freeze_mapping(self.config))
+
+
+@dataclass(frozen=True, slots=True)
 class ProviderCapability:
     name: str
     version: str
@@ -152,6 +183,32 @@ class ProviderSnapshot:
             raise ValueError("in_flight_requests must not be negative")
         _require_aware(self.registered_at, "registered_at")
         _require_aware(self.last_state_change_at, "last_state_change_at")
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderRegistration:
+    provider_id: str
+    lifecycle_status: ProviderStatus
+    registered_at: datetime
+
+    def __post_init__(self) -> None:
+        if _PROVIDER_ID_PATTERN.fullmatch(self.provider_id) is None:
+            raise ValueError("provider_id must match ^[a-z][a-z0-9_]{2,63}$")
+        if self.lifecycle_status not in {ProviderStatus.REGISTERED, ProviderStatus.DISABLED}:
+            raise ValueError("registration status must be registered or disabled")
+        _require_aware(self.registered_at, "registered_at")
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderRegistrySnapshot:
+    providers: tuple[ProviderSnapshot, ...]
+    captured_at: datetime
+
+    def __post_init__(self) -> None:
+        _require_aware(self.captured_at, "captured_at")
+        provider_ids = tuple(item.metadata.provider_id for item in self.providers)
+        if len(provider_ids) != len(set(provider_ids)):
+            raise ValueError("registry snapshot must not contain duplicate provider IDs")
 
 
 @dataclass(frozen=True, slots=True)

@@ -32,6 +32,10 @@ class DuplicateProviderError(ProviderRegistrationError):
     error_code = "PROVIDER_DUPLICATE"
 
 
+class ProviderNotFoundError(ProviderRegistrationError):
+    error_code = "PROVIDER_NOT_FOUND"
+
+
 class InvalidProviderDefinitionError(ProviderRegistrationError):
     error_code = "PROVIDER_DEFINITION_INVALID"
 

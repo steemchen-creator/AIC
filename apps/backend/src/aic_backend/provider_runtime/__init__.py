@@ -1,10 +1,12 @@
 """Provider runtime contracts and immutable models."""
 
+from aic_backend.provider_runtime.factory import ProviderFactory
 from aic_backend.provider_runtime.interfaces import (
     Clock,
     IdGenerator,
     MetricsCollector,
     Provider,
+    ProviderBuilder,
     ProviderInvocationHandler,
     ProviderRuntimePort,
 )
@@ -15,10 +17,13 @@ from aic_backend.provider_runtime.models import (
     InvocationRecord,
     ProviderAttribution,
     ProviderCapability,
+    ProviderDefinition,
     ProviderEventType,
     ProviderInvocationRequest,
     ProviderInvocationResult,
     ProviderMetadata,
+    ProviderRegistration,
+    ProviderRegistrySnapshot,
     ProviderRequestContext,
     ProviderRuntimeEvent,
     ProviderSnapshot,
@@ -26,6 +31,7 @@ from aic_backend.provider_runtime.models import (
     ProviderType,
     SelectionDecision,
 )
+from aic_backend.provider_runtime.registry import ProviderRegistry
 from aic_backend.provider_runtime.system import UtcClock, UuidIdGenerator
 
 __all__ = [
@@ -37,13 +43,19 @@ __all__ = [
     "InvocationRecord",
     "MetricsCollector",
     "Provider",
+    "ProviderBuilder",
     "ProviderAttribution",
     "ProviderCapability",
+    "ProviderDefinition",
     "ProviderEventType",
     "ProviderInvocationHandler",
     "ProviderInvocationRequest",
     "ProviderInvocationResult",
     "ProviderMetadata",
+    "ProviderFactory",
+    "ProviderRegistration",
+    "ProviderRegistry",
+    "ProviderRegistrySnapshot",
     "ProviderRequestContext",
     "ProviderRuntimeEvent",
     "ProviderRuntimePort",

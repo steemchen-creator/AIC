@@ -12,6 +12,8 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   protocols, stable errors, and injectable UTC clock and UUID generation.
 - ADR-0003 and automated Provider Runtime dependency boundaries.
 - Ruff, Mypy, and branch-aware pytest coverage quality checks.
+- Concurrency-safe Provider Registry, immutable registration snapshots,
+  validated Provider Definitions, and an explicit allowlist Provider Factory.
 - Repository governance rules covering branches, checkpoints, commits, Pull Requests, documentation, sensitive files, and architecture changes.
 - Baseline ignore rules for secrets, logs, caches, generated output, and local tooling.
 - Project Governance documentation tree for architecture, roadmap, ADRs, APIs, databases, UI, development, deployment, meetings, and research.
