@@ -1,1 +1,0 @@
-"""AIC backend application package."""
