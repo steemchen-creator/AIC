@@ -6,7 +6,9 @@ Select concrete adapters and inject them into Application use cases.
 
 ## Boundary
 
-Bootstrap is the composition root and may import all backend layers solely to wire dependencies. No other package chooses concrete adapters.
+Bootstrap is the composition root and may import all backend layers solely to
+wire dependencies. No other package chooses concrete adapters. Fixture modules
+own Mock values; Bootstrap only requests them while constructing adapters.
 
 ## Prohibited
 

@@ -18,3 +18,10 @@ TASK-002 exposes one deterministic mock record at `GET /data/sample-1`:
 An unknown identifier returns HTTP `404` with `Data record not found`. Existing `GET /` and `GET /health` behavior remains unchanged.
 
 No real data-source, stock, market, financial, news, AI, or strategy endpoint is part of TASK-002.
+
+## `GET /health`
+
+This backward-compatible endpoint is a process liveness check. HTTP `200` with
+`{"status":"healthy"}` means the application can respond; it does not assert
+that PostgreSQL or Redis is currently reachable. When enabled, those dependencies
+are checked during application startup before requests are served.

@@ -15,8 +15,11 @@ information. It defensively copies and freezes its payload.
 ## Event
 
 `DataRecordReceived` states that a record supplied by a provider has crossed
-into the owned data boundary. It contains only record identity, source, and the
-event timestamp.
+into the owned data boundary. It contains `event_id`, record identity, source,
+an immutable payload snapshot, and a timezone-aware event timestamp.
+
+The event rejects blank `event_id` and `record_id` values, rejects timestamps
+without timezone information, and defensively copies and freezes its payload.
 
 ## Dependencies
 

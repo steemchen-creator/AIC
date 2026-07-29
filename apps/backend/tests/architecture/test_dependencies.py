@@ -33,6 +33,12 @@ def test_domain_uses_standard_library_only() -> None:
 
     assert {module.split(".")[0] for module in external_imports} <= allowed_roots
 
+    assert not {
+        module
+        for module in package_imports("domain")
+        if module.startswith("aic_backend.application")
+    }
+
 
 def test_application_does_not_depend_on_outer_layers() -> None:
     forbidden = (
@@ -66,3 +72,47 @@ def test_presentation_does_not_depend_on_concrete_adapters() -> None:
         for module in package_imports("presentation")
         if module.startswith(forbidden)
     }
+
+
+def test_providers_do_not_depend_on_presentation() -> None:
+    assert not {
+        module
+        for module in package_imports("providers")
+        if module.startswith("aic_backend.presentation")
+    }
+
+
+def test_infrastructure_does_not_depend_on_presentation() -> None:
+    assert not {
+        module
+        for module in package_imports("infrastructure")
+        if module.startswith("aic_backend.presentation")
+    }
+
+
+def test_only_bootstrap_combines_application_and_concrete_adapters() -> None:
+    concrete_roots = ("aic_backend.infrastructure", "aic_backend.providers")
+    layer_packages = (
+        "application",
+        "domain",
+        "infrastructure",
+        "presentation",
+        "providers",
+        "shared",
+    )
+
+    for package in layer_packages:
+        imports = package_imports(package)
+        references_application = any(
+            module.startswith("aic_backend.application") for module in imports
+        )
+        references_concrete = any(
+            module.startswith(concrete_roots) for module in imports
+        )
+        assert not (references_application and references_concrete), package
+
+    bootstrap_imports = package_imports("bootstrap")
+    assert any(
+        module.startswith("aic_backend.application") for module in bootstrap_imports
+    )
+    assert any(module.startswith(concrete_roots) for module in bootstrap_imports)

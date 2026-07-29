@@ -46,6 +46,10 @@ async def test_use_case_fetches_persists_caches_and_publishes_once() -> None:
     assert provider.fetch_count == 1
     assert len(event_bus.events) == 1
     assert event_bus.events[0].record_id == record.record_id
+    assert event_bus.events[0].event_id == (
+        "data-record-received:mock:sample-1:2026-01-02T00:00:00+00:00"
+    )
+    assert event_bus.events[0].payload == {"value": 42}
 
 
 @pytest.mark.asyncio

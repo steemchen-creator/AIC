@@ -25,6 +25,26 @@ async def test_existing_foundation_endpoints_remain_compatible() -> None:
     assert health.json() == {"status": "healthy"}
 
 
+async def test_health_is_a_liveness_response_without_runtime_dependency_probe() -> None:
+    calls = 0
+
+    async def startup_check(_: Settings) -> None:
+        nonlocal calls
+        calls += 1
+
+    app = create_app(
+        get_data_record=build_container().get_data_record,
+        settings=Settings(environment=Environment.TESTING, verify_dependencies=False),
+        startup_check=startup_check,
+    )
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/health")
+
+    assert response.json() == {"status": "healthy"}
+    assert calls == 0
+
+
 async def test_data_endpoint_returns_mock_record() -> None:
     app = make_testing_app()
     transport = ASGITransport(app=app)

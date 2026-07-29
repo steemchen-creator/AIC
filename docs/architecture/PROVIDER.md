@@ -18,6 +18,9 @@ service.
 in-memory lookup. It makes no HTTP calls and has no cache, repository, event, or
 calculation responsibility.
 
+The deterministic records are owned by `providers/fixtures.py`. The Bootstrap
+composition root requests those fixtures but does not construct Mock data.
+
 ## Replacement rule
 
 A later provider must implement the same Application-owned contract and map its

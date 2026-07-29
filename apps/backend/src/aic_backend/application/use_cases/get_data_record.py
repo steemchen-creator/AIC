@@ -36,9 +36,17 @@ class GetDataRecord:
             return None
         await self._repository.save(supplied)
         await self._cache.set(supplied)
-        await self._event_bus.publish(DataRecordReceived(
-            record_id=supplied.record_id,
-            source=supplied.source,
-            occurred_at=self._clock(),
-        ))
+        occurred_at = self._clock()
+        await self._event_bus.publish(
+            DataRecordReceived(
+                event_id=(
+                    f"data-record-received:{supplied.source}:"
+                    f"{supplied.record_id}:{occurred_at.isoformat()}"
+                ),
+                record_id=supplied.record_id,
+                source=supplied.source,
+                payload=supplied.payload,
+                occurred_at=occurred_at,
+            )
+        )
         return supplied

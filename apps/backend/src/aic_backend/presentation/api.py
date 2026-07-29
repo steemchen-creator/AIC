@@ -41,6 +41,7 @@ def create_app(
 
     @app.get("/health")
     async def health() -> dict[str, str]:
+        """Report process liveness; dependencies are verified during startup."""
         return {"status": "healthy"}
 
     @app.get("/data/{record_id}", response_model=DataRecordResponse)

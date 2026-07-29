@@ -30,6 +30,12 @@ Dependencies must point inward. Presentation never accesses providers,
 databases, caches, or event buses directly. Domain never imports FastAPI,
 Pydantic, SQLAlchemy, Redis, Celery, or any other framework.
 
+Automated dependency rules additionally enforce that Domain cannot depend on
+Application, Providers and Infrastructure cannot depend on Presentation,
+Presentation cannot depend on Bootstrap, and Application cannot import concrete
+adapters. Bootstrap is the only package allowed to reference Application and
+concrete adapters together.
+
 ## Data flow
 
 The read use case follows one deterministic path:
@@ -52,6 +58,17 @@ prove replaceability without introducing database schemas, migrations, live
 services, credentials, retries, or vendor behavior. The existing PostgreSQL and
 Redis startup checks remain operational foundation concerns and are not used by
 the data use case in this checkpoint.
+
+Mock fixture values live outside the composition root in
+`providers/fixtures.py`. `build_container()` is limited to selecting and wiring
+the Provider, Repository, Cache, Event Bus, and use case.
+
+## Health semantics
+
+`GET /health` is a liveness endpoint: a successful response means that the
+application process can serve HTTP. PostgreSQL and Redis are verified once
+during application startup when `AIC_VERIFY_DEPENDENCIES=true`. `/health` does
+not perform a live dependency probe and must not be interpreted as one.
 
 ## Migration and rollback
 

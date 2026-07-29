@@ -26,6 +26,8 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   architecture dependency tests.
 - TASK-002 architecture, domain, provider, repository, API, testing, and
   acceptance documentation.
+- Architecture audit remediation for isolated Mock fixtures, validated immutable
+  Domain Events, expanded dependency-rule tests, and explicit liveness semantics.
 
 ### Changed
 

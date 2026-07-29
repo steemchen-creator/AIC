@@ -44,8 +44,10 @@ async def test_cache_sets_and_retrieves(record: DataRecord) -> None:
 @pytest.mark.asyncio
 async def test_event_bus_captures_published_event(record: DataRecord) -> None:
     event = DataRecordReceived(
+        event_id="event-1",
         record_id=record.record_id,
         source=record.source,
+        payload=record.payload,
         occurred_at=record.observed_at,
     )
     event_bus = InMemoryEventBus()

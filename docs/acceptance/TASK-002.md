@@ -3,7 +3,7 @@
 - Task: Data Foundation
 - Version: 1.0
 - Branch: `feature/data-foundation`
-- Date: 2026-07-28
+- Date: 2026-07-29
 - Result: Passed
 
 ## Scope delivered
@@ -23,7 +23,7 @@ portfolio, order, user, authentication, or authorization behavior was added.
 
 | Check | Result |
 |---|---|
-| Python tests | 18 passed |
+| Python tests | 27 passed |
 | Architecture dependency tests | Passed |
 | Python bytecode compilation | Passed |
 | WPF Release build | Passed, 0 warnings, 0 errors |
@@ -41,6 +41,11 @@ Dependency direction is enforced by AST-based tests. Presentation receives an
 Application use case and an optional startup callback; it does not import
 providers or concrete infrastructure. Domain imports only Python standard
 library modules and its own package.
+
+The architecture audit remediation additionally separates deterministic Mock
+fixtures from the composition root, validates Domain Event identity, timezone,
+and payload immutability, expands the dependency matrix, and defines `/health`
+as liveness with startup-time dependency verification.
 
 ## Risks and remaining limitations
 
