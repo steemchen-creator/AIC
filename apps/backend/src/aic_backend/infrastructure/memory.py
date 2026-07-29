@@ -1,6 +1,7 @@
 """Deterministic in-memory adapters for TASK-002."""
 
-from aic_backend.domain import DataRecord, DataRecordReceived
+from aic_backend.application.ports import Event
+from aic_backend.domain import DataRecord
 
 
 class InMemoryDataRepository:
@@ -33,7 +34,7 @@ class InMemoryEventBus:
     """Capture published events for deterministic tests and local use."""
 
     def __init__(self) -> None:
-        self.events: list[DataRecordReceived] = []
+        self.events: list[Event] = []
 
-    async def publish(self, event: DataRecordReceived) -> None:
+    async def publish(self, event: Event) -> None:
         self.events.append(event)

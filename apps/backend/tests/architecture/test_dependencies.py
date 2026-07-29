@@ -1,7 +1,6 @@
 import ast
 from pathlib import Path
 
-
 PACKAGE_ROOT = Path("apps/backend/src/aic_backend")
 
 
@@ -24,7 +23,7 @@ def package_imports(package: str) -> set[str]:
 
 
 def test_domain_uses_standard_library_only() -> None:
-    allowed_roots = {"dataclasses", "datetime", "types", "typing"}
+    allowed_roots = {"collections", "dataclasses", "datetime", "types", "typing"}
     external_imports = {
         module
         for module in package_imports("domain")
@@ -37,6 +36,12 @@ def test_domain_uses_standard_library_only() -> None:
         module
         for module in package_imports("domain")
         if module.startswith("aic_backend.application")
+    }
+
+    assert not {
+        module
+        for module in package_imports("domain")
+        if module.startswith("aic_backend.provider_runtime")
     }
 
 
@@ -90,14 +95,33 @@ def test_infrastructure_does_not_depend_on_presentation() -> None:
     }
 
 
+def test_provider_runtime_does_not_depend_on_outer_layers() -> None:
+    forbidden = (
+        "aic_backend.bootstrap",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "fastapi",
+        "pydantic",
+        "sqlalchemy",
+        "redis",
+        "celery",
+    )
+
+    assert not {
+        module
+        for module in package_imports("provider_runtime")
+        if module.startswith(forbidden)
+    }
+
+
 def test_only_bootstrap_combines_application_and_concrete_adapters() -> None:
     concrete_roots = ("aic_backend.infrastructure", "aic_backend.providers")
     layer_packages = (
         "application",
         "domain",
-        "infrastructure",
         "presentation",
-        "providers",
+        "provider_runtime",
         "shared",
     )
 

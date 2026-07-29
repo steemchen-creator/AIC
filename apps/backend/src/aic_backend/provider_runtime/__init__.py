@@ -1,0 +1,56 @@
+"""Provider runtime contracts and immutable models."""
+
+from aic_backend.provider_runtime.interfaces import (
+    Clock,
+    IdGenerator,
+    MetricsCollector,
+    Provider,
+    ProviderInvocationHandler,
+    ProviderRuntimePort,
+)
+from aic_backend.provider_runtime.models import (
+    CapabilityMode,
+    HealthCheckResult,
+    HealthStatus,
+    InvocationRecord,
+    ProviderAttribution,
+    ProviderCapability,
+    ProviderEventType,
+    ProviderInvocationRequest,
+    ProviderInvocationResult,
+    ProviderMetadata,
+    ProviderRequestContext,
+    ProviderRuntimeEvent,
+    ProviderSnapshot,
+    ProviderStatus,
+    ProviderType,
+    SelectionDecision,
+)
+from aic_backend.provider_runtime.system import UtcClock, UuidIdGenerator
+
+__all__ = [
+    "CapabilityMode",
+    "Clock",
+    "HealthCheckResult",
+    "HealthStatus",
+    "IdGenerator",
+    "InvocationRecord",
+    "MetricsCollector",
+    "Provider",
+    "ProviderAttribution",
+    "ProviderCapability",
+    "ProviderEventType",
+    "ProviderInvocationHandler",
+    "ProviderInvocationRequest",
+    "ProviderInvocationResult",
+    "ProviderMetadata",
+    "ProviderRequestContext",
+    "ProviderRuntimeEvent",
+    "ProviderRuntimePort",
+    "ProviderSnapshot",
+    "ProviderStatus",
+    "ProviderType",
+    "SelectionDecision",
+    "UtcClock",
+    "UuidIdGenerator",
+]

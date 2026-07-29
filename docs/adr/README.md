@@ -4,3 +4,4 @@ This directory contains Architecture Decision Records (ADRs). Start with [ADR-00
 
 - [ADR-0001: Foundation Architecture](ADR-0001-foundation-architecture.md)
 - [ADR-0002: Data Foundation Clean Architecture](ADR-0002-data-foundation-clean-architecture.md)
+- [ADR-0003: Provider Runtime boundary](ADR-0003-provider-runtime.md)

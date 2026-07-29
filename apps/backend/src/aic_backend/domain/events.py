@@ -1,9 +1,9 @@
 """Domain events emitted by data foundation use cases."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
-from typing import Mapping
 
 
 @dataclass(frozen=True, slots=True)
@@ -15,6 +15,11 @@ class DataRecordReceived:
     source: str
     payload: Mapping[str, object]
     occurred_at: datetime
+
+    @property
+    def event_type(self) -> str:
+        """Return the stable event name required by the shared Event Bus."""
+        return "data_record_received"
 
     def __post_init__(self) -> None:
         if not self.event_id.strip():
