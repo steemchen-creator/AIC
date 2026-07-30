@@ -115,6 +115,17 @@ def test_provider_runtime_does_not_depend_on_outer_layers() -> None:
     }
 
 
+def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:
+    callers = {
+        path.name
+        for path in (PACKAGE_ROOT / "provider_runtime").glob("*.py")
+        if path.name != "registry.py"
+        and "_replace_runtime_state" in path.read_text(encoding="utf-8")
+    }
+
+    assert callers == {"lifecycle.py"}
+
+
 def test_only_bootstrap_combines_application_and_concrete_adapters() -> None:
     concrete_roots = ("aic_backend.infrastructure", "aic_backend.providers")
     layer_packages = (

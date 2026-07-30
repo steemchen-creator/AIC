@@ -4,8 +4,8 @@
 
 SPEC-003 Phase 1 defines the framework-independent runtime vocabulary and
 contracts. Phase 2 adds in-process registration and explicit provider
-construction. The runtime does not initialize, check, select, invoke, or expose
-providers through HTTP yet.
+construction. Phase 3 adds validated lifecycle execution and health monitoring.
+The runtime does not select, invoke, fail over, or expose providers through HTTP.
 
 The package intentionally uses a flat Python structure:
 
@@ -16,6 +16,8 @@ provider_runtime/
 |-- errors.py       stable error taxonomy
 |-- registry.py     atomic registration and immutable snapshots
 |-- factory.py      explicit implementation allowlist
+|-- lifecycle.py    validated state transitions and lifecycle events
+|-- health.py       bounded health checks, thresholds and background tasks
 |-- system.py       UTC clock and UUID implementations
 `-- __init__.py     public contract surface
 ```
@@ -40,4 +42,36 @@ Runtime. Composition and the compatibility adapter for the existing
 - Registration captures immutable metadata and capabilities. Read operations
   return snapshots sorted by Provider ID and do not expose registry internals.
 - An enabled Provider starts as `REGISTERED`; a disabled Provider starts as
-  `DISABLED`. No other state transition exists in Phase 2.
+  `DISABLED`.
+
+## Phase 3 lifecycle ownership
+
+- `ProviderRegistry` remains responsible for registration and queries. Its
+  private atomic state-storage hook is called only by `ProviderLifecycleManager`;
+  an architecture test enforces this boundary.
+- `ProviderLifecycleManager` is the sole status owner. It serializes changes per
+  Provider, validates every transition, calls initialize and shutdown, and
+  publishes lifecycle events through the existing Event Bus.
+- `ProviderHealthManager` performs time-bounded checks and maintains consecutive
+  success/failure counters. It cannot write status directly and requests changes
+  through `ProviderLifecycleManager`.
+- Background health tasks are explicit, idempotent to start, and cancellable.
+
+The allowed state transitions are:
+
+```text
+REGISTERED -> INITIALIZING | DISABLED
+INITIALIZING -> READY | FAILED
+READY -> DEGRADED | UNAVAILABLE | STOPPING | DISABLED
+DEGRADED -> READY | UNAVAILABLE | STOPPING | DISABLED
+UNAVAILABLE -> DEGRADED | READY | STOPPING | DISABLED
+STOPPING -> STOPPED | FAILED
+DISABLED -> INITIALIZING
+FAILED -> INITIALIZING
+STOPPED -> terminal
+```
+
+An unhealthy check degrades a ready Provider immediately. The configured
+consecutive-failure threshold makes it unavailable. Recovery is deliberately
+staged: the success threshold moves `UNAVAILABLE` to `DEGRADED`, and a second
+success window moves `DEGRADED` to `READY`.

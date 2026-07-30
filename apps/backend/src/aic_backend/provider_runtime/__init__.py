@@ -1,6 +1,7 @@
 """Provider runtime contracts and immutable models."""
 
 from aic_backend.provider_runtime.factory import ProviderFactory
+from aic_backend.provider_runtime.health import ProviderHealthManager
 from aic_backend.provider_runtime.interfaces import (
     Clock,
     IdGenerator,
@@ -10,8 +11,10 @@ from aic_backend.provider_runtime.interfaces import (
     ProviderInvocationHandler,
     ProviderRuntimePort,
 )
+from aic_backend.provider_runtime.lifecycle import ProviderLifecycleManager
 from aic_backend.provider_runtime.models import (
     CapabilityMode,
+    HealthCheckPolicy,
     HealthCheckResult,
     HealthStatus,
     InvocationRecord,
@@ -38,6 +41,7 @@ __all__ = [
     "CapabilityMode",
     "Clock",
     "HealthCheckResult",
+    "HealthCheckPolicy",
     "HealthStatus",
     "IdGenerator",
     "InvocationRecord",
@@ -53,6 +57,8 @@ __all__ = [
     "ProviderInvocationResult",
     "ProviderMetadata",
     "ProviderFactory",
+    "ProviderHealthManager",
+    "ProviderLifecycleManager",
     "ProviderRegistration",
     "ProviderRegistry",
     "ProviderRegistrySnapshot",

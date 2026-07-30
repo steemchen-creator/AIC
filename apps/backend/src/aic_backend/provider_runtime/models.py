@@ -85,6 +85,7 @@ class ProviderEventType(StrEnum):
     INVOCATION_FAILED = "provider_invocation_failed"
     FAILOVER_OCCURRED = "provider_failover_occurred"
     DISABLED = "provider_disabled"
+    STATUS_CHANGED = "provider_status_changed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -163,6 +164,31 @@ class HealthCheckResult:
         if self.latency_ms is not None and self.latency_ms < 0:
             raise ValueError("latency_ms must not be negative")
         object.__setattr__(self, "details", _freeze_mapping(self.details))
+
+
+@dataclass(frozen=True, slots=True)
+class HealthCheckPolicy:
+    ready_interval_seconds: float = 60
+    degraded_interval_seconds: float = 30
+    unavailable_interval_seconds: float = 60
+    timeout_ms: int = 2000
+    failure_threshold: int = 3
+    recovery_threshold: int = 2
+
+    def __post_init__(self) -> None:
+        intervals = (
+            self.ready_interval_seconds,
+            self.degraded_interval_seconds,
+            self.unavailable_interval_seconds,
+        )
+        if any(interval <= 0 for interval in intervals):
+            raise ValueError("health check intervals must be positive")
+        if self.timeout_ms <= 0:
+            raise ValueError("health check timeout_ms must be positive")
+        if self.failure_threshold <= 0:
+            raise ValueError("failure_threshold must be positive")
+        if self.recovery_threshold <= 0:
+            raise ValueError("recovery_threshold must be positive")
 
 
 @dataclass(frozen=True, slots=True)
