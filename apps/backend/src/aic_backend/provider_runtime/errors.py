@@ -51,6 +51,27 @@ class InvalidStateTransitionError(ProviderLifecycleError):
 class ProviderSelectionError(ProviderRuntimeError):
     error_code = "PROVIDER_SELECTION_ERROR"
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        supported_provider_count: int = 0,
+        exclusion_summary: dict[str, str] | None = None,
+        request_id: str | None = None,
+        provider_id: str | None = None,
+        capability: str | None = None,
+        failover_occurred: bool = False,
+    ) -> None:
+        super().__init__(
+            message,
+            request_id=request_id,
+            provider_id=provider_id,
+            capability=capability,
+            failover_occurred=failover_occurred,
+        )
+        self.supported_provider_count = supported_provider_count
+        self.exclusion_summary = dict(exclusion_summary or {})
+
 
 class NoProviderAvailableError(ProviderSelectionError):
     error_code = "PROVIDER_NO_AVAILABLE"
@@ -59,6 +80,10 @@ class NoProviderAvailableError(ProviderSelectionError):
 
 class CapabilityUnavailableError(ProviderSelectionError):
     error_code = "PROVIDER_CAPABILITY_UNAVAILABLE"
+
+
+class InvalidSelectionContextError(ProviderSelectionError):
+    error_code = "PROVIDER_SELECTION_CONTEXT_INVALID"
 
 
 class ProviderInvocationError(ProviderRuntimeError):

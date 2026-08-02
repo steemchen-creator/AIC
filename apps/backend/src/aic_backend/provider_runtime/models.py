@@ -88,6 +88,27 @@ class ProviderEventType(StrEnum):
     STATUS_CHANGED = "provider_status_changed"
 
 
+class ProviderSelectionReason(StrEnum):
+    PREFERRED_PROVIDER = "preferred_provider"
+    READY_STATE = "ready_state"
+    DEGRADED_STATE = "degraded_state"
+    HIGHER_QUALITY_SCORE = "higher_quality_score"
+    HIGHER_PRIORITY = "higher_priority"
+    STABLE_PROVIDER_ID_TIE_BREAK = "stable_provider_id_tie_break"
+
+
+class ProviderExclusionReason(StrEnum):
+    PROVIDER_DISABLED = "provider_disabled"
+    CAPABILITY_NOT_SUPPORTED = "capability_not_supported"
+    EXPLICITLY_EXCLUDED = "explicitly_excluded"
+    LIFECYCLE_NOT_SELECTABLE = "lifecycle_not_selectable"
+    DEGRADED_NOT_ALLOWED = "degraded_not_allowed"
+    HEALTH_UNHEALTHY = "health_unhealthy"
+    HEALTH_UNKNOWN = "health_unknown"
+    PROVIDER_IN_COOLDOWN = "provider_in_cooldown"
+    CONCURRENCY_CAPACITY_EXHAUSTED = "concurrency_capacity_exhausted"
+
+
 @dataclass(frozen=True, slots=True)
 class ProviderMetadata:
     provider_id: str
@@ -239,18 +260,140 @@ class ProviderRegistrySnapshot:
 
 @dataclass(frozen=True, slots=True)
 class ProviderRequestContext:
-    capability: ProviderCapability
     request_id: str
+    capability: ProviderCapability
     timeout_ms: int
-    symbol: str | None = None
-    market: str | None = None
     preferred_provider_ids: tuple[str, ...] = ()
     excluded_provider_ids: frozenset[str] = frozenset()
+    allow_degraded: bool = False
+    symbol: str | None = None
+    market: str | None = None
 
     def __post_init__(self) -> None:
         _require_text(self.request_id, "request_id")
         if self.timeout_ms <= 0:
             raise ValueError("timeout_ms must be positive")
+        preferred = tuple(self.preferred_provider_ids)
+        excluded = frozenset(self.excluded_provider_ids)
+        if any(not provider_id.strip() for provider_id in preferred):
+            raise ValueError("preferred_provider_ids must not contain empty values")
+        if any(not provider_id.strip() for provider_id in excluded):
+            raise ValueError("excluded_provider_ids must not contain empty values")
+        object.__setattr__(self, "preferred_provider_ids", preferred)
+        object.__setattr__(self, "excluded_provider_ids", excluded)
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderMetricsSnapshot:
+    provider_id: str
+    total_calls: int = 0
+    successful_calls: int = 0
+    failed_calls: int = 0
+    timeout_calls: int = 0
+    p50_latency_ms: float | None = None
+    p95_latency_ms: float | None = None
+    last_success_at: datetime | None = None
+    last_failure_at: datetime | None = None
+    data_freshness_seconds: float | None = None
+    in_flight_requests: int = 0
+    max_concurrency: int = 1
+    cooldown_until: datetime | None = None
+
+    def __post_init__(self) -> None:
+        _require_text(self.provider_id, "provider_id")
+        counts = (
+            self.total_calls,
+            self.successful_calls,
+            self.failed_calls,
+            self.timeout_calls,
+            self.in_flight_requests,
+        )
+        if any(value < 0 for value in counts):
+            raise ValueError("metrics counts must not be negative")
+        if self.successful_calls + self.failed_calls > self.total_calls:
+            raise ValueError("successful_calls and failed_calls must not exceed total_calls")
+        if self.max_concurrency <= 0:
+            raise ValueError("max_concurrency must be positive")
+        for value, name in (
+            (self.p50_latency_ms, "p50_latency_ms"),
+            (self.p95_latency_ms, "p95_latency_ms"),
+            (self.data_freshness_seconds, "data_freshness_seconds"),
+        ):
+            if value is not None and value < 0:
+                raise ValueError(f"{name} must not be negative")
+        if self.last_success_at is not None:
+            _require_aware(self.last_success_at, "last_success_at")
+        if self.last_failure_at is not None:
+            _require_aware(self.last_failure_at, "last_failure_at")
+        if self.cooldown_until is not None:
+            _require_aware(self.cooldown_until, "cooldown_until")
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderCapacitySnapshot:
+    in_flight_requests: int
+    max_concurrency: int
+
+    def __post_init__(self) -> None:
+        if self.in_flight_requests < 0:
+            raise ValueError("in_flight_requests must not be negative")
+        if self.max_concurrency <= 0:
+            raise ValueError("max_concurrency must be positive")
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderCooldownSnapshot:
+    cooldown_until: datetime | None
+
+    def __post_init__(self) -> None:
+        if self.cooldown_until is not None:
+            _require_aware(self.cooldown_until, "cooldown_until")
+
+
+@dataclass(frozen=True, slots=True)
+class QualityScoreBreakdown:
+    total_score: float
+    availability_score: float
+    success_rate_score: float
+    latency_score: float
+    freshness_score: float
+    priority_score: float
+    used_default_success_rate: bool
+    used_default_latency: bool
+    used_p50_latency: bool
+    freshness_unknown: bool
+
+    def __post_init__(self) -> None:
+        scores = (
+            self.total_score,
+            self.availability_score,
+            self.success_rate_score,
+            self.latency_score,
+            self.freshness_score,
+            self.priority_score,
+        )
+        if any(not 0 <= score <= 100 for score in scores):
+            raise ValueError("quality scores must be between 0 and 100")
+        weighted = (
+            self.availability_score * 0.35
+            + self.success_rate_score * 0.30
+            + self.latency_score * 0.20
+            + self.freshness_score * 0.10
+            + self.priority_score * 0.05
+        )
+        if abs(self.total_score - weighted) > 1e-9:
+            raise ValueError("total_score must equal the weighted component scores")
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderCandidate:
+    provider_id: str
+    lifecycle_status: ProviderStatus
+    health_status: HealthStatus
+    priority: int
+    quality_score: float
+    score_breakdown: QualityScoreBreakdown
+    preferred_rank: int | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -327,20 +470,36 @@ class InvocationRecord:
 @dataclass(frozen=True, slots=True)
 class SelectionDecision:
     request_id: str
-    capability: str
+    capability: ProviderCapability
     selected_provider_id: str
-    candidate_provider_ids: tuple[str, ...]
-    scores: Mapping[str, float]
-    reasons: Mapping[str, tuple[str, ...]]
+    ordered_candidate_provider_ids: tuple[str, ...]
+    candidate_scores: Mapping[str, float]
+    score_breakdowns: Mapping[str, QualityScoreBreakdown]
+    selection_reasons: Mapping[str, tuple[ProviderSelectionReason, ...]]
+    excluded_providers: Mapping[str, ProviderExclusionReason]
     decided_at: datetime
 
     def __post_init__(self) -> None:
         _require_text(self.request_id, "request_id")
-        _require_text(self.capability, "capability")
         _require_text(self.selected_provider_id, "selected_provider_id")
         _require_aware(self.decided_at, "decided_at")
-        object.__setattr__(self, "scores", _freeze_mapping(self.scores))
-        object.__setattr__(self, "reasons", _freeze_mapping(self.reasons))
+        utc_offset = self.decided_at.utcoffset()
+        if utc_offset is None or utc_offset.total_seconds() != 0:
+            raise ValueError("decided_at must use UTC")
+        candidates = tuple(self.ordered_candidate_provider_ids)
+        if not candidates or self.selected_provider_id != candidates[0]:
+            raise ValueError("selected_provider_id must be the first ordered candidate")
+        candidate_ids = set(candidates)
+        if (
+            set(self.candidate_scores) != candidate_ids
+            or set(self.score_breakdowns) != candidate_ids
+        ):
+            raise ValueError("candidate scores and breakdowns must match candidates")
+        object.__setattr__(self, "ordered_candidate_provider_ids", candidates)
+        object.__setattr__(self, "candidate_scores", _freeze_mapping(self.candidate_scores))
+        object.__setattr__(self, "score_breakdowns", _freeze_mapping(self.score_breakdowns))
+        object.__setattr__(self, "selection_reasons", _freeze_mapping(self.selection_reasons))
+        object.__setattr__(self, "excluded_providers", _freeze_mapping(self.excluded_providers))
 
 
 @dataclass(frozen=True, slots=True)

@@ -170,18 +170,27 @@ def test_invocation_record_validates_audit_fields() -> None:
 
 def test_selection_decision_copies_explanation_mappings() -> None:
     scores = {"mock_market_primary": 98.4}
+    from aic_backend.provider_runtime import (
+        ProviderExclusionReason,
+        ProviderSelectionReason,
+        QualityScoreBreakdown,
+    )
+
+    breakdown = QualityScoreBreakdown(98.4, 100, 100, 100, 84, 100, False, False, False, False)
     decision = SelectionDecision(
         request_id="req_1",
-        capability=CAPABILITY.name,
+        capability=CAPABILITY,
         selected_provider_id="mock_market_primary",
-        candidate_provider_ids=("mock_market_primary",),
-        scores=scores,
-        reasons={"mock_market_primary": ("ready",)},
+        ordered_candidate_provider_ids=("mock_market_primary",),
+        candidate_scores=scores,
+        score_breakdowns={"mock_market_primary": breakdown},
+        selection_reasons={"mock_market_primary": (ProviderSelectionReason.READY_STATE,)},
+        excluded_providers={"mock_disabled": ProviderExclusionReason.PROVIDER_DISABLED},
         decided_at=NOW,
     )
     scores["mock_market_primary"] = 0
 
-    assert decision.scores["mock_market_primary"] == 98.4
+    assert decision.candidate_scores["mock_market_primary"] == 98.4
 
 
 def test_provider_runtime_event_is_validated_and_immutable() -> None:

@@ -16,6 +16,12 @@ Coverage includes:
 - serialization of concurrent status changes;
 - architecture enforcement of exclusive lifecycle state ownership.
 
+Phase 4 additionally verifies immutable request and metrics inputs, every
+filter category, preferred/excluded precedence, stable sorting, scoring boundary
+values and defaults, immutable decisions, distinct no-candidate errors, and
+1,000 deterministic selections across 100 Mock Provider snapshots. Selection
+and scoring remain network-free pure calculations.
+
 Run the full quality gate from the repository root:
 
 ```powershell

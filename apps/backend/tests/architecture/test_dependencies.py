@@ -126,6 +126,33 @@ def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:
     assert callers == {"lifecycle.py"}
 
 
+def test_selection_and_scoring_keep_pure_runtime_boundaries() -> None:
+    runtime_root = PACKAGE_ROOT / "provider_runtime"
+    selector_imports = imported_modules(runtime_root / "selector.py")
+    scoring_imports = imported_modules(runtime_root / "scoring.py")
+    forbidden = (
+        "aic_backend.bootstrap",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "fastapi",
+    )
+
+    assert not {module for module in selector_imports if module.startswith(forbidden)}
+    assert "aic_backend.provider_runtime.registry" not in selector_imports
+    assert "aic_backend.provider_runtime.registry" not in scoring_imports
+    assert "aic_backend.provider_runtime.interfaces" not in scoring_imports
+    assert "datetime.datetime.now" not in (runtime_root / "scoring.py").read_text(
+        encoding="utf-8"
+    )
+    for name in ("registry.py", "lifecycle.py", "health.py"):
+        assert "provider_runtime.selector" not in imported_modules(runtime_root / name)
+    assert not {
+        module
+        for module in package_imports("application")
+        if module.startswith("aic_backend.provider_runtime.selector")
+    }
+
+
 def test_only_bootstrap_combines_application_and_concrete_adapters() -> None:
     concrete_roots = ("aic_backend.infrastructure", "aic_backend.providers")
     layer_packages = (

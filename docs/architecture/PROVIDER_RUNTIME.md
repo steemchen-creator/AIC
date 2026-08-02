@@ -5,7 +5,8 @@
 SPEC-003 Phase 1 defines the framework-independent runtime vocabulary and
 contracts. Phase 2 adds in-process registration and explicit provider
 construction. Phase 3 adds validated lifecycle execution and health monitoring.
-The runtime does not select, invoke, fail over, or expose providers through HTTP.
+Phase 4 adds pure selection and quality scoring. The runtime does not invoke,
+fail over, or expose providers through HTTP.
 
 The package intentionally uses a flat Python structure:
 
@@ -18,6 +19,8 @@ provider_runtime/
 |-- factory.py      explicit implementation allowlist
 |-- lifecycle.py    validated state transitions and lifecycle events
 |-- health.py       bounded health checks, thresholds and background tasks
+|-- scoring.py      pure explainable quality calculation
+|-- selector.py     pure filtering and deterministic ordering
 |-- system.py       UTC clock and UUID implementations
 `-- __init__.py     public contract surface
 ```
@@ -75,3 +78,15 @@ An unhealthy check degrades a ready Provider immediately. The configured
 consecutive-failure threshold makes it unavailable. Recovery is deliberately
 staged: the success threshold moves `UNAVAILABLE` to `DEGRADED`, and a second
 success window moves `DEGRADED` to `READY`.
+
+## Phase 4 selection boundary
+
+The caller supplies immutable Registry and Metrics snapshots plus an explicit
+UTC timestamp. `ProviderSelector` performs no I/O and holds no Registry,
+Lifecycle, or Health Manager. `QualityScorer` is stateless and never obtains the
+current time itself.
+
+Filtering order is enabled, exact capability, explicit exclusion, lifecycle,
+health, cooldown, then capacity. Sorting order is preferred rank, lifecycle
+(`READY` before `DEGRADED`), score descending, priority descending, and Provider
+ID ascending. Structured reason enums make both exclusion and ordering auditable.
