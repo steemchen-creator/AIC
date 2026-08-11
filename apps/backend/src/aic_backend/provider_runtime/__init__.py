@@ -11,12 +11,14 @@ from aic_backend.provider_runtime.interfaces import (
     ProviderInvocationHandler,
     ProviderRuntimePort,
 )
+from aic_backend.provider_runtime.invocation import ProviderInvocationManager
 from aic_backend.provider_runtime.lifecycle import ProviderLifecycleManager
 from aic_backend.provider_runtime.models import (
     CapabilityMode,
     HealthCheckPolicy,
     HealthCheckResult,
     HealthStatus,
+    InvocationErrorDetail,
     InvocationRecord,
     ProviderAttribution,
     ProviderCandidate,
@@ -27,6 +29,7 @@ from aic_backend.provider_runtime.models import (
     ProviderEventType,
     ProviderExclusionReason,
     ProviderInvocationRequest,
+    ProviderInvocationResponse,
     ProviderInvocationResult,
     ProviderMetadata,
     ProviderMetricsSnapshot,
@@ -54,6 +57,7 @@ __all__ = [
     "HealthStatus",
     "IdGenerator",
     "InvocationRecord",
+    "InvocationErrorDetail",
     "MetricsCollector",
     "Provider",
     "ProviderBuilder",
@@ -65,7 +69,9 @@ __all__ = [
     "ProviderDefinition",
     "ProviderEventType",
     "ProviderInvocationHandler",
+    "ProviderInvocationManager",
     "ProviderInvocationRequest",
+    "ProviderInvocationResponse",
     "ProviderInvocationResult",
     "ProviderMetadata",
     "ProviderMetricsSnapshot",

@@ -90,6 +90,14 @@ class ProviderInvocationError(ProviderRuntimeError):
     error_code = "PROVIDER_INVOCATION_ERROR"
 
 
+class ProviderExecutionError(ProviderInvocationError):
+    error_code = "PROVIDER_EXECUTION_ERROR"
+
+
+class ProviderCancelledError(ProviderInvocationError):
+    error_code = "PROVIDER_CANCELLED"
+
+
 class ProviderTimeoutError(ProviderInvocationError):
     error_code = "PROVIDER_TIMEOUT"
     retryable = True

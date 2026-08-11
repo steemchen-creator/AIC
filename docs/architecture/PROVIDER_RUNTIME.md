@@ -5,8 +5,8 @@
 SPEC-003 Phase 1 defines the framework-independent runtime vocabulary and
 contracts. Phase 2 adds in-process registration and explicit provider
 construction. Phase 3 adds validated lifecycle execution and health monitoring.
-Phase 4 adds pure selection and quality scoring. The runtime does not invoke,
-fail over, or expose providers through HTTP.
+Phase 4 adds pure selection and quality scoring. Phase 5 adds bounded invocation.
+The runtime does not retry, fail over, or expose providers through HTTP.
 
 The package intentionally uses a flat Python structure:
 
@@ -21,6 +21,7 @@ provider_runtime/
 |-- health.py       bounded health checks, thresholds and background tasks
 |-- scoring.py      pure explainable quality calculation
 |-- selector.py     pure filtering and deterministic ordering
+|-- invocation.py   one-Provider execution, timeout and capacity cleanup
 |-- system.py       UTC clock and UUID implementations
 `-- __init__.py     public contract surface
 ```
@@ -90,3 +91,16 @@ Filtering order is enabled, exact capability, explicit exclusion, lifecycle,
 health, cooldown, then capacity. Sorting order is preferred rank, lifecycle
 (`READY` before `DEGRADED`), score descending, priority descending, and Provider
 ID ascending. Structured reason enums make both exclusion and ordering auditable.
+
+## Phase 5 invocation boundary
+
+Invocation receives an explicit Provider ID selected upstream, verifies current
+status and exact Capability, retrieves the instance through Registry, and calls
+the handler protocol without knowing its concrete type. A per-Provider
+Semaphore bounds concurrency. The timeout encloses both capacity waiting and the
+Provider call, and context managers guarantee release on every exit path.
+
+Cancellation is re-raised as `asyncio.CancelledError` after cleanup. Expected
+runtime errors retain their stable codes; unexpected exceptions become sanitized
+`ProviderExecutionError` values. No Lifecycle transition, retry, failover,
+metrics collection, network adapter, or concrete Provider is introduced.

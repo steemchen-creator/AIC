@@ -10,6 +10,7 @@ from aic_backend.provider_runtime.models import (
     ProviderCapability,
     ProviderDefinition,
     ProviderInvocationRequest,
+    ProviderInvocationResponse,
     ProviderInvocationResult,
     ProviderMetadata,
     ProviderRequestContext,
@@ -40,7 +41,7 @@ class ProviderInvocationHandler(Protocol):
 
     async def invoke(
         self, request: ProviderInvocationRequest
-    ) -> ProviderInvocationResult: ...
+    ) -> ProviderInvocationResponse: ...
 
 
 class ProviderRuntimePort(Protocol):

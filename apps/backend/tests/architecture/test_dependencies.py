@@ -153,6 +153,24 @@ def test_selection_and_scoring_keep_pure_runtime_boundaries() -> None:
     }
 
 
+def test_invocation_keeps_runtime_execution_boundaries() -> None:
+    runtime_root = PACKAGE_ROOT / "provider_runtime"
+    imports = imported_modules(runtime_root / "invocation.py")
+    forbidden = (
+        "aic_backend.bootstrap",
+        "aic_backend.lifecycle",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "fastapi",
+    )
+
+    assert not {module for module in imports if module.startswith(forbidden)}
+    assert "aic_backend.provider_runtime.lifecycle" not in imports
+    assert "aic_backend.provider_runtime.invocation" not in imported_modules(
+        runtime_root / "selector.py"
+    )
+
+
 def test_only_bootstrap_combines_application_and_concrete_adapters() -> None:
     concrete_roots = ("aic_backend.infrastructure", "aic_backend.providers")
     layer_packages = (

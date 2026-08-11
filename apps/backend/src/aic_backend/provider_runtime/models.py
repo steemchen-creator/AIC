@@ -398,10 +398,19 @@ class ProviderCandidate:
 
 @dataclass(frozen=True, slots=True)
 class ProviderInvocationRequest:
+    request_id: str
+    provider_id: str
     capability: ProviderCapability
     payload: Mapping[str, Any]
+    timeout_ms: int
+    created_at: datetime
 
     def __post_init__(self) -> None:
+        _require_text(self.request_id, "request_id")
+        _require_text(self.provider_id, "provider_id")
+        if self.timeout_ms <= 0:
+            raise ValueError("timeout_ms must be positive")
+        _require_aware(self.created_at, "created_at")
         object.__setattr__(self, "payload", _freeze_mapping(self.payload))
 
 
@@ -426,7 +435,7 @@ class ProviderAttribution:
 
 
 @dataclass(frozen=True, slots=True)
-class ProviderInvocationResult:
+class ProviderInvocationResponse:
     payload: Mapping[str, Any]
     source_timestamp: datetime | None = None
     attribution: ProviderAttribution | None = None
@@ -435,6 +444,45 @@ class ProviderInvocationResult:
         if self.source_timestamp is not None:
             _require_aware(self.source_timestamp, "source_timestamp")
         object.__setattr__(self, "payload", _freeze_mapping(self.payload))
+
+
+@dataclass(frozen=True, slots=True)
+class InvocationErrorDetail:
+    error_code: str
+    message: str
+    retryable: bool
+
+    def __post_init__(self) -> None:
+        _require_text(self.error_code, "error_code")
+        _require_text(self.message, "message")
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderInvocationResult:
+    request_id: str
+    provider_id: str
+    success: bool
+    data: Mapping[str, Any] | None
+    error: InvocationErrorDetail | None
+    latency_ms: float
+    started_at: datetime
+    finished_at: datetime
+
+    def __post_init__(self) -> None:
+        _require_text(self.request_id, "request_id")
+        _require_text(self.provider_id, "provider_id")
+        if self.latency_ms < 0:
+            raise ValueError("latency_ms must not be negative")
+        _require_aware(self.started_at, "started_at")
+        _require_aware(self.finished_at, "finished_at")
+        if self.finished_at < self.started_at:
+            raise ValueError("finished_at must not precede started_at")
+        if self.success and (self.data is None or self.error is not None):
+            raise ValueError("successful result must contain data and no error")
+        if not self.success and (self.data is not None or self.error is None):
+            raise ValueError("failed result must contain error and no data")
+        if self.data is not None:
+            object.__setattr__(self, "data", _freeze_mapping(self.data))
 
 
 @dataclass(frozen=True, slots=True)

@@ -6,6 +6,8 @@
 - Phase 2: concurrency-safe Registry and explicit allowlist Factory.
 - Phase 3: serialized Lifecycle and bounded Health management.
 - Phase 4: deterministic Provider selection and explainable quality scoring.
+- Phase 5: bounded single-Provider invocation with timeout, cancellation and
+  concurrency cleanup.
 
 ## Phase 4 selection contract
 
@@ -38,3 +40,20 @@ marked fallback when P95 is absent.
 scores, score breakdowns, structured selection reasons, structured first
 exclusion reasons, and the injected UTC decision time. No-candidate outcomes
 distinguish unsupported capability from temporarily unavailable candidates.
+
+## Phase 5 invocation contract
+
+`ProviderInvocationManager` executes exactly one selected Provider through the
+owned `ProviderInvocationHandler` protocol. It queries Registry snapshots but
+does not modify Registry, Lifecycle, Health, or Selection state.
+
+The request contains request and Provider IDs, exact Capability, immutable
+payload, timeout and UTC creation time. Successful responses are standardized
+with immutable data, latency and UTC start/finish times. Known runtime errors
+remain structured; unknown Provider exceptions are wrapped with sanitized
+messages while retaining the original exception as the internal cause.
+
+The call-level timeout covers both concurrency acquisition and execution.
+`asyncio` cancellation propagates normally. Semaphore context management
+releases capacity after success, Provider error, timeout, or cancellation.
+Phase 5 performs no retry or failover.

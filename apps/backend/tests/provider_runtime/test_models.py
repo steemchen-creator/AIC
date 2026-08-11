@@ -12,7 +12,7 @@ from aic_backend.provider_runtime import (
     ProviderCapability,
     ProviderEventType,
     ProviderInvocationRequest,
-    ProviderInvocationResult,
+    ProviderInvocationResponse,
     ProviderMetadata,
     ProviderRequestContext,
     ProviderRuntimeEvent,
@@ -119,8 +119,15 @@ def test_request_context_requires_request_id_and_positive_timeout() -> None:
 def test_invocation_request_and_result_copy_payloads() -> None:
     request_payload = {"symbol": "TEST"}
     result_payload = {"price": 42}
-    request = ProviderInvocationRequest(capability=CAPABILITY, payload=request_payload)
-    result = ProviderInvocationResult(payload=result_payload, source_timestamp=NOW)
+    request = ProviderInvocationRequest(
+        request_id="req_1",
+        provider_id="mock_market_primary",
+        capability=CAPABILITY,
+        payload=request_payload,
+        timeout_ms=100,
+        created_at=NOW,
+    )
+    result = ProviderInvocationResponse(payload=result_payload, source_timestamp=NOW)
     request_payload["symbol"] = "CHANGED"
     result_payload["price"] = 0
 

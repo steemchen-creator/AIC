@@ -22,6 +22,11 @@ values and defaults, immutable decisions, distinct no-candidate errors, and
 1,000 deterministic selections across 100 Mock Provider snapshots. Selection
 and scoring remain network-free pure calculations.
 
+Phase 5 verifies successful standardization, known and unknown Provider errors,
+invalid responses, unavailable state, unsupported Capability, timeout-driven
+cancellation, external task cancellation, capacity release on every exit path,
+and concurrent calls under a deterministic per-Provider limit.
+
 Run the full quality gate from the repository root:
 
 ```powershell
