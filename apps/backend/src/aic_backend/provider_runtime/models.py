@@ -458,6 +458,60 @@ class InvocationErrorDetail:
 
 
 @dataclass(frozen=True, slots=True)
+class FailoverAttempt:
+    provider_id: str
+    attempt_number: int
+    success: bool
+    error_code: str | None = None
+
+    def __post_init__(self) -> None:
+        _require_text(self.provider_id, "provider_id")
+        if self.attempt_number <= 0:
+            raise ValueError("attempt_number must be positive")
+        if self.success and self.error_code is not None:
+            raise ValueError("successful attempt must not contain error_code")
+        if not self.success and self.error_code is None:
+            raise ValueError("failed attempt must contain error_code")
+
+
+@dataclass(frozen=True, slots=True)
+class FailoverContext:
+    request_id: str
+    capability: ProviderCapability
+    original_provider_id: str
+    attempted_provider_ids: tuple[str, ...]
+    max_failover_attempts: int
+    started_at: datetime
+
+    def __post_init__(self) -> None:
+        _require_text(self.request_id, "request_id")
+        _require_text(self.original_provider_id, "original_provider_id")
+        attempted = tuple(self.attempted_provider_ids)
+        if len(attempted) != len(set(attempted)):
+            raise ValueError("attempted_provider_ids must not contain duplicates")
+        if self.max_failover_attempts < 0:
+            raise ValueError("max_failover_attempts must not be negative")
+        _require_aware(self.started_at, "started_at")
+        object.__setattr__(self, "attempted_provider_ids", attempted)
+
+
+@dataclass(frozen=True, slots=True)
+class FailoverDecision:
+    should_failover: bool
+    reason: str
+    excluded_provider_ids: frozenset[str]
+    next_provider_candidates: tuple[str, ...]
+    attempt_number: int
+
+    def __post_init__(self) -> None:
+        _require_text(self.reason, "reason")
+        if self.attempt_number <= 0:
+            raise ValueError("attempt_number must be positive")
+        object.__setattr__(self, "excluded_provider_ids", frozenset(self.excluded_provider_ids))
+        object.__setattr__(self, "next_provider_candidates", tuple(self.next_provider_candidates))
+
+
+@dataclass(frozen=True, slots=True)
 class ProviderInvocationResult:
     request_id: str
     provider_id: str
@@ -467,6 +521,8 @@ class ProviderInvocationResult:
     latency_ms: float
     started_at: datetime
     finished_at: datetime
+    attempt_history: tuple[FailoverAttempt, ...] = ()
+    failover_count: int = 0
 
     def __post_init__(self) -> None:
         _require_text(self.request_id, "request_id")
@@ -483,6 +539,10 @@ class ProviderInvocationResult:
             raise ValueError("failed result must contain error and no data")
         if self.data is not None:
             object.__setattr__(self, "data", _freeze_mapping(self.data))
+        history = tuple(self.attempt_history)
+        if self.failover_count < 0 or self.failover_count > max(0, len(history) - 1):
+            raise ValueError("failover_count must match attempt history")
+        object.__setattr__(self, "attempt_history", history)
 
 
 @dataclass(frozen=True, slots=True)

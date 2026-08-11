@@ -171,6 +171,26 @@ def test_invocation_keeps_runtime_execution_boundaries() -> None:
     )
 
 
+def test_failover_reuses_selector_without_crossing_runtime_boundaries() -> None:
+    runtime_root = PACKAGE_ROOT / "provider_runtime"
+    imports = imported_modules(runtime_root / "failover.py")
+    forbidden = (
+        "aic_backend.bootstrap",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "aic_backend.provider_runtime.health",
+        "aic_backend.provider_runtime.lifecycle",
+        "aic_backend.provider_runtime.registry",
+        "fastapi",
+        "redis",
+        "sqlalchemy",
+    )
+
+    assert "aic_backend.provider_runtime.selector" in imports
+    assert not {module for module in imports if module.startswith(forbidden)}
+
+
 def test_only_bootstrap_combines_application_and_concrete_adapters() -> None:
     concrete_roots = ("aic_backend.infrastructure", "aic_backend.providers")
     layer_packages = (

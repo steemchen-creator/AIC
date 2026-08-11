@@ -145,3 +145,28 @@ class UserPermissionError(ProviderInvocationError):
 class AllProvidersFailedError(ProviderInvocationError):
     error_code = "PROVIDER_ALL_FAILED"
     retryable = True
+
+
+class FailoverError(ProviderRuntimeError):
+    error_code = "PROVIDER_FAILOVER_ERROR"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        request_id: str,
+        capability: str,
+        attempted_provider_ids: tuple[str, ...],
+        last_error: ProviderInvocationError,
+    ) -> None:
+        super().__init__(message, request_id=request_id, capability=capability)
+        self.attempted_provider_ids = tuple(attempted_provider_ids)
+        self.last_error = last_error
+
+
+class FailoverExhaustedError(FailoverError):
+    error_code = "PROVIDER_FAILOVER_EXHAUSTED"
+
+
+class FailoverNotAllowedError(FailoverError):
+    error_code = "PROVIDER_FAILOVER_NOT_ALLOWED"

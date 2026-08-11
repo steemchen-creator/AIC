@@ -8,6 +8,8 @@
 - Phase 4: deterministic Provider selection and explainable quality scoring.
 - Phase 5: bounded single-Provider invocation with timeout, cancellation and
   concurrency cleanup.
+- Phase 6: bounded failover across distinct Providers using the existing
+  Selector and Invocation boundaries.
 
 ## Phase 4 selection contract
 
@@ -57,3 +59,21 @@ The call-level timeout covers both concurrency acquisition and execution.
 `asyncio` cancellation propagates normally. Semaphore context management
 releases capacity after success, Provider error, timeout, or cancellation.
 Phase 5 performs no retry or failover.
+
+## Phase 6 failover contract
+
+Failover is a Provider switch, never a retry of the same Provider. The Manager
+uses the existing Selector for initial and backup ordering, adds every attempted
+Provider to the immutable exclusion set, and invokes candidates through the
+Phase 5 invocation port. It does not modify Registry, Lifecycle, Health,
+Quality Score, or Selector behavior.
+
+Timeout, execution, and unavailable errors permit failover. Invalid request,
+unsupported capability, invalid response, and all other errors deny it by
+default. The default failover budget is one switch, so a request may attempt A
+and then B. A zero budget attempts only the original Provider.
+
+Successful results record final Provider ID, ordered attempt history, stable
+error codes for failed attempts, and failover count. Exhausted and disallowed
+flows preserve attempted Provider IDs and the last structured error without
+exposing Provider internals.

@@ -44,6 +44,12 @@ class ProviderInvocationHandler(Protocol):
     ) -> ProviderInvocationResponse: ...
 
 
+class ProviderInvoker(Protocol):
+    async def invoke(
+        self, request: ProviderInvocationRequest
+    ) -> ProviderInvocationResult: ...
+
+
 class ProviderRuntimePort(Protocol):
     """Application-facing provider runtime contract."""
 

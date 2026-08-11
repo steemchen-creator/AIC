@@ -27,6 +27,12 @@ invalid responses, unavailable state, unsupported Capability, timeout-driven
 cancellation, external task cancellation, capacity release on every exit path,
 and concurrent calls under a deterministic per-Provider limit.
 
+Phase 6 verifies the error allowlist policy, A-fails/B-succeeds, complete
+exhaustion, zero and two-switch budgets, no repeated Provider, structured last
+error preservation, final source attribution, Selector-based backup ordering,
+and architecture isolation from Registry mutation, Lifecycle, Health, concrete
+Providers, and external infrastructure.
+
 Run the full quality gate from the repository root:
 
 ```powershell

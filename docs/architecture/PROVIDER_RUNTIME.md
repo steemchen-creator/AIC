@@ -6,7 +6,8 @@ SPEC-003 Phase 1 defines the framework-independent runtime vocabulary and
 contracts. Phase 2 adds in-process registration and explicit provider
 construction. Phase 3 adds validated lifecycle execution and health monitoring.
 Phase 4 adds pure selection and quality scoring. Phase 5 adds bounded invocation.
-The runtime does not retry, fail over, or expose providers through HTTP.
+Phase 6 adds bounded Provider failover. The runtime does not retry, use circuit
+breakers, or expose providers through HTTP.
 
 The package intentionally uses a flat Python structure:
 
@@ -22,6 +23,7 @@ provider_runtime/
 |-- scoring.py      pure explainable quality calculation
 |-- selector.py     pure filtering and deterministic ordering
 |-- invocation.py   one-Provider execution, timeout and capacity cleanup
+|-- failover.py     policy-driven switching across distinct Providers
 |-- system.py       UTC clock and UUID implementations
 `-- __init__.py     public contract surface
 ```
@@ -104,3 +106,16 @@ Cancellation is re-raised as `asyncio.CancelledError` after cleanup. Expected
 runtime errors retain their stable codes; unexpected exceptions become sanitized
 `ProviderExecutionError` values. No Lifecycle transition, retry, failover,
 metrics collection, network adapter, or concrete Provider is introduced.
+
+## Phase 6 failover boundary
+
+`ProviderFailoverManager` composes the existing Selector and Invocation port.
+It never owns Provider ordering logic and never mutates operational state.
+Attempted IDs become Selector exclusions, which prevents retrying the same
+Provider and preserves deterministic backup ordering.
+
+Only timeout, execution, and unavailable failures allow switching. The explicit
+budget limits switches and defaults to one. Results expose the final source,
+ordered attempts, stable failure codes, and failover count. Failover is local to
+one process and request; no distributed coordination or historical metrics are
+implemented.
