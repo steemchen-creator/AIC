@@ -95,3 +95,8 @@ docs/       Architecture and development documentation
 
 Detailed Data Foundation contracts are under [docs/architecture](docs/architecture/README.md),
 [docs/api](docs/api/README.md), and [docs/testing](docs/testing/README.md).
+
+SPEC-003 currently includes framework-independent Provider Runtime models and
+protocols, an in-process Registry, an explicit allowlist Factory, and lifecycle
+and health management. Selection, invocation, failover, and HTTP integration
+remain intentionally inactive until their reviewed phases.
