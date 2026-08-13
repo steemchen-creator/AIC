@@ -171,9 +171,15 @@ Result: **Passed — 0 warnings, 0 errors.**
 
 ## 20. GitHub Actions
 
-Status at document creation: **Pending publication**. The Draft PR CI must complete
-before Phase 1 handoff. Final run status and URL will be recorded in the PR and final
-delivery response; a CI failure blocks handoff.
+Draft PR #5 CI run
+[`31676315017`](https://github.com/steemchen-creator/AIC/actions/runs/31676315017):
+
+- Governance baseline: **Passed** in 4s.
+- Backend tests: **Passed** in 45s.
+- Desktop build: **Passed** in 46s.
+
+This run verified implementation commit `9a316fc`. The evidence-only documentation
+commit is subject to the same required checks before final handoff.
 
 ## 21. Known Limitations
 
