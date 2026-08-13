@@ -8,6 +8,10 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-004 Phase 4 deterministic Raw-to-Canonical normalization and ingestion pipeline
+  with immutable structured outcomes and explicit fixture-normalizer registration.
+- Provenance-preserving DailyBar parsing plus existing Validation/Quality integration,
+  100-run determinism, no-mutation and architecture-boundary evidence.
 - SPEC-004 Phase 3 deterministic Data Quality Engine with fixed explainable weighting,
   immutable assessments/flags and validated-input enforcement.
 - DailyBar freshness, completeness, consistency and configurable source-confidence

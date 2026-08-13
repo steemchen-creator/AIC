@@ -5,6 +5,18 @@ from aic_backend.data_foundation.identity import (
     deterministic_record_id,
     raw_payload_hash,
 )
+from aic_backend.data_foundation.ingestion import (
+    DataIngestionPipeline,
+    IngestionFailure,
+    IngestionFailureCode,
+    IngestionSuccess,
+)
+from aic_backend.data_foundation.normalization import (
+    DataNormalizer,
+    FixtureDailyBarNormalizer,
+    NormalizationError,
+    NormalizationErrorCode,
+)
 from aic_backend.data_foundation.quality import (
     CompletenessPolicy,
     ConflictDetector,
@@ -36,12 +48,20 @@ __all__ = [
     "DailyBarValidator",
     "DailyBarQualityAssessor",
     "DataConflict",
+    "DataIngestionPipeline",
+    "DataNormalizer",
     "DataQualityAssessment",
     "DataQualityFlag",
     "DataValidationService",
     "FreshnessPolicy",
+    "FixtureDailyBarNormalizer",
+    "IngestionFailure",
+    "IngestionFailureCode",
+    "IngestionSuccess",
     "InvalidQualityInputError",
     "QualityContext",
+    "NormalizationError",
+    "NormalizationErrorCode",
     "SourceClassification",
     "ValidationContext",
     "ValidationIssue",

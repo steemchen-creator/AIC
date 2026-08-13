@@ -111,5 +111,35 @@ OFFICIAL_EXCHANGE/LICENSED_VENDOR/PUBLIC_FINANCIAL_API/DERIVED_SOURCE/UNKNOWN =
 second deduction. Quality is associated separately from Canonical Record identity, so
 reassessment at another reference time never changes `record_id`.
 
-Phase 4 through Phase 7 remain unstarted. No normalization/ingestion pipeline,
-persistence, reconciliation or real Provider exists.
+Phase 4 is implemented as described below. Phase 5 through Phase 7 remain unstarted;
+no persistence, reconciliation or real Provider exists.
+
+## Phase 4 implementation: Normalization and Ingestion Pipeline
+
+Phase 4 introduces a source-specific normalization boundary and a deterministic
+orchestrator:
+
+```text
+RawObservation -> FixtureDailyBarNormalizer -> DailyBar
+  -> Phase 2 Validation -> Phase 3 Quality -> IngestionSuccess | IngestionFailure
+```
+
+`DataNormalizer[T]` is the narrow normalization contract. The only implementation is
+the explicitly named fixture normalizer, registered through an explicit mapping rather
+than discovery or dynamic imports. It parses fixture fields, preserves the source
+market `trading_date`, requires timezone-aware event/provider timestamps, uses exact
+Decimal conversion, reuses `InstrumentIdentity`, and never repairs financial values.
+
+The resulting provenance retains the Raw Observation provider, canonical payload hash,
+source metadata and failover attribution. Its stable `transformation_version` is the
+actual normalizer version. The deterministic financial `record_id` remains independent
+of the execution-level `ingestion_id` and quality reference time.
+
+`DataIngestionPipeline` only sequences Normalize, Validate and Assess. Validation
+failure stops before Quality. Expected source-data errors become immutable structured
+failures; unexpected programming errors propagate. Quality policy and OHLC rules remain
+owned exclusively by the Phase 3 and Phase 2 engines.
+
+Phase 5 persistence has not started. There is no repository adapter, database or
+migration change, network I/O, real Provider, retry, reconciliation or strategy logic,
+and SPEC-003 Provider Runtime remains unchanged.

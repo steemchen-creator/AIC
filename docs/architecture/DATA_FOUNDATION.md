@@ -193,5 +193,30 @@ Assessment is separate from financial-fact identity. A record can be reassessed 
 with a different freshness result while retaining the same `record_id`. This package
 does not import or affect SPEC-003 Provider Runtime Quality Score or Selector.
 
-Phase 4 normalization and ingestion, persistence, real providers and reconciliation
-remain outside the architecture.
+Persistence, real providers and reconciliation remain outside the architecture.
+
+## SPEC-004 Phase 4: Normalization and Ingestion
+
+Phase 4 adds two flat modules because each currently has one cohesive responsibility:
+
+```text
+data_foundation/
+|-- normalization.py  DataNormalizer, stable errors, fixture DailyBar mapping
+`-- ingestion.py      immutable outcomes and Raw-to-Canonical orchestration
+```
+
+Every source output enters as the Phase 1 `RawObservation`. The fixture normalizer is a
+Provider-specific boundary, not a real Provider adapter. It converts explicitly known
+raw field names to source-neutral Domain names, parses exact values, and constructs
+provenance with the observation hash and its own stable transformation version. Raw
+field names do not appear in canonical Domain model fields.
+
+The pipeline owns control flow only. It uses injected existing Phase 2 and Phase 3
+contracts and an explicit normalizer allowlist. It neither contains OHLC rules nor
+quality weights. Invalid normalization or validation produces a typed failure and
+prevents later stages; invariant/programming failures are not hidden.
+
+The service is synchronous, deterministic, immutable and I/O-free. It does not depend
+on Presentation, Infrastructure, concrete Providers or Provider Runtime internals.
+`ingestion_id` identifies one execution; the canonical `record_id` identifies the
+financial fact. Persistence/idempotent writes belong to Phase 5 and are not present.

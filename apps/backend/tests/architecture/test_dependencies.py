@@ -238,6 +238,71 @@ def test_data_quality_engine_is_pure_and_separate_from_provider_runtime_score() 
     assert not {operation for operation in forbidden_operations if operation in source}
 
 
+def test_normalization_and_ingestion_keep_phase_4_boundaries() -> None:
+    phase_4_paths = (
+        PACKAGE_ROOT / "data_foundation/normalization.py",
+        PACKAGE_ROOT / "data_foundation/ingestion.py",
+    )
+    imports: set[str] = set()
+    for path in phase_4_paths:
+        imports.update(imported_modules(path))
+
+    forbidden_imports = (
+        "aic_backend.bootstrap",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.provider_runtime",
+        "aic_backend.providers",
+        "asyncpg",
+        "fastapi",
+        "httpx",
+        "redis",
+        "requests",
+        "sqlalchemy",
+        "urllib.request",
+    )
+    assert not {module for module in imports if module.startswith(forbidden_imports)}
+
+    ingestion_imports = imported_modules(phase_4_paths[1])
+    assert "aic_backend.data_foundation.validation" in ingestion_imports
+    assert "aic_backend.data_foundation.quality" in ingestion_imports
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in phase_4_paths
+    ).casefold()
+    forbidden_operations = (
+        "open(",
+        "socket.",
+        "urlopen(",
+        "providerselector",
+        "lifecyclemanager",
+        "healthmanager",
+        "failovermanager",
+        "canonicaldatarepository",
+        "freshness_weight",
+        "source_weight",
+        "daily_bar_high_invalid",
+        "daily_bar_low_invalid",
+    )
+    assert not {operation for operation in forbidden_operations if operation in source}
+
+
+def test_fixture_raw_field_names_do_not_leak_into_market_domain_models() -> None:
+    model_source = (PACKAGE_ROOT / "domain/market_data/models.py").read_text(
+        encoding="utf-8"
+    )
+    model_tree = ast.parse(model_source)
+    declared_fields = {
+        node.target.id
+        for node in ast.walk(model_tree)
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
+    }
+
+    assert not declared_fields.intersection(
+        {"ticker", "trade_day", "o", "h", "l", "c", "vol", "amount"}
+    )
+
+
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:
     callers = {
         path.name

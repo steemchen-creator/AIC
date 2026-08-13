@@ -112,3 +112,32 @@ each remain at least 95% covered.
   --cov=aic_backend.data_foundation.quality `
   --cov-report=term-missing
 ```
+
+## SPEC-004 Phase 4 verification
+
+Pipeline tests cover the fixture DailyBar end-to-end path, stable structured parsing
+errors, unsupported records, validation short-circuiting, quality-input failure,
+failover provenance/flag propagation, explicit conflict context and reference-time
+reassessment without record identity changes.
+
+Determinism tests repeat the pipeline 100 times, reorder raw mapping keys, and prove no
+mutation of raw payloads or quality context. Boundary cases cover missing/invalid
+numbers, dates, timezone awareness, source metadata types, invalid OHLC, negative
+volume, no auto-correction and propagation of unexpected programming errors.
+
+Architecture tests prohibit network/database/filesystem writes, real Provider SDKs,
+Presentation, Infrastructure and Provider Runtime internals. They also verify use of
+the existing Validation and Quality engines, absence of copied formulas/OHLC rules, and
+that fixture raw field names do not leak into Domain model fields. Normalization and
+ingestion core modules must each remain at least 95% covered.
+
+```powershell
+.venv\Scripts\python.exe -m pytest `
+  apps/backend/tests/data_foundation/test_ingestion_pipeline.py `
+  --cov=aic_backend.data_foundation.normalization `
+  --cov=aic_backend.data_foundation.ingestion `
+  --cov-report=term-missing
+```
+
+Phase 4 has no database, migration, network, persistence, retry, reconciliation or real
+Provider acceptance test because those capabilities are explicitly outside scope.
