@@ -182,9 +182,15 @@ Release build: **Passed; 0 warnings and 0 errors**.
 
 ## 28. GitHub Actions
 
-Status at document creation: **Pending publication**. PR #5 Governance, Backend and
-Desktop jobs must pass on the Phase 3 commit before handoff; evidence will be recorded
-after completion.
+Draft PR #5 CI run
+[`31678775184`](https://github.com/steemchen-creator/AIC/actions/runs/31678775184):
+
+- Governance baseline: **Passed** in 5s.
+- Backend tests: **Passed** in 37s.
+- Desktop build: **Passed** in 50s.
+
+This run verified Phase 3 implementation commit `cba368b`. The evidence-only document
+commit remains subject to the same required checks before final handoff.
 
 ## 29. Known Limitations
 
