@@ -8,6 +8,12 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-004 Phase 3 deterministic Data Quality Engine with fixed explainable weighting,
+  immutable assessments/flags and validated-input enforcement.
+- DailyBar freshness, completeness, consistency and configurable source-confidence
+  policies plus exact Decimal conflict representation without reconciliation.
+- Quality identity-stability, no-mutation, 100-run determinism, 10,000-assessment and
+  architecture-isolation tests without changing Provider Runtime Quality Score.
 - SPEC-004 Phase 2 deterministic Validation Engine with immutable issues/results,
   injected-clock timestamp rules and explicit CanonicalRecord/DailyBar dispatch.
 - Structural validation for schema, timestamps, instruments, provenance and safe

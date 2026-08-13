@@ -142,10 +142,13 @@ def test_real_data_foundation_phase_1_has_no_outer_or_future_dependencies() -> N
     assert not {module for module in data_imports if module.startswith(forbidden)}
     assert not {module for module in market_domain_imports if module.startswith(forbidden)}
 
+    phase_1_paths = (
+        PACKAGE_ROOT / "data_foundation/canonical.py",
+        PACKAGE_ROOT / "data_foundation/identity.py",
+        *(PACKAGE_ROOT / "domain/market_data").rglob("*.py"),
+    )
     phase_1_source = "\n".join(
-        path.read_text(encoding="utf-8")
-        for root in (PACKAGE_ROOT / "data_foundation", PACKAGE_ROOT / "domain/market_data")
-        for path in root.rglob("*.py")
+        path.read_text(encoding="utf-8") for path in phase_1_paths
     ).casefold()
     forbidden_concepts = (
         "fastapi",
@@ -189,6 +192,44 @@ def test_validation_engine_is_pure_and_has_no_phase_3_or_adapter_dependencies() 
     forbidden_operations = (
         "qualityengine",
         "qualityscore",
+        "canonicaldatarepository",
+        "open(",
+        "socket.",
+        "urlopen(",
+    )
+    assert not {operation for operation in forbidden_operations if operation in source}
+
+
+def test_data_quality_engine_is_pure_and_separate_from_provider_runtime_score() -> None:
+    quality_root = PACKAGE_ROOT / "data_foundation/quality"
+    imports: set[str] = set()
+    source_parts: list[str] = []
+    for path in quality_root.rglob("*.py"):
+        imports.update(imported_modules(path))
+        source_parts.append(path.read_text(encoding="utf-8"))
+
+    forbidden_imports = (
+        "aic_backend.bootstrap",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.provider_runtime",
+        "aic_backend.providers",
+        "asyncpg",
+        "fastapi",
+        "httpx",
+        "redis",
+        "requests",
+        "sqlalchemy",
+        "urllib.request",
+    )
+    assert not {module for module in imports if module.startswith(forbidden_imports)}
+
+    source = "\n".join(source_parts).casefold()
+    forbidden_operations = (
+        "providerselector",
+        "qualityscorer",
+        "normalizationpipeline",
+        "ingestionpipeline",
         "canonicaldatarepository",
         "open(",
         "socket.",

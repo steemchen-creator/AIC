@@ -88,3 +88,27 @@ coupling. There are no Warning rules in Phase 2.
   --cov=aic_backend.data_foundation.validation `
   --cov-report=term-missing
 ```
+
+## SPEC-004 Phase 3 verification
+
+Quality tests cover score clamp/rounding, immutable sorted unique flags, every source
+classification and unknown fallback, DailyBar fresh/middle/stale thresholds, future
+and naive reference inputs, optional/unavailable completeness, INCOMPLETE distinction,
+fallback and unknown-source annotations, exact Decimal conflict detection, affected-
+field consistency and absence of winner/average behavior.
+
+Assessor tests require successful Validation, compare reassessment at different
+reference times without record-ID change, prove no mutation of record/provenance/context
+or conflicts, repeat a full assessment 100 times, and run 10,000 pure assessments
+without a flaky wall-clock SLA.
+
+Architecture tests prohibit Provider Runtime QualityScorer/Selector, concrete Provider,
+Infrastructure, Presentation, FastAPI, HTTP, database, filesystem writes, real SDK,
+Persistence and Phase 4 Pipeline coupling. Data Quality core and DailyBar assessor must
+each remain at least 95% covered.
+
+```powershell
+.venv\Scripts\python.exe -m pytest apps/backend/tests/data_foundation `
+  --cov=aic_backend.data_foundation.quality `
+  --cov-report=term-missing
+```

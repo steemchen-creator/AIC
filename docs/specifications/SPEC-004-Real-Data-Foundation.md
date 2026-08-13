@@ -85,3 +85,31 @@ there is no plugin scan, reflection or dynamic import.
 
 Phase 3 through Phase 7 remain unstarted. No Data Quality Engine, freshness score,
 conflict resolution, normalization pipeline, persistence or real Provider exists.
+
+## Phase 3 implementation: Data Quality Engine
+
+Phase 3 assesses already validated DailyBar data. The caller must supply a successful
+Phase 2 `ValidationResult`; invalid data is explicitly rejected, and Quality does not
+copy or redefine Validation rules.
+
+The fixed V1 formula is freshness 30%, completeness 25%, consistency 25% and source
+confidence 20%. Scores are clamped to 0–100 and rounded to two decimal places.
+DailyBar freshness is 100 through one day, declines linearly until seven days, and is
+0 plus `STALE` at seven days or later. Reference time is explicit; future events fail.
+
+Completeness supports configured optional and source-unavailable fields. A partial gap
+produces `MISSING_OPTIONAL_FIELD`; a score at or below the incomplete threshold produces
+`INCOMPLETE`. Current typed DailyBar turnover is required, so normal completeness is 100.
+
+Consistency uses exact Decimal conflict values and deducts by affected comparable-field
+ratio. Conflicts are immutable observations; no winner, average or reconciliation is
+produced. Source confidence uses the configurable V1 mapping
+OFFICIAL_EXCHANGE/LICENSED_VENDOR/PUBLIC_FINANCIAL_API/DERIVED_SOURCE/UNKNOWN =
+100/90/70/50/30. These are AIC policy inputs, not objective vendor claims.
+
+`SOURCE_FALLBACK` and `UNKNOWN_SOURCE_TIMESTAMP` are annotations and do not cause a
+second deduction. Quality is associated separately from Canonical Record identity, so
+reassessment at another reference time never changes `record_id`.
+
+Phase 4 through Phase 7 remain unstarted. No normalization/ingestion pipeline,
+persistence, reconciliation or real Provider exists.

@@ -161,3 +161,37 @@ timezone registry is introduced.
 
 Validation and Quality remain separate: Phase 2 decides legality; Phase 3 will assess
 freshness, completeness, source confidence and conflicts for already legal data.
+
+## SPEC-004 Phase 3: Data Quality Engine
+
+The Quality Engine contains immutable models, centralized component policies, exact
+conflict detection and a DailyBar assessor. It requires a successful Phase 2
+ValidationResult and performs synchronous pure calculation only.
+
+```text
+validated DailyBar + reference time + QualityContext
+  -> FreshnessPolicy
+  -> CompletenessPolicy
+  -> Consistency policy / conflicts
+  -> Source Confidence policy
+  -> immutable DataQualityAssessment
+```
+
+The weighted score is 30% freshness, 25% completeness, 25% consistency and 20% source
+confidence, clamped and rounded to two decimals. Flags are stable, sorted and unique.
+STALE, INCOMPLETE and CONFLICTING_SOURCE reflect component outcomes; SOURCE_FALLBACK
+and UNKNOWN_SOURCE_TIMESTAMP are annotations without duplicate deductions.
+SUSPICIOUS_VALUE is reserved but never automatically triggered without evidence.
+
+Freshness uses an explicit reference time and one centralized DailyBar policy (one-day
+fresh threshold, seven-day stale threshold). It does not infer weekends, holidays,
+suspensions or trading calendars. Completeness distinguishes optional fields from
+source-declared unavailable fields. Consistency represents exact Decimal disagreements
+without choosing or synthesizing a value.
+
+Assessment is separate from financial-fact identity. A record can be reassessed later
+with a different freshness result while retaining the same `record_id`. This package
+does not import or affect SPEC-003 Provider Runtime Quality Score or Selector.
+
+Phase 4 normalization and ingestion, persistence, real providers and reconciliation
+remain outside the architecture.
