@@ -219,4 +219,25 @@ prevents later stages; invariant/programming failures are not hidden.
 The service is synchronous, deterministic, immutable and I/O-free. It does not depend
 on Presentation, Infrastructure, concrete Providers or Provider Runtime internals.
 `ingestion_id` identifies one execution; the canonical `record_id` identifies the
-financial fact. Persistence/idempotent writes belong to Phase 5 and are not present.
+financial fact. Persistence/idempotent writes are added by the Phase 5 boundary below.
+
+## SPEC-004 Phase 5: Persistence boundary
+
+The Application layer owns `CanonicalDailyBarRepository`; Infrastructure implements it
+with PostgreSQL. Domain and Data Foundation contain no SQLAlchemy, asyncpg or Alembic
+imports. The minimal orchestration is:
+
+```text
+IngestionSuccess -> PersistIngestionSuccess -> CanonicalDailyBarRepository
+                                           -> PostgreSQL adapter
+```
+
+One denormalized canonical table stores DailyBar, Provenance and the first ingestion
+Quality Snapshot in one transaction. This avoids a partial three-table aggregate while
+retaining explicit columns and exact types. The primary key is the final concurrency
+and idempotency guard. Duplicate writes never update the stored fact or quality.
+
+Full raw payload is deliberately not retained in V1. Audit linkage retains
+`observation_id`, provider/source identity and the canonical Phase 1 SHA-256 payload
+hash. Connection ownership belongs to the injected async SQLAlchemy engine; callers
+dispose engines at application/test lifecycle boundaries.

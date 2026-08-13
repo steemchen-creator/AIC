@@ -303,6 +303,60 @@ def test_fixture_raw_field_names_do_not_leak_into_market_domain_models() -> None
     )
 
 
+def test_phase_5_persistence_technology_stays_in_infrastructure() -> None:
+    pure_packages = (
+        "domain/market_data",
+        "data_foundation/validation",
+        "data_foundation/quality",
+    )
+    pure_files = (
+        PACKAGE_ROOT / "data_foundation/normalization.py",
+        PACKAGE_ROOT / "data_foundation/ingestion.py",
+    )
+    forbidden = ("alembic", "asyncpg", "psycopg", "sqlalchemy")
+
+    for package in pure_packages:
+        assert not {
+            module
+            for module in package_imports(package)
+            if module.startswith(forbidden)
+        }
+    for path in pure_files:
+        assert not {
+            module for module in imported_modules(path) if module.startswith(forbidden)
+        }
+
+    adapter = PACKAGE_ROOT / "infrastructure/canonical_persistence.py"
+    adapter_imports = imported_modules(adapter)
+    assert "aic_backend.application.ports.persistence" in adapter_imports
+    assert any(module.startswith("sqlalchemy") for module in adapter_imports)
+    assert not {
+        module
+        for module in adapter_imports
+        if module.startswith(("aic_backend.presentation", "aic_backend.provider_runtime"))
+    }
+
+
+def test_phase_5_does_not_add_future_or_provider_behavior() -> None:
+    paths = (
+        PACKAGE_ROOT / "application/ports/persistence.py",
+        PACKAGE_ROOT / "application/use_cases/persist_ingestion.py",
+        PACKAGE_ROOT / "infrastructure/canonical_persistence.py",
+    )
+    source = "\n".join(path.read_text(encoding="utf-8") for path in paths).casefold()
+    forbidden = (
+        "providerselector",
+        "retryengine",
+        "reconciliation",
+        "investmentstrategy",
+        "fastapi",
+        "redis",
+        "requests",
+        "httpx",
+    )
+    assert not {item for item in forbidden if item in source}
+
+
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:
     callers = {
         path.name

@@ -8,6 +8,10 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-004 Phase 5 Application-owned persistence port, idempotent PostgreSQL adapter,
+  immutable ingestion-time quality snapshots and Alembic schema migration.
+- PostgreSQL contract, concurrency, transaction, read-back and migration tests with
+  exact NUMERIC financial values and stable persistence errors.
 - SPEC-004 Phase 4 deterministic Raw-to-Canonical normalization and ingestion pipeline
   with immutable structured outcomes and explicit fixture-normalizer registration.
 - Provenance-preserving DailyBar parsing plus existing Validation/Quality integration,

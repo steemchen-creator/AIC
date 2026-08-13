@@ -140,6 +140,23 @@ failure stops before Quality. Expected source-data errors become immutable struc
 failures; unexpected programming errors propagate. Quality policy and OHLC rules remain
 owned exclusively by the Phase 3 and Phase 2 engines.
 
-Phase 5 persistence has not started. There is no repository adapter, database or
-migration change, network I/O, real Provider, retry, reconciliation or strategy logic,
-and SPEC-003 Provider Runtime remains unchanged.
+Phase 5 persistence is implemented below. There is still no network I/O, real Provider,
+retry, reconciliation or strategy logic, and SPEC-003 Provider Runtime remains unchanged.
+
+## Phase 5 implementation: Persistence and Idempotent Storage
+
+Phase 5 adds an Application-owned async canonical DailyBar repository port and two
+contract-compatible adapters: an in-memory fake for Application tests and a PostgreSQL
+Infrastructure adapter for production/integration evidence. A separate Application use
+case accepts only Phase 4 outcomes; failed ingestion returns without writing, while a
+successful outcome is persisted without normalization or validation repetition.
+
+The PostgreSQL `canonical_daily_bars` table atomically stores the immutable financial
+fact, provenance and ingestion-time quality snapshot. `record_id` is the primary-key
+idempotency boundary. `INSERT ... ON CONFLICT DO NOTHING` followed by exact fact
+comparison returns `INSERTED` or `ALREADY_EXISTS`; a different fact under the same ID
+raises `PERSISTENCE_IDENTITY_CONFLICT`. No update or last-write-wins path exists.
+
+Prices use `NUMERIC(28,10)`, turnover uses `NUMERIC(38,10)`, and scores use
+`NUMERIC(5,2)`. Alembic owns the reversible schema migration. Phase 6 and real Provider
+selection have not started; Redis is not canonical storage.

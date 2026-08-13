@@ -8,6 +8,7 @@ version = "0.2.0"
 description = "AIC backend data foundation"
 requires-python = ">=3.12"
 dependencies = [
+  "alembic>=1.16,<2",
   "asyncpg>=0.30,<1",
   "celery[redis]>=5.5,<6",
   "fastapi>=0.116,<1",
@@ -52,7 +53,7 @@ files = ["apps/backend/src/aic_backend"]
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["celery"]
+module = ["alembic", "celery"]
 ignore_missing_imports = true
 
 [tool.coverage.run]

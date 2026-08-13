@@ -141,3 +141,15 @@ ingestion core modules must each remain at least 95% covered.
 
 Phase 4 has no database, migration, network, persistence, retry, reconciliation or real
 Provider acceptance test because those capabilities are explicitly outside scope.
+
+## SPEC-004 Phase 5 verification
+
+Shared repository semantics cover first insert, identical duplicate, immutable first
+quality snapshot, read-back and identity conflict. PostgreSQL tests additionally cover
+concurrent duplicate writers, exact Decimal/date/time/instrument/provenance/flags round
+trip, numeric-overflow rollback, safe unavailable errors, row count and repeatable
+Alembic migration.
+
+CI runs a PostgreSQL 17 service, executes `alembic upgrade head`, then the full pytest,
+coverage, Ruff and Mypy gates. SQLite is not used as integration evidence. Application
+tests prove normalization/validation failure outcomes cause zero repository writes.
