@@ -31,6 +31,14 @@ from aic_backend.infrastructure.canonical_persistence import (
 NOW = datetime(2026, 1, 2, tzinfo=UTC)
 
 
+def migration_environment() -> dict[str, str]:
+    environment = os.environ.copy()
+    for name in tuple(environment):
+        if name.startswith("COV_CORE_") or name == "COVERAGE_PROCESS_START":
+            del environment[name]
+    return environment
+
+
 def stored(*, close: str = "10.20", quality: float = 100.0) -> PersistedDailyBar:
     provenance = DataProvenance(
         "fixture", "source-1", "https://fixture.test/1", NOW, True, 1, "a" * 64, "v1"
@@ -48,7 +56,7 @@ def stored(*, close: str = "10.20", quality: float = 100.0) -> PersistedDailyBar
 @pytest.fixture
 async def engine() -> AsyncEngine:
     url = os.environ["AIC_DATABASE_URL"]
-    subprocess.run(["alembic", "upgrade", "head"], check=True, env=os.environ.copy())
+    subprocess.run(["alembic", "upgrade", "head"], check=True, env=migration_environment())
     value = create_async_engine(url, pool_pre_ping=True)
     async with value.begin() as connection:
         await connection.execute(delete(canonical_daily_bars))
@@ -120,5 +128,5 @@ async def test_unavailable_database_error_is_safe() -> None:
 
 
 def test_migration_is_repeatable() -> None:
-    subprocess.run(["alembic", "upgrade", "head"], check=True, env=os.environ.copy())
-    subprocess.run(["alembic", "upgrade", "head"], check=True, env=os.environ.copy())
+    subprocess.run(["alembic", "upgrade", "head"], check=True, env=migration_environment())
+    subprocess.run(["alembic", "upgrade", "head"], check=True, env=migration_environment())

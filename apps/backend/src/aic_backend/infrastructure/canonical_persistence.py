@@ -201,7 +201,7 @@ class PostgreSQLCanonicalDailyBarRepository(CanonicalDailyBarRepository):
             raise PersistenceError(
                 PersistenceErrorCode.CONSTRAINT_VIOLATION, "persistence constraint rejected data"
             ) from error
-        except DBAPIError as error:
+        except (DBAPIError, OSError) as error:
             raise PersistenceError(
                 PersistenceErrorCode.UNAVAILABLE, "canonical persistence is unavailable"
             ) from error
@@ -225,7 +225,7 @@ class PostgreSQLCanonicalDailyBarRepository(CanonicalDailyBarRepository):
                     )
                 ).mappings().one_or_none()
             return None if row is None else _stored(row)
-        except DBAPIError as error:
+        except (DBAPIError, OSError) as error:
             raise PersistenceError(
                 PersistenceErrorCode.UNAVAILABLE, "canonical persistence is unavailable"
             ) from error
