@@ -60,3 +60,28 @@ real Provider, retry, circuit breaker, UI, strategy, recommendation or AI behavi
 
 `DataCapability` is a source-neutral data-domain enum. A later approved adapter may
 map it to a Provider Runtime capability without making Domain depend on Runtime.
+
+## Phase 2 implementation: Validation Engine
+
+Phase 2 adds synchronous, pure validation for `CanonicalRecord` and `DailyBar`
+candidates. Validation answers whether a candidate is structurally and semantically
+legal; it does not score the quality of a legal record.
+
+`ValidationIssue` carries a stable uppercase code, `ERROR` or `WARNING` severity,
+optional field and fixed audit message. `ValidationResult.valid` is derived from the
+absence of errors, so contradictory states cannot be constructed. Issues are sorted by
+field and code for deterministic output. Phase 2 defines Warning support but no Warning
+rules, avoiding premature overlap with Phase 3 Quality flags.
+
+Structural rules cover required identifiers, supported schema version, timezone-aware
+timestamps, injected-clock future skew, instrument identity, provenance, immutable safe
+payload vocabulary and DailyBar field types. Semantic DailyBar rules enforce OHLC
+bounds, non-negative prices, volume and turnover. Zero values remain allowed.
+
+Validation only reports issues. It never changes, rounds, fills, repairs or infers a
+candidate field. It performs no I/O and does not catch programming errors as data
+issues. The current service dispatches the two supported Domain record types explicitly;
+there is no plugin scan, reflection or dynamic import.
+
+Phase 3 through Phase 7 remain unstarted. No Data Quality Engine, freshness score,
+conflict resolution, normalization pipeline, persistence or real Provider exists.

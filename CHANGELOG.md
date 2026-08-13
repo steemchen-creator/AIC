@@ -8,6 +8,12 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-004 Phase 2 deterministic Validation Engine with immutable issues/results,
+  injected-clock timestamp rules and explicit CanonicalRecord/DailyBar dispatch.
+- Structural validation for schema, timestamps, instruments, provenance and safe
+  payloads plus DailyBar OHLC, non-negative price, volume and turnover rules.
+- Validation purity, determinism, no-auto-correction, architecture-boundary and
+  10,000-record calculation tests without introducing Quality or persistence.
 - SPEC-004 Phase 1 immutable real-data models for market-qualified instruments,
   canonical envelopes, typed daily bars, raw observations and source provenance.
 - Deterministic SHA-256 record identity and canonical raw-payload hashing with

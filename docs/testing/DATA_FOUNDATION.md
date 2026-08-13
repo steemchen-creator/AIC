@@ -65,3 +65,26 @@ Phase 1 core coverage is measured separately and must remain at least 95%:
 The full repository gate also runs pytest with configured branch coverage, Ruff,
 Mypy strict, architecture tests, the WPF Release build, `git diff --check`, and CI.
 There are no network, database or real-Provider tests in Phase 1.
+
+## SPEC-004 Phase 2 verification
+
+Validation tests cover immutable issues/results, severity classification, derived
+validity, deterministic ordering, schema support, required fields, timezone offsets,
+naive and future timestamps with an injected Clock, instrument identity, provenance,
+credential-bearing URIs and immutable safe payload vocabulary.
+
+DailyBar tests cover every required OHLC relation, negative prices, volume and turnover,
+field type failures, multiple simultaneous errors, stable issue order, unchanged input,
+unchanged Decimal precision, 100 identical repeated results and 10,000 synchronous
+validations without a flaky wall-clock threshold.
+
+The Validation Engine core and `DailyBarValidator` must each remain at least 95%
+covered. Architecture tests reject Runtime, Provider, Infrastructure, Presentation,
+FastAPI, HTTP client, database, filesystem write, dynamic network and Phase 3/Persistence
+coupling. There are no Warning rules in Phase 2.
+
+```powershell
+.venv\Scripts\python.exe -m pytest apps/backend/tests/data_foundation `
+  --cov=aic_backend.data_foundation.validation `
+  --cov-report=term-missing
+```

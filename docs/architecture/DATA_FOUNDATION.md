@@ -128,3 +128,36 @@ Validation, quality scoring, conflict handling, normalization, ingestion, reposi
 ports, persistence and real Provider integration are deferred to reviewed later phases.
 The Phase 1 `CanonicalRecord` therefore does not pretend that a Phase 3 quality
 assessment already exists.
+
+## SPEC-004 Phase 2: Validation Engine
+
+The Validation Engine is a child package of `data_foundation`:
+
+```text
+validation/
+|-- models.py       issue/result/context and Validator/Clock protocols
+|-- candidates.py   structural pre-Domain candidate contracts
+|-- rules.py        pure structural and semantic rules
+|-- validators.py   CanonicalRecord and DailyBar orchestration
+|-- service.py      explicit supported-type dispatch
+`-- __init__.py     public validation surface
+```
+
+Candidate protocols allow parsed external data to be checked before it can satisfy the
+strict Phase 1 constructors. Official Domain models remain unchanged and keep their
+construction invariants. A `ValidationContext` owns the injected Clock, one centralized
+future-skew tolerance and supported schema versions.
+
+Rules return immutable issues and never repair values. Validators collect every
+detectable issue, then produce field/code-sorted immutable results. `valid` is derived
+from the error tuple. The engine is synchronous and contains no network, database,
+Provider Runtime, Infrastructure or Presentation dependency.
+
+Phase 2 deliberately does not enforce `event_time <= observed_at <= ingested_at`.
+Phase 1 defines the timestamps independently, and Provider observation semantics may
+not justify a universal order without a source-specific contract. This avoids inventing
+a rule. Trading-date calendar validation is also deferred; no holiday service or market
+timezone registry is introduced.
+
+Validation and Quality remain separate: Phase 2 decides legality; Phase 3 will assess
+freshness, completeness, source confidence and conflicts for already legal data.

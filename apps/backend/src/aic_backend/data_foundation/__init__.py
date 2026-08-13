@@ -5,5 +5,25 @@ from aic_backend.data_foundation.identity import (
     deterministic_record_id,
     raw_payload_hash,
 )
+from aic_backend.data_foundation.validation import (
+    CanonicalRecordValidator,
+    DailyBarValidator,
+    DataValidationService,
+    ValidationContext,
+    ValidationIssue,
+    ValidationResult,
+    ValidationSeverity,
+)
 
-__all__ = ["create_raw_observation", "deterministic_record_id", "raw_payload_hash"]
+__all__ = [
+    "CanonicalRecordValidator",
+    "DailyBarValidator",
+    "DataValidationService",
+    "ValidationContext",
+    "ValidationIssue",
+    "ValidationResult",
+    "ValidationSeverity",
+    "create_raw_observation",
+    "deterministic_record_id",
+    "raw_payload_hash",
+]
