@@ -35,3 +35,33 @@ from `/data/missing`.
 
 No real provider, performance, load, schema migration, persistence, market,
 financial, news, AI, strategy, or portfolio test belongs to TASK-002.
+
+## SPEC-004 Phase 1 verification
+
+Phase 1 tests cover:
+
+- market-qualified instrument identity and instrument-type distinction;
+- timezone acceptance, naive-time rejection and deterministic UTC conversion;
+- preservation of event, observed, ingested and market trading-date semantics;
+- deterministic record IDs across equivalent time zones and repeated calls;
+- identity changes for market, instrument, event time, record type and discriminator;
+- canonical SHA-256 raw hashing independent of mapping key order;
+- immutable nested payload and source metadata values;
+- complete provenance attribution and rejection of credential-bearing URIs;
+- exact `Decimal` price/turnover behavior and integer volume;
+- typed `DailyBar` construction without Phase 2 OHLC validation;
+- architecture isolation from Runtime, FastAPI, Infrastructure, network, database,
+  Validation, Quality and Persistence implementations.
+
+Phase 1 core coverage is measured separately and must remain at least 95%:
+
+```powershell
+.venv\Scripts\python.exe -m pytest apps/backend/tests/data_foundation `
+  --cov=aic_backend.data_foundation `
+  --cov=aic_backend.domain.market_data `
+  --cov-report=term-missing
+```
+
+The full repository gate also runs pytest with configured branch coverage, Ruff,
+Mypy strict, architecture tests, the WPF Release build, `git diff --check`, and CI.
+There are no network, database or real-Provider tests in Phase 1.

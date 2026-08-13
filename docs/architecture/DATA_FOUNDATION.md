@@ -76,3 +76,55 @@ The backend import root moves to `apps/backend/src/aic_backend`. Docker, tests,
 and CI install this package through `pyproject.toml`; the HTTP behavior from
 Checkpoint 1 remains compatible. Rollback is a revert of the TASK-002 commits;
 there is no database or persisted-data migration.
+
+## SPEC-004 Phase 1: real-data domain foundation
+
+SPEC-004 extends, rather than replaces, the TASK-002 boundary. The compatibility
+`DataRecord` remains unchanged. New source-neutral types live under
+`domain/market_data`, while deterministic hashing and construction helpers live under
+`data_foundation`:
+
+```text
+domain/market_data/
+|-- enums.py       market, instrument-type and data-capability codes
+|-- errors.py      stable invariant failures
+|-- models.py      instrument, provenance, raw, canonical and DailyBar values
+`-- __init__.py    public domain surface
+
+data_foundation/
+|-- identity.py    deterministic record ID and canonical raw hashing
+|-- canonical.py   Raw Observation construction
+`-- __init__.py    public helper surface
+```
+
+Domain remains standard-library-only and does not depend on Provider Runtime.
+`data_foundation` may depend inward on market-data Domain but not on FastAPI,
+Infrastructure, Provider Runtime, network or database code.
+
+### Identity and time
+
+An instrument is identified by market, symbol and instrument type. The canonical key
+uses the market-qualified form such as `CN.SSE.600519`; the type is retained in the
+record identity input. A record ID is SHA-256 over a versioned canonical serialization
+of instrument key/type, record type, UTC event time and a domain discriminator.
+
+`event_time`, `observed_at` and `ingested_at` are independent, timezone-aware values
+normalized to UTC. `DailyBar.trading_date` retains the source market's calendar date
+and is not inferred from UTC.
+
+### Immutability and provenance
+
+Models are frozen, slotted dataclasses. Mappings are recursively copied and exposed as
+immutable mappings; sequences become tuples. Unsupported opaque payload objects are
+rejected. Raw payload hashes use type-delimited SHA-256 and canonical key ordering.
+
+Every canonical value carries Provider ID, optional source ID/URI/timestamp, failover
+attribution, raw hash and transformation version. Credentials are not model fields,
+and source URIs containing user information or common secret query keys are rejected.
+
+### Deferred capabilities
+
+Validation, quality scoring, conflict handling, normalization, ingestion, repository
+ports, persistence and real Provider integration are deferred to reviewed later phases.
+The Phase 1 `CanonicalRecord` therefore does not pretend that a Phase 3 quality
+assessment already exists.

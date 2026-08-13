@@ -29,6 +29,7 @@ apps/backend/
 |   |-- presentation/    HTTP boundary
 |   |-- application/     Use cases and outbound ports
 |   |-- domain/          Framework-independent models and events
+|   |-- data_foundation/ Deterministic real-data identity and construction helpers
 |   |-- providers/       Data-source adapters
 |   |-- infrastructure/  Repository, cache, event, and operational adapters
 |   |-- bootstrap/       Dependency composition
@@ -96,7 +97,8 @@ docs/       Architecture and development documentation
 Detailed Data Foundation contracts are under [docs/architecture](docs/architecture/README.md),
 [docs/api](docs/api/README.md), and [docs/testing](docs/testing/README.md).
 
-SPEC-003 currently includes framework-independent Provider Runtime models and
-protocols, an in-process Registry, an explicit allowlist Factory, and lifecycle
-and health management. Selection, invocation, failover, and HTTP integration
-remain intentionally inactive until their reviewed phases.
+SPEC-003 Provider Runtime V1.0 is merged and includes registration, lifecycle,
+health, selection, scoring, invocation and bounded failover. SPEC-004 Phase 1 adds
+source-neutral canonical market-data models, provenance, strict timestamp semantics,
+deterministic identity and raw hashing. Validation, quality, persistence and real
+Provider integration remain intentionally deferred.

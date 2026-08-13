@@ -23,7 +23,16 @@ def package_imports(package: str) -> set[str]:
 
 
 def test_domain_uses_standard_library_only() -> None:
-    allowed_roots = {"collections", "dataclasses", "datetime", "types", "typing"}
+    allowed_roots = {
+        "collections",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "types",
+        "typing",
+        "urllib",
+    }
     external_imports = {
         module
         for module in package_imports("domain")
@@ -113,6 +122,42 @@ def test_provider_runtime_does_not_depend_on_outer_layers() -> None:
         for module in package_imports("provider_runtime")
         if module.startswith(forbidden)
     }
+
+
+def test_real_data_foundation_phase_1_has_no_outer_or_future_dependencies() -> None:
+    forbidden = (
+        "aic_backend.bootstrap",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.provider_runtime",
+        "fastapi",
+        "pydantic",
+        "sqlalchemy",
+        "redis",
+        "celery",
+    )
+    data_imports = package_imports("data_foundation")
+    market_domain_imports = package_imports("domain/market_data")
+
+    assert not {module for module in data_imports if module.startswith(forbidden)}
+    assert not {module for module in market_domain_imports if module.startswith(forbidden)}
+
+    phase_1_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for root in (PACKAGE_ROOT / "data_foundation", PACKAGE_ROOT / "domain/market_data")
+        for path in root.rglob("*.py")
+    ).casefold()
+    forbidden_concepts = (
+        "fastapi",
+        "httpx",
+        "requests",
+        "sqlalchemy",
+        "asyncpg",
+        "validationengine",
+        "qualityengine",
+        "canonicaldatarepository",
+    )
+    assert not {concept for concept in forbidden_concepts if concept in phase_1_source}
 
 
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:

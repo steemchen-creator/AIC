@@ -8,6 +8,12 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-004 Phase 1 immutable real-data models for market-qualified instruments,
+  canonical envelopes, typed daily bars, raw observations and source provenance.
+- Deterministic SHA-256 record identity and canonical raw-payload hashing with
+  timezone-safe semantics, Decimal financial values and deep immutable mappings.
+- Automated SPEC-004 Phase 1 architecture boundaries and identity, timestamp,
+  provenance, hashing, immutability and serialization tests.
 - SPEC-003 Provider Runtime immutable models, lifecycle and invocation
   protocols, stable errors, and injectable UTC clock and UUID generation.
 - ADR-0003 and automated Provider Runtime dependency boundaries.
