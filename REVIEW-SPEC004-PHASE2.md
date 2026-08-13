@@ -167,9 +167,15 @@ Result: **Passed — 0 warnings and 0 errors.**
 
 ## 22. GitHub Actions
 
-Status at document creation: **Pending publication**. PR #5 must pass Governance,
-Backend tests and Desktop build on the Phase 2 commit before handoff. The run evidence
-will be recorded after CI completes.
+Draft PR #5 CI run
+[`31677549949`](https://github.com/steemchen-creator/AIC/actions/runs/31677549949):
+
+- Governance baseline: **Passed** in 6s.
+- Backend tests: **Passed** in 36s.
+- Desktop build: **Passed** in 54s.
+
+This run verified Phase 2 implementation commit `1bcfaae`. The evidence-only document
+commit remains subject to the same required checks before final handoff.
 
 ## 23. Known Limitations
 
