@@ -7,6 +7,7 @@ from decimal import Decimal
 
 import pytest
 from sqlalchemy import delete, func, select
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from aic_backend.application.ports import (
@@ -25,6 +26,7 @@ from aic_backend.domain.market_data import (
 )
 from aic_backend.infrastructure.canonical_persistence import (
     PostgreSQLCanonicalDailyBarRepository,
+    _translate_error,
     canonical_daily_bars,
 )
 
@@ -123,6 +125,9 @@ async def test_unavailable_database_error_is_safe() -> None:
             await PostgreSQLCanonicalDailyBarRepository(engine).save(stored())
         assert captured.value.code is PersistenceErrorCode.UNAVAILABLE
         assert "secret-value" not in str(captured.value)
+        with pytest.raises(PersistenceError) as read_captured:
+            await PostgreSQLCanonicalDailyBarRepository(engine).get_by_record_id("record-1")
+        assert read_captured.value.code is PersistenceErrorCode.UNAVAILABLE
     finally:
         await engine.dispose()
 
@@ -130,3 +135,27 @@ async def test_unavailable_database_error_is_safe() -> None:
 def test_migration_is_repeatable() -> None:
     subprocess.run(["alembic", "upgrade", "head"], check=True, env=migration_environment())
     subprocess.run(["alembic", "upgrade", "head"], check=True, env=migration_environment())
+
+
+@pytest.mark.parametrize(
+    ("error", "reading", "code"),
+    [
+        (
+            IntegrityError("insert", {}, Exception("constraint")),
+            False,
+            PersistenceErrorCode.CONSTRAINT_VIOLATION,
+        ),
+        (ValueError("invalid"), False, PersistenceErrorCode.SERIALIZATION_ERROR),
+        (TypeError("invalid"), True, PersistenceErrorCode.SERIALIZATION_ERROR),
+        (SQLAlchemyError("transaction"), False, PersistenceErrorCode.TRANSACTION_ERROR),
+        (SQLAlchemyError("transaction"), True, PersistenceErrorCode.TRANSACTION_ERROR),
+    ],
+)
+def test_error_translation_is_stable_and_sanitized(
+    error: SQLAlchemyError | ValueError | TypeError,
+    reading: bool,
+    code: PersistenceErrorCode,
+) -> None:
+    translated = _translate_error(error, reading=reading)
+    assert translated.code is code
+    assert "insert" not in str(translated)

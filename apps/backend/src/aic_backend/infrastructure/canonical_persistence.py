@@ -197,22 +197,8 @@ class PostgreSQLCanonicalDailyBarRepository(CanonicalDailyBarRepository):
                 return SaveResult(SaveStatus.ALREADY_EXISTS, value.record.record_id)
         except PersistenceError:
             raise
-        except IntegrityError as error:
-            raise PersistenceError(
-                PersistenceErrorCode.CONSTRAINT_VIOLATION, "persistence constraint rejected data"
-            ) from error
-        except (DBAPIError, OSError) as error:
-            raise PersistenceError(
-                PersistenceErrorCode.UNAVAILABLE, "canonical persistence is unavailable"
-            ) from error
-        except (ValueError, TypeError) as error:
-            raise PersistenceError(
-                PersistenceErrorCode.SERIALIZATION_ERROR, "canonical value cannot be serialized"
-            ) from error
-        except SQLAlchemyError as error:
-            raise PersistenceError(
-                PersistenceErrorCode.TRANSACTION_ERROR, "canonical transaction failed"
-            ) from error
+        except (SQLAlchemyError, OSError, ValueError, TypeError) as error:
+            raise _translate_error(error, reading=False) from error
 
     async def get_by_record_id(self, record_id: str) -> PersistedDailyBar | None:
         try:
@@ -225,18 +211,8 @@ class PostgreSQLCanonicalDailyBarRepository(CanonicalDailyBarRepository):
                     )
                 ).mappings().one_or_none()
             return None if row is None else _stored(row)
-        except (DBAPIError, OSError) as error:
-            raise PersistenceError(
-                PersistenceErrorCode.UNAVAILABLE, "canonical persistence is unavailable"
-            ) from error
-        except (ValueError, TypeError) as error:
-            raise PersistenceError(
-                PersistenceErrorCode.SERIALIZATION_ERROR, "stored canonical value is invalid"
-            ) from error
-        except SQLAlchemyError as error:
-            raise PersistenceError(
-                PersistenceErrorCode.TRANSACTION_ERROR, "canonical read transaction failed"
-            ) from error
+        except (SQLAlchemyError, OSError, ValueError, TypeError) as error:
+            raise _translate_error(error, reading=True) from error
 
 
 class InMemoryCanonicalDailyBarRepository(CanonicalDailyBarRepository):
@@ -257,3 +233,26 @@ class InMemoryCanonicalDailyBarRepository(CanonicalDailyBarRepository):
 
     async def get_by_record_id(self, record_id: str) -> PersistedDailyBar | None:
         return self._records.get(record_id)
+
+
+def _translate_error(
+    error: SQLAlchemyError | OSError | ValueError | TypeError, *, reading: bool
+) -> PersistenceError:
+    if isinstance(error, IntegrityError):
+        return PersistenceError(
+            PersistenceErrorCode.CONSTRAINT_VIOLATION,
+            "persistence constraint rejected data",
+        )
+    if isinstance(error, (DBAPIError, OSError)):
+        return PersistenceError(
+            PersistenceErrorCode.UNAVAILABLE, "canonical persistence is unavailable"
+        )
+    if isinstance(error, (ValueError, TypeError)):
+        message = (
+            "stored canonical value is invalid"
+            if reading
+            else "canonical value cannot be serialized"
+        )
+        return PersistenceError(PersistenceErrorCode.SERIALIZATION_ERROR, message)
+    message = "canonical read transaction failed" if reading else "canonical transaction failed"
+    return PersistenceError(PersistenceErrorCode.TRANSACTION_ERROR, message)
