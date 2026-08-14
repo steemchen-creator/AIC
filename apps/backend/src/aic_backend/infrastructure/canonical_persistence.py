@@ -45,7 +45,7 @@ metadata = MetaData()
 canonical_daily_bars = Table(
     "canonical_daily_bars",
     metadata,
-    Column("record_id", String(64), primary_key=True),
+    Column("record_id", String(80), primary_key=True),
     Column("observation_id", String(255), nullable=False),
     Column("schema_version", String(32), nullable=False),
     Column("market", String(32), nullable=False),

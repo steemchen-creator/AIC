@@ -241,3 +241,14 @@ Full raw payload is deliberately not retained in V1. Audit linkage retains
 `observation_id`, provider/source identity and the canonical Phase 1 SHA-256 payload
 hash. Connection ownership belongs to the injected async SQLAlchemy engine; callers
 dispose engines at application/test lifecycle boundaries.
+
+## SPEC-004 Phase 6: first real Provider
+
+The vendor-neutral `IngestDailyBars` use case requests the daily capability through
+Provider Runtime. Each row becomes an immutable RawObservation, then passes Tushare
+normalization, existing Validation, unchanged Quality assessment, and the Application
+persistence port. Rows fail independently.
+
+Canonical volume is shares (`vol × 100`); canonical turnover is CNY yuan
+(`amount × 1000`). Daily event time is 15:00 Asia/Shanghai (07:00 UTC), the period
+end rather than a claimed precise last-trade timestamp.

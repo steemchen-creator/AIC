@@ -1,9 +1,11 @@
 import asyncio
 import os
 import subprocess
+from collections.abc import Mapping
 from dataclasses import replace
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from typing import Any
 
 import pytest
 from sqlalchemy import delete, func, select
@@ -16,7 +18,14 @@ from aic_backend.application.ports import (
     PersistenceErrorCode,
     SaveStatus,
 )
-from aic_backend.data_foundation.quality import DataQualityAssessment
+from aic_backend.application.use_cases import IngestDailyBars, PersistIngestionSuccess
+from aic_backend.data_foundation import DataIngestionPipeline
+from aic_backend.data_foundation.quality import (
+    DailyBarQualityAssessor,
+    DataQualityAssessment,
+)
+from aic_backend.data_foundation.tushare_normalization import TushareDailyBarNormalizer
+from aic_backend.data_foundation.validation import DailyBarValidator, ValidationContext
 from aic_backend.domain.market_data import (
     DailyBar,
     DataProvenance,
@@ -29,8 +38,41 @@ from aic_backend.infrastructure.canonical_persistence import (
     _translate_error,
     canonical_daily_bars,
 )
+from aic_backend.provider_runtime import ProviderInvocationResult, ProviderRequestContext
+from aic_backend.providers.tushare import TUSHARE_DAILY
 
 NOW = datetime(2026, 1, 2, tzinfo=UTC)
+RECEIVED = datetime(2026, 1, 3, tzinfo=UTC)
+
+
+class FixedClock:
+    def now(self) -> datetime:
+        return RECEIVED
+
+
+class SequentialIds:
+    def __init__(self) -> None:
+        self.value = 0
+
+    def new_id(self, prefix: str) -> str:
+        self.value += 1
+        return f"{prefix}_{self.value}"
+
+
+class FixtureDailyRuntime:
+    async def execute(
+        self, context: ProviderRequestContext, payload: Mapping[str, Any]
+    ) -> ProviderInvocationResult:
+        del payload
+        row = {
+            "ts_code": "600000.SH", "trade_date": "20260102",
+            "open": "10.1", "high": "10.5", "low": "9.9", "close": "10.2",
+            "vol": "1234", "amount": "1",
+        }
+        return ProviderInvocationResult(
+            context.request_id, "tushare_pro", True, {"rows": [row]}, None,
+            1.0, RECEIVED, RECEIVED,
+        )
 
 
 def migration_environment() -> dict[str, str]:
@@ -77,6 +119,30 @@ async def test_postgresql_round_trip_duplicate_and_first_snapshot(engine: AsyncE
     assert loaded is not None
     assert loaded.record.turnover == Decimal("1010.1234567890")
     assert loaded.record.event_time.tzinfo is not None
+    async with engine.connect() as connection:
+        count = await connection.scalar(select(func.count()).select_from(canonical_daily_bars))
+    assert count == 1
+
+
+@pytest.mark.asyncio
+async def test_tushare_fixture_vertical_slice_is_idempotent(engine: AsyncEngine) -> None:
+    repository = PostgreSQLCanonicalDailyBarRepository(engine)
+    clock = FixedClock()
+    pipeline = DataIngestionPipeline(
+        {DailyBar.RECORD_TYPE: TushareDailyBarNormalizer()},
+        DailyBarValidator(
+            ValidationContext(clock, timedelta(minutes=5), frozenset({"1.0"}))
+        ),
+        DailyBarQualityAssessor(),
+    )
+    use_case = IngestDailyBars(
+        FixtureDailyRuntime(), TUSHARE_DAILY, pipeline,
+        PersistIngestionSuccess(repository), clock, SequentialIds(),
+    )
+    first = await use_case.execute({"ts_code": "600000.SH"})
+    second = await use_case.execute({"ts_code": "600000.SH"})
+    assert first.persisted == 1
+    assert second.already_exists == 1
     async with engine.connect() as connection:
         count = await connection.scalar(select(func.count()).select_from(canonical_daily_bars))
     assert count == 1

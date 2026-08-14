@@ -1,5 +1,9 @@
 # SPEC-004 Real Data Foundation
 
+Phase 6 completes the first real-data vertical slice for Tushare Pro A-share daily
+bars. It reuses the SPEC-003 Runtime and Phase 1–5 pipeline; it introduces no
+real-time, financial, news, strategy, AI, trading, or second-Provider capability.
+
 ## Goal
 
 SPEC-004 defines how a Provider Runtime result can eventually become a trusted,

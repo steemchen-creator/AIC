@@ -98,8 +98,9 @@ Detailed Data Foundation contracts are under [docs/architecture](docs/architectu
 [docs/api](docs/api/README.md), and [docs/testing](docs/testing/README.md).
 
 SPEC-003 Provider Runtime V1.0 is merged and includes registration, lifecycle,
-health, selection, scoring, invocation and bounded failover. SPEC-004 Phases 1–5 add
+health, selection, scoring, invocation and bounded failover. SPEC-004 Phases 1–6 add
 source-neutral canonical market-data models, provenance, deterministic identity and raw
 hashing, Validation, Data Quality, and a fixture-only Raw-to-Canonical normalization and
-ingestion pipeline plus idempotent PostgreSQL persistence and migration. Real Provider
-integration remains intentionally deferred.
+ingestion pipeline plus idempotent PostgreSQL persistence and migration. Phase 6 adds
+the first real Provider for Tushare Pro A-share daily bars. Set `AIC_TUSHARE_TOKEN`
+only in the runtime environment and never commit its value.

@@ -8,6 +8,11 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-004 Phase 6 Tushare Pro A-share daily Provider, Runtime-selected ingestion,
+  canonical unit conversion, partial batch processing, and idempotent persistence.
+- Reversible canonical `record_id` length migration aligning PostgreSQL storage with
+  the existing deterministic identity contract.
+
 - SPEC-004 Phase 5 Application-owned persistence port, idempotent PostgreSQL adapter,
   immutable ingestion-time quality snapshots and Alembic schema migration.
 - PostgreSQL contract, concurrency, transaction, read-back and migration tests with

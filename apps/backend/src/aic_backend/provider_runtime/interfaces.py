@@ -55,8 +55,8 @@ class ProviderRuntimePort(Protocol):
 
     async def execute(
         self,
-        request: ProviderInvocationRequest,
         context: ProviderRequestContext,
+        payload: Mapping[str, Any],
     ) -> ProviderInvocationResult: ...
 
 

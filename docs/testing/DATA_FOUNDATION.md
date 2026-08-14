@@ -153,3 +153,11 @@ Alembic migration.
 CI runs a PostgreSQL 17 service, executes `alembic upgrade head`, then the full pytest,
 coverage, Ruff and Mypy gates. SQLite is not used as integration evidence. Application
 tests prove normalization/validation failure outcomes cause zero repository writes.
+
+## SPEC-004 Phase 6 verification
+
+Deterministic tests cover Provider error mapping, SZ/SH and unit mapping, provenance,
+Runtime selection, partial batch failure, Validation/Quality, idempotent PostgreSQL
+persistence, architecture isolation, and the fixture vertical slice. Required tests
+never use the network or require a token. Optional live smoke is deliberately outside
+required CI.

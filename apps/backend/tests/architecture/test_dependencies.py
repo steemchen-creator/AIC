@@ -357,6 +357,34 @@ def test_phase_5_does_not_add_future_or_provider_behavior() -> None:
     assert not {item for item in forbidden if item in source}
 
 
+def test_phase_6_tushare_dependencies_stay_at_owned_boundaries() -> None:
+    adapter = PACKAGE_ROOT / "providers/tushare.py"
+    normalizer = PACKAGE_ROOT / "data_foundation/tushare_normalization.py"
+    persistence = PACKAGE_ROOT / "infrastructure/canonical_persistence.py"
+    runtime_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (PACKAGE_ROOT / "provider_runtime").rglob("*.py")
+    ).casefold()
+
+    assert "httpx" in imported_modules(adapter)
+    assert not {
+        module
+        for module in imported_modules(adapter)
+        if module.startswith(("sqlalchemy", "aic_backend.infrastructure"))
+    }
+    assert not {
+        module
+        for module in imported_modules(normalizer)
+        if module.startswith(("httpx", "requests", "sqlalchemy", "urllib.request"))
+    }
+    assert "tushare" not in "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (PACKAGE_ROOT / "application").rglob("*.py")
+    ).casefold()
+    assert "tushare" not in persistence.read_text(encoding="utf-8").casefold()
+    assert "tushare" not in runtime_source
+
+
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:
     callers = {
         path.name
