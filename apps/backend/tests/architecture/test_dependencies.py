@@ -385,6 +385,57 @@ def test_phase_6_tushare_dependencies_stay_at_owned_boundaries() -> None:
     assert "tushare" not in runtime_source
 
 
+def test_phase_7_historical_service_keeps_application_and_adapter_boundaries() -> None:
+    application_paths = (
+        PACKAGE_ROOT / "application/ports/historical.py",
+        PACKAGE_ROOT / "application/use_cases/historical_daily_bars.py",
+        PACKAGE_ROOT / "application/use_cases/backfill_daily_bars.py",
+    )
+    application_imports: set[str] = set()
+    for path in application_paths:
+        application_imports.update(imported_modules(path))
+    forbidden = (
+        "aic_backend.bootstrap",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "httpx",
+        "requests",
+        "sqlalchemy",
+    )
+    assert not {
+        module for module in application_imports if module.startswith(forbidden)
+    }
+    backfill_imports = imported_modules(application_paths[2])
+    assert "aic_backend.application.use_cases.ingest_daily_bars" in backfill_imports
+    assert "aic_backend.provider_runtime" in backfill_imports
+
+    adapter_imports = imported_modules(
+        PACKAGE_ROOT / "infrastructure/historical_persistence.py"
+    )
+    assert "aic_backend.application.ports.historical" in adapter_imports
+    assert any(module.startswith("sqlalchemy") for module in adapter_imports)
+
+    provider_imports = imported_modules(PACKAGE_ROOT / "providers/tushare.py")
+    assert not {
+        module
+        for module in provider_imports
+        if module.startswith(("sqlalchemy", "aic_backend.infrastructure"))
+    }
+    source = "\n".join(path.read_text(encoding="utf-8") for path in application_paths)
+    assert not {
+        concept
+        for concept in (
+            "aic_backend.strategy",
+            "aic_backend.portfolio",
+            "aic_backend.trading",
+            "aic_backend.presentation",
+            "aic_backend.providers.tushare",
+        )
+        if concept in source.casefold()
+    }
+
+
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:
     callers = {
         path.name

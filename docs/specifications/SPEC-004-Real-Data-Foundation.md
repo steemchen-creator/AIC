@@ -33,7 +33,20 @@ Business modules must not treat raw Provider output as trusted financial facts.
 - Phase 4: deterministic normalization and ingestion with fixtures.
 - Phase 5: reviewed persistence, migrations and idempotent queries.
 - Phase 6: reviewer-selected and separately specified real Provider.
-- Phase 7: end-to-end real-data verification and final review.
+- Phase 7: historical A-share DailyBar query, conservative coverage metadata,
+  resumable backfill and PostgreSQL end-to-end verification.
+
+## Phase 7 implementation: Historical query and backfill
+
+The historical read port is owned by Application and reads canonical PostgreSQL facts
+only. An explicit backfill use case determines gaps from completed Provider-request
+intervals, splits inclusive ranges into bounded sequential chunks and reuses the
+existing Runtime-to-persistence vertical slice. Partial or failed chunks remain audit
+evidence but do not establish coverage; later requests resume from unconfirmed gaps.
+
+Coverage deliberately does not infer exchange sessions from weekdays or existing rows.
+This phase adds no trading-calendar or corporate-action adjustment engine. Full semantics
+and limitations are documented in `docs/data/HISTORICAL_DAILY_BARS.md`.
 
 ## Phase 1 implementation
 

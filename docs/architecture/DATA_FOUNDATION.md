@@ -252,3 +252,21 @@ persistence port. Rows fail independently.
 Canonical volume is shares (`vol × 100`); canonical turnover is CNY yuan
 (`amount × 1000`). Daily event time is 15:00 Asia/Shanghai (07:00 UTC), the period
 end rather than a claimed precise last-trade timestamp.
+
+## SPEC-004 Phase 7: Historical query and backfill
+
+Application owns both the canonical historical read contract and the operational
+backfill-metadata contract. Infrastructure implements them with PostgreSQL; the Provider
+does not import persistence and the read service does not import or invoke Runtime.
+
+```text
+query -> canonical read port -> PostgreSQL
+explicit backfill -> coverage gaps -> sequential chunks -> existing IngestDailyBars
+                  -> Runtime/Provider -> pipeline -> canonical PostgreSQL
+                  -> append-only attempt metadata
+```
+
+Only completed request intervals prove coverage. This conservative model prevents a
+missing weekend, holiday or suspension row from being fabricated or classified without
+a trading calendar. Repeated execution is safe through immutable canonical identity;
+refresh never silently overwrites a financial fact or its quality snapshot.

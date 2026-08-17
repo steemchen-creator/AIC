@@ -1,11 +1,12 @@
 """Application-owned canonical persistence contract."""
 
 from dataclasses import dataclass
+from datetime import date
 from enum import StrEnum
 from typing import Protocol
 
 from aic_backend.data_foundation.quality import DataQualityAssessment
-from aic_backend.domain.market_data import DailyBar
+from aic_backend.domain.market_data import DailyBar, InstrumentIdentity
 
 
 class SaveStatus(StrEnum):
@@ -44,3 +45,10 @@ class CanonicalDailyBarRepository(Protocol):
     async def save(self, value: PersistedDailyBar) -> SaveResult: ...
 
     async def get_by_record_id(self, record_id: str) -> PersistedDailyBar | None: ...
+
+    async def get_daily_bars(
+        self,
+        instrument: InstrumentIdentity,
+        start: date,
+        end: date,
+    ) -> tuple[PersistedDailyBar, ...]: ...

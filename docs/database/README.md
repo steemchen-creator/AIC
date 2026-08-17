@@ -17,3 +17,10 @@ SPEC-004 Phase 6 migration `20260814_0002` expands `record_id` from 64 to 80
 characters so the existing `rec_` plus SHA-256 deterministic identity fits without
 changing identity semantics. Upgrade is non-destructive. Downgrade restores 64 and
 must only run when no stored record ID exceeds that limit.
+
+SPEC-004 Phase 7 migration `20260817_0003` adds
+`daily_bar_backfill_attempts`, an operational append-only ledger for requested inclusive
+ranges, Provider/capability attribution, UTC timing, outcome counts and sanitized error
+codes. Only `COMPLETED` attempts establish coverage; `PARTIAL` and `FAILED` attempts are
+retained for audit/resume. The composite range index supports instrument-scoped overlap
+queries. Downgrade drops only this operational ledger, not canonical DailyBar facts.

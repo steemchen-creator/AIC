@@ -1,7 +1,7 @@
 """PostgreSQL canonical DailyBar persistence adapter."""
 
 from collections.abc import Mapping
-from datetime import UTC
+from datetime import UTC, date
 from decimal import Decimal
 from typing import Any
 
@@ -214,6 +214,36 @@ class PostgreSQLCanonicalDailyBarRepository(CanonicalDailyBarRepository):
         except (SQLAlchemyError, OSError, ValueError, TypeError) as error:
             raise _translate_error(error, reading=True) from error
 
+    async def get_daily_bars(
+        self,
+        instrument: InstrumentIdentity,
+        start: date,
+        end: date,
+    ) -> tuple[PersistedDailyBar, ...]:
+        if end < start:
+            raise ValueError("end must not precede start")
+        try:
+            statement = (
+                select(canonical_daily_bars)
+                .where(
+                    canonical_daily_bars.c.market == instrument.market.value,
+                    canonical_daily_bars.c.symbol == instrument.symbol,
+                    canonical_daily_bars.c.instrument_type
+                    == instrument.instrument_type.value,
+                    canonical_daily_bars.c.trading_date >= start,
+                    canonical_daily_bars.c.trading_date <= end,
+                )
+                .order_by(
+                    canonical_daily_bars.c.trading_date.asc(),
+                    canonical_daily_bars.c.record_id.asc(),
+                )
+            )
+            async with self._engine.connect() as connection:
+                rows = (await connection.execute(statement)).mappings().all()
+            return tuple(_stored(row) for row in rows)
+        except (SQLAlchemyError, OSError, ValueError, TypeError) as error:
+            raise _translate_error(error, reading=True) from error
+
 
 class InMemoryCanonicalDailyBarRepository(CanonicalDailyBarRepository):
     def __init__(self) -> None:
@@ -233,6 +263,26 @@ class InMemoryCanonicalDailyBarRepository(CanonicalDailyBarRepository):
 
     async def get_by_record_id(self, record_id: str) -> PersistedDailyBar | None:
         return self._records.get(record_id)
+
+    async def get_daily_bars(
+        self,
+        instrument: InstrumentIdentity,
+        start: date,
+        end: date,
+    ) -> tuple[PersistedDailyBar, ...]:
+        if end < start:
+            raise ValueError("end must not precede start")
+        return tuple(
+            sorted(
+                (
+                    item
+                    for item in self._records.values()
+                    if item.record.instrument == instrument
+                    and start <= item.record.trading_date <= end
+                ),
+                key=lambda item: (item.record.trading_date, item.record.record_id),
+            )
+        )
 
 
 def _translate_error(

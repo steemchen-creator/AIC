@@ -32,6 +32,11 @@ Health is a lightweight initialized/configuration check and consumes no data quo
 There is no retry engine or scheduler. Required tests use deterministic fixtures;
 optional live smoke needs an explicit local token and is not a CI gate.
 
+Phase 7 historical backfill supplies canonical `symbol`, `market`, `start_date` and
+`end_date` values. Translation to Tushare `.SH`/`.SZ` codes and compact dates occurs
+only inside this adapter. Historical query itself is PostgreSQL-only and cannot consume
+network quota. Completed empty Provider responses are valid coverage evidence.
+
 This Provider does not support real-time/minute/L2 data, financials, news, funds,
 institutional holdings, strategies, AI, trading, portfolios, reconciliation, or a
 second real Provider.

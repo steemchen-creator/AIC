@@ -219,6 +219,24 @@ async def test_empty_response_is_distinct_and_request_requires_scope() -> None:
         await provider.invoke(invalid)
 
 
+def test_canonical_historical_parameters_are_translated_at_adapter_boundary() -> None:
+    assert TushareDailyProvider._parameters({
+        "symbol": "600000",
+        "market": "CN.SSE",
+        "start_date": "2026-01-01",
+        "end_date": "2026-01-31",
+    }) == {
+        "ts_code": "600000.SH",
+        "start_date": "20260101",
+        "end_date": "20260131",
+    }
+    assert TushareDailyProvider._parameters({
+        "symbol": "000001", "market": "CN.SZSE", "trade_date": "2026-01-02"
+    })["ts_code"] == "000001.SZ"
+    with pytest.raises(InvalidRequestError):
+        TushareDailyProvider._parameters({"symbol": "1", "market": "CN.BJSE"})
+
+
 @pytest.mark.asyncio
 async def test_health_shutdown_float_conversion_and_invalid_json() -> None:
     client = FakeClient({

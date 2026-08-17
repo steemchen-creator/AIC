@@ -161,3 +161,14 @@ Runtime selection, partial batch failure, Validation/Quality, idempotent Postgre
 persistence, architecture isolation, and the fixture vertical slice. Required tests
 never use the network or require a token. Optional live smoke is deliberately outside
 required CI.
+
+## SPEC-004 Phase 7 verification
+
+Tests cover inclusive range boundaries, deterministic ordering, empty/partial/covered
+metadata, conservative gap merging, configurable chunks, multi-chunk completion,
+Provider errors, partial rows, stop-and-resume behavior, forced refresh and repeated
+no-network queries. PostgreSQL 17 tests exercise the actual Runtime selector, sanitized
+Tushare HTTP fixture, ingestion pipeline, unique canonical writes, append-only coverage
+ledger, concurrent duplicate requests, unavailable-error mapping and reversible Alembic
+migration. Architecture tests keep Application ports free of Infrastructure and keep
+the Provider free of database concerns.

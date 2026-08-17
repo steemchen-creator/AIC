@@ -8,6 +8,11 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-004 Phase 7 inclusive historical A-share DailyBar queries, conservative
+  coverage/gap detection and explicit sequential backfill through the existing Runtime.
+- Persistent backfill-attempt ledger, configurable date chunking, partial-failure resume,
+  deterministic ordering, PostgreSQL E2E and concurrent idempotency evidence.
+
 - SPEC-004 Phase 6 Tushare Pro A-share daily Provider, Runtime-selected ingestion,
   canonical unit conversion, partial batch processing, and idempotent persistence.
 - Reversible canonical `record_id` length migration aligning PostgreSQL storage with

@@ -130,6 +130,15 @@ class TushareDailyProvider:
     def _parameters(payload: Mapping[str, Any]) -> dict[str, str]:
         allowed = ("ts_code", "trade_date", "start_date", "end_date")
         result = {key: str(payload[key]) for key in allowed if payload.get(key)}
+        if "ts_code" not in result and payload.get("symbol") and payload.get("market"):
+            suffixes = {"CN.SSE": "SH", "CN.SZSE": "SZ"}
+            suffix = suffixes.get(str(payload["market"]))
+            if suffix is None:
+                raise InvalidRequestError("Tushare daily instrument market is unsupported.")
+            result["ts_code"] = f"{payload['symbol']}.{suffix}"
+        for field in ("trade_date", "start_date", "end_date"):
+            if field in result:
+                result[field] = result[field].replace("-", "")
         if "ts_code" not in result and "trade_date" not in result:
             raise InvalidRequestError("Tushare daily requires ts_code or trade_date.")
         return result
