@@ -92,9 +92,11 @@ Historical adjusted integration 97%。
 `dotnet build apps/desktop/AIC.Desktop.csproj -c Release --nologo`：Passed，
 0 warnings / 0 errors。
 ## 43. GitHub Actions
-待最终推送后记录 exact-HEAD Actions 状态。
+最终提交推送后的 exact-HEAD GitHub Actions 由外部 immutable attestation 记录，避免
+为了写回 Run ID 产生 evidence-only commit loop；required jobs 必须全部 PASSED。
 ## 44. Final HEAD Attestation
-待 CI 后核验 Local = Remote = PR #5 Head 且工作区 Clean。
+最终核验必须满足 Local = Remote = PR #5 Head、required CI 全绿且工作区 Clean；
+具体 SHA 与 Actions Run ID 在本文件对应提交完成后由外部证明提供。
 ## 45. Known Limitations
 无完整 revision history、配股认购模型、拆分/合并映射、第二 Provider reconciliation 或账户级结算。
 ## 46. Technical Debt
