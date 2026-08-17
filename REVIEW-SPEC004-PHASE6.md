@@ -124,13 +124,14 @@ Tushare dependency; persistence and Runtime core remain vendor-neutral.
 - Ruff: passed. Mypy strict: passed. Architecture tests: passed.
 - WPF Release: passed with 0 warnings and 0 errors.
 - Docker Compose config: passed. PostgreSQL 17 integration: passed.
-- GitHub Actions and exact final remote HEAD: pending publication of this report.
+- GitHub Actions run `31790648578`: Backend tests、Desktop build、Governance
+  baseline 全部通过。
 
 ## Final HEAD
 
-The exact Local/Remote/PR HEAD and required-check result will be added after the final
-report commit is pushed and GitHub Actions completes. The final PR attestation is the
-authoritative non-self-referential SHA evidence.
+实现提交 `2ad629508454a7347b002cd7e74e417b4c05434d` 已验证 Local、Remote、
+PR #5 HEAD 三方一致，且该提交对应的 required checks 全绿。本报告提交仅更新
+最终审核证据；其精确最终 HEAD 和 CI 将在 PR #5 中作为最终 attestation 记录。
 
 ## Known Limitations / Technical Debt
 
@@ -149,5 +150,4 @@ PR #5 remains Draft and is not merged.
 
 ## Final Recommendation
 
-Proceed to architecture review after final GitHub Actions and exact HEAD attestation.
-Do not merge and do not start a later phase before approval.
+本阶段证据完整，建议提交外部架构审核。不要 Merge，也不要在批准前开始后续阶段。
