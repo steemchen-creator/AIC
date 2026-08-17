@@ -8,6 +8,11 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-004 Phase 8 canonical SSE/SZSE trading-calendar facts, standard split-session
+  policy, Calendar Provider capability, PostgreSQL repository/coverage and explicit sync.
+- Calendar-aware Historical DailyBar candidate-gap detection that excludes confirmed
+  CLOSED dates while preserving the unresolved instrument-suspension limitation.
+
 - SPEC-004 Phase 7 inclusive historical A-share DailyBar queries, conservative
   coverage/gap detection and explicit sequential backfill through the existing Runtime.
 - Persistent backfill-attempt ledger, configurable date chunking, partial-failure resume,

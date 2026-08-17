@@ -108,3 +108,7 @@ Phase 7 adds database-only historical queries and explicit, resumable, idempoten
 backfill with conservative coverage metadata. Configure inclusive request chunk size
 with `AIC_HISTORICAL_CHUNK_DAYS` (default 365). See
 [Historical DailyBars](docs/data/HISTORICAL_DAILY_BARS.md).
+
+Phase 8 adds the authoritative SSE/SZSE trading-calendar foundation: persisted OPEN and
+CLOSED facts, timezone-aware split sessions, explicit calendar sync and calendar-aware
+DailyBar candidate gaps. See [Trading Calendar](docs/data/TRADING_CALENDAR.md).

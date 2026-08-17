@@ -270,3 +270,11 @@ Only completed request intervals prove coverage. This conservative model prevent
 missing weekend, holiday or suspension row from being fabricated or classified without
 a trading calendar. Repeated execution is safe through immutable canonical identity;
 refresh never silently overwrites a financial fact or its quality snapshot.
+
+## SPEC-004 Phase 8: Trading Calendar
+
+Application owns Calendar Repository, coverage and normalizer contracts. Tushare supplies
+OPEN/CLOSED dates through a capability separate from DailyBar; a source-neutral policy
+supplies standard split sessions. PostgreSQL stores both closed and open facts. Historical
+candidate gaps are computed only under complete calendar coverage, without weekday
+heuristics or a false claim that an exchange-open instrument must have traded.

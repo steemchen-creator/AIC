@@ -1,6 +1,12 @@
 """Outbound contracts owned by the application layer."""
 
 from aic_backend.application.ports.cache import DataCache
+from aic_backend.application.ports.calendar import (
+    CalendarCoverageAttempt,
+    CalendarCoverageRepository,
+    CalendarNormalizer,
+    TradingCalendarRepository,
+)
 from aic_backend.application.ports.event_bus import Event, EventBus
 from aic_backend.application.ports.historical import (
     BackfillAttempt,
@@ -24,6 +30,9 @@ __all__ = [
     "BackfillAttemptStatus",
     "BackfillMetadataRepository",
     "CanonicalDailyBarRepository",
+    "CalendarCoverageAttempt",
+    "CalendarCoverageRepository",
+    "CalendarNormalizer",
     "DataCache",
     "DataProvider",
     "DataRepository",
@@ -35,4 +44,5 @@ __all__ = [
     "PersistenceErrorCode",
     "SaveResult",
     "SaveStatus",
+    "TradingCalendarRepository",
 ]

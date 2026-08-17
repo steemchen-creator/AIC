@@ -37,6 +37,10 @@ Phase 7 historical backfill supplies canonical `symbol`, `market`, `start_date` 
 only inside this adapter. Historical query itself is PostgreSQL-only and cannot consume
 network quota. Completed empty Provider responses are valid coverage evidence.
 
+Phase 8 adds the separate `market.calendar.read` capability using `trade_cal`. The
+adapter returns only Provider fields (`exchange`, `cal_date`, `is_open`); standard A-share
+session times are owned by the source-neutral Session Policy, not attributed to Tushare.
+
 This Provider does not support real-time/minute/L2 data, financials, news, funds,
 institutional holdings, strategies, AI, trading, portfolios, reconciliation, or a
 second real Provider.

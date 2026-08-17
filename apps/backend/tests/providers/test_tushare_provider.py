@@ -30,7 +30,11 @@ from aic_backend.provider_runtime.models import (
     ProviderInvocationRequest,
 )
 from aic_backend.provider_runtime.system import UtcClock
-from aic_backend.providers.tushare import TUSHARE_DAILY, TushareDailyProvider
+from aic_backend.providers.tushare import (
+    TUSHARE_CALENDAR,
+    TUSHARE_DAILY,
+    TushareDailyProvider,
+)
 
 
 class FakeClient:
@@ -79,16 +83,23 @@ class FixedIds:
 
 def definition() -> ProviderDefinition:
     return ProviderDefinition(
-        "tushare_pro", "providers.tushare_daily",
-        True, 100, frozenset({TUSHARE_DAILY}), {},
+        "tushare_pro",
+        "providers.tushare_daily",
+        True,
+        100,
+        frozenset({TUSHARE_DAILY}),
+        {},
     )
 
 
 def request() -> ProviderInvocationRequest:
     return ProviderInvocationRequest(
-        "req-1", "tushare_pro", TUSHARE_DAILY,
+        "req-1",
+        "tushare_pro",
+        TUSHARE_DAILY,
         {"ts_code": "000001.SZ", "start_date": "20260102", "end_date": "20260102"},
-        1000, datetime(2026, 1, 3, tzinfo=UTC),
+        1000,
+        datetime(2026, 1, 3, tzinfo=UTC),
     )
 
 
@@ -131,16 +142,16 @@ async def test_missing_token_is_safe() -> None:
 
 @pytest.mark.asyncio
 async def test_fixture_response_is_returned_without_token_leak() -> None:
-    client = FakeClient({
-        "code": 0,
-        "data": {"fields": ["ts_code", "trade_date"], "items": [["000001.SZ", "20260102"]]},
-    })
+    client = FakeClient(
+        {
+            "code": 0,
+            "data": {"fields": ["ts_code", "trade_date"], "items": [["000001.SZ", "20260102"]]},
+        }
+    )
     provider = TushareDailyProvider(definition(), "secret-token", client)
     await provider.initialize()
     response = await provider.invoke(request())
-    assert response.payload["rows"] == [
-        {"ts_code": "000001.SZ", "trade_date": "20260102"}
-    ]
+    assert response.payload["rows"] == [{"ts_code": "000001.SZ", "trade_date": "20260102"}]
     assert "secret-token" not in repr(response)
 
 
@@ -212,7 +223,11 @@ async def test_empty_response_is_distinct_and_request_requires_scope() -> None:
     await provider.initialize()
     assert (await provider.invoke(request())).payload == {"rows": []}
     invalid = ProviderInvocationRequest(
-        "req-2", "tushare_pro", TUSHARE_DAILY, {}, 1000,
+        "req-2",
+        "tushare_pro",
+        TUSHARE_DAILY,
+        {},
+        1000,
         datetime(2026, 1, 3, tzinfo=UTC),
     )
     with pytest.raises(InvalidRequestError):
@@ -220,29 +235,36 @@ async def test_empty_response_is_distinct_and_request_requires_scope() -> None:
 
 
 def test_canonical_historical_parameters_are_translated_at_adapter_boundary() -> None:
-    assert TushareDailyProvider._parameters({
-        "symbol": "600000",
-        "market": "CN.SSE",
-        "start_date": "2026-01-01",
-        "end_date": "2026-01-31",
-    }) == {
+    assert TushareDailyProvider._parameters(
+        {
+            "symbol": "600000",
+            "market": "CN.SSE",
+            "start_date": "2026-01-01",
+            "end_date": "2026-01-31",
+        }
+    ) == {
         "ts_code": "600000.SH",
         "start_date": "20260101",
         "end_date": "20260131",
     }
-    assert TushareDailyProvider._parameters({
-        "symbol": "000001", "market": "CN.SZSE", "trade_date": "2026-01-02"
-    })["ts_code"] == "000001.SZ"
+    assert (
+        TushareDailyProvider._parameters(
+            {"symbol": "000001", "market": "CN.SZSE", "trade_date": "2026-01-02"}
+        )["ts_code"]
+        == "000001.SZ"
+    )
     with pytest.raises(InvalidRequestError):
         TushareDailyProvider._parameters({"symbol": "1", "market": "CN.BJSE"})
 
 
 @pytest.mark.asyncio
 async def test_health_shutdown_float_conversion_and_invalid_json() -> None:
-    client = FakeClient({
-        "code": 0,
-        "data": {"fields": ["close"], "items": [[10.2]]},
-    })
+    client = FakeClient(
+        {
+            "code": 0,
+            "data": {"fields": ["close"], "items": [[10.2]]},
+        }
+    )
     provider = TushareDailyProvider(definition(), "secret", client)
     assert (await provider.health_check()).status.value == "unhealthy"
     await provider.initialize()
@@ -255,3 +277,43 @@ async def test_health_shutdown_float_conversion_and_invalid_json() -> None:
     await broken.initialize()
     with pytest.raises(ProviderInvalidResponseError):
         await broken.invoke(request())
+
+
+@pytest.mark.asyncio
+async def test_calendar_capability_is_separate_and_returns_calendar_rows() -> None:
+    calendar_definition = ProviderDefinition(
+        "tushare_pro",
+        "providers.tushare_daily",
+        True,
+        100,
+        frozenset({TUSHARE_DAILY, TUSHARE_CALENDAR}),
+        {},
+    )
+    provider = TushareDailyProvider(
+        calendar_definition,
+        "secret",
+        FakeClient(
+            {
+                "code": 0,
+                "data": {
+                    "fields": ["exchange", "cal_date", "is_open"],
+                    "items": [["SSE", "20260817", "1"]],
+                },
+            }
+        ),
+    )
+    await provider.initialize()
+    response = await provider.invoke(
+        ProviderInvocationRequest(
+            "calendar-1",
+            "tushare_pro",
+            TUSHARE_CALENDAR,
+            {"exchange": "SSE", "start_date": "2026-08-17", "end_date": "2026-08-17"},
+            1000,
+            datetime(2026, 8, 17, tzinfo=UTC),
+        )
+    )
+    assert response.payload["rows"] == [{"exchange": "SSE", "cal_date": "20260817", "is_open": "1"}]
+    assert TushareDailyProvider._calendar_parameters(
+        {"exchange": "SZSE", "start_date": "2026-08-01", "end_date": "2026-08-31"}
+    ) == {"exchange": "SZSE", "start_date": "20260801", "end_date": "20260831"}

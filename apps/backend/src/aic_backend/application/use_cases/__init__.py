@@ -20,10 +20,17 @@ from aic_backend.application.use_cases.ingest_daily_bars import (
     IngestDailyBars,
 )
 from aic_backend.application.use_cases.persist_ingestion import PersistIngestionSuccess
+from aic_backend.application.use_cases.trading_calendar import (
+    BackfillTradingCalendar,
+    CalendarBackfillResult,
+    TradingCalendarService,
+)
 
 __all__ = [
     "BackfillDailyBars",
     "BackfillStatus",
+    "BackfillTradingCalendar",
+    "CalendarBackfillResult",
     "CoverageStatus",
     "DailyBarBatchSummary",
     "DailyBarBackfillResult",
@@ -34,6 +41,7 @@ __all__ = [
     "HistoricalDailyBarSeries",
     "HistoricalDailyBarService",
     "PersistIngestionSuccess",
+    "TradingCalendarService",
     "chunk_intervals",
     "missing_intervals",
 ]

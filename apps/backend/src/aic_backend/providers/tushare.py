@@ -29,6 +29,7 @@ from aic_backend.provider_runtime.models import (
 from aic_backend.shared.config import get_settings
 
 TUSHARE_DAILY = ProviderCapability("market.daily.read", "1.0.0", CapabilityMode.BATCH)
+TUSHARE_CALENDAR = ProviderCapability("market.calendar.read", "1.0.0", CapabilityMode.BATCH)
 TUSHARE_IMPLEMENTATION = "providers.tushare_daily"
 
 
@@ -42,7 +43,9 @@ class TushareDailyProvider:
     endpoint = "https://api.tushare.pro"
 
     def __init__(
-        self, definition: ProviderDefinition, token: str | None,
+        self,
+        definition: ProviderDefinition,
+        token: str | None,
         client: JsonHttpClient | None = None,
     ) -> None:
         self._definition = definition
@@ -53,14 +56,18 @@ class TushareDailyProvider:
     @property
     def metadata(self) -> ProviderMetadata:
         return ProviderMetadata(
-            self._definition.provider_id, "Tushare Pro Daily", ProviderType.MARKET_DATA,
-            "1.0.0", vendor="Tushare", priority=self._definition.priority,
+            self._definition.provider_id,
+            "Tushare Pro Daily",
+            ProviderType.MARKET_DATA,
+            "1.0.0",
+            vendor="Tushare",
+            priority=self._definition.priority,
             enabled=self._definition.enabled,
         )
 
     @property
     def capabilities(self) -> frozenset[ProviderCapability]:
-        return frozenset({TUSHARE_DAILY})
+        return self._definition.capabilities
 
     async def initialize(self) -> None:
         if self._token is None:
@@ -83,10 +90,18 @@ class TushareDailyProvider:
     async def invoke(self, request: ProviderInvocationRequest) -> ProviderInvocationResponse:
         if not self._initialized or self._token is None:
             raise AuthenticationConfigurationError("Tushare credential is unavailable.")
+        calendar = request.capability == TUSHARE_CALENDAR
+        if not calendar and request.capability != TUSHARE_DAILY:
+            raise InvalidRequestError("Tushare capability is unsupported.")
         body = {
-            "api_name": "daily", "token": self._token,
-            "params": self._parameters(request.payload),
-            "fields": "ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount",
+            "api_name": "trade_cal" if calendar else "daily",
+            "token": self._token,
+            "params": self._calendar_parameters(request.payload)
+            if calendar
+            else self._parameters(request.payload),
+            "fields": "exchange,cal_date,is_open,pretrade_date"
+            if calendar
+            else "ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount",
         }
         try:
             response = await self._client.post(
@@ -118,8 +133,10 @@ class TushareDailyProvider:
             raise ProviderInvalidResponseError("Tushare rows are malformed.")
         try:
             rows = [
-                {str(key): str(value) if isinstance(value, float) else value
-                 for key, value in zip(fields, item, strict=True)}
+                {
+                    str(key): str(value) if isinstance(value, float) else value
+                    for key, value in zip(fields, item, strict=True)
+                }
                 for item in items
             ]
         except (TypeError, ValueError) as error:
@@ -141,6 +158,19 @@ class TushareDailyProvider:
                 result[field] = result[field].replace("-", "")
         if "ts_code" not in result and "trade_date" not in result:
             raise InvalidRequestError("Tushare daily requires ts_code or trade_date.")
+        return result
+
+    @staticmethod
+    def _calendar_parameters(payload: Mapping[str, Any]) -> dict[str, str]:
+        exchange = str(payload.get("exchange", ""))
+        if exchange not in {"SSE", "SZSE"}:
+            raise InvalidRequestError("Tushare calendar exchange is unsupported.")
+        result = {"exchange": exchange}
+        for field in ("start_date", "end_date"):
+            if payload.get(field):
+                result[field] = str(payload[field]).replace("-", "")
+        if "start_date" not in result or "end_date" not in result:
+            raise InvalidRequestError("Tushare calendar requires a date range.")
         return result
 
 

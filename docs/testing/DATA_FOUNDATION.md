@@ -172,3 +172,11 @@ Tushare HTTP fixture, ingestion pipeline, unique canonical writes, append-only c
 ledger, concurrent duplicate requests, unavailable-error mapping and reversible Alembic
 migration. Architecture tests keep Application ports free of Infrastructure and keep
 the Provider free of database concerns.
+
+## SPEC-004 Phase 8 verification
+
+Tests cover SSE/SZSE isolation, OPEN/CLOSED/holiday fixtures, split timezone-aware
+sessions, exact/previous/next/inclusive reads, deterministic order, normalization errors,
+coverage, idempotency, conflicts, chunk/resume boundaries and calendar-aware historical
+candidate gaps. PostgreSQL E2E uses the real Runtime selector/invocation/failover chain,
+sanitized Tushare fixture, migration 0004 and canonical adapters.

@@ -18,6 +18,10 @@ characters so the existing `rec_` plus SHA-256 deterministic identity fits witho
 changing identity semantics. Upgrade is non-destructive. Downgrade restores 64 and
 must only run when no stored record ID exceeds that limit.
 
+Migration `20260817_0004` adds `trading_calendar_days` keyed by market/date and the
+append-only `calendar_backfill_attempts` coverage ledger. OPEN and CLOSED facts retain
+first provenance and use insert-or-verify. Downgrade removes only Phase 8 calendar tables.
+
 SPEC-004 Phase 7 migration `20260817_0003` adds
 `daily_bar_backfill_attempts`, an operational append-only ledger for requested inclusive
 ranges, Provider/capability attribution, UTC timing, outcome counts and sanitized error

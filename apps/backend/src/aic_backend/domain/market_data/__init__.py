@@ -1,5 +1,10 @@
 """Public market-data domain vocabulary."""
 
+from aic_backend.domain.market_data.calendar import (
+    TradingSession,
+    TradingSessionDay,
+    standard_a_share_session,
+)
 from aic_backend.domain.market_data.enums import (
     DataCapability,
     InstrumentType,
@@ -34,4 +39,7 @@ __all__ = [
     "InvalidTimestampError",
     "Market",
     "RawObservation",
+    "TradingSession",
+    "TradingSessionDay",
+    "standard_a_share_session",
 ]

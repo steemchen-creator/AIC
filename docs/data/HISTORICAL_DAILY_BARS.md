@@ -27,6 +27,11 @@ holidays. Failed and partial attempts never confirm their interval.
 This version has no trading-calendar engine. It does not synthesize weekdays, holidays,
 suspensions or missing bars.
 
+Phase 8 optionally enriches the response when authoritative Calendar coverage is
+complete. `expected_missing_dates` contains OPEN exchange dates without a bar and is a
+candidate gap only: an exchange OPEN day may still be an instrument suspension. CLOSED
+dates and partial/unconfirmed calendar ranges are never reported as proven bar gaps.
+
 ## Failure, resume and idempotency
 
 Each chunk writes an immutable operational attempt with provider, capability,

@@ -4,6 +4,10 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from enum import StrEnum
 
+from aic_backend.application.ports.calendar import (
+    CalendarCoverageRepository,
+    TradingCalendarRepository,
+)
 from aic_backend.application.ports.historical import (
     BackfillAttemptStatus,
     BackfillMetadataRepository,
@@ -34,6 +38,8 @@ class DailyBarCoverage:
     coverage_status: CoverageStatus
     known_missing_intervals: tuple[DateInterval, ...]
     last_backfill_at: datetime | None
+    expected_missing_dates: tuple[date, ...] = ()
+    calendar_coverage_complete: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,9 +82,13 @@ class HistoricalDailyBarService:
         self,
         repository: CanonicalDailyBarRepository,
         metadata: BackfillMetadataRepository,
+        calendar: TradingCalendarRepository | None = None,
+        calendar_coverage: CalendarCoverageRepository | None = None,
     ) -> None:
         self._repository = repository
         self._metadata = metadata
+        self._calendar = calendar
+        self._calendar_coverage = calendar_coverage
 
     async def get_daily_bars(
         self,
@@ -96,9 +106,7 @@ class HistoricalDailyBarService:
         )
         attempts = await self._metadata.get_attempts(instrument, start, end)
         confirmed = tuple(
-            item.interval
-            for item in attempts
-            if item.status is BackfillAttemptStatus.COMPLETED
+            item.interval for item in attempts if item.status is BackfillAttemptStatus.COMPLETED
         )
         gaps = missing_intervals(requested, confirmed)
         if not bars and not confirmed:
@@ -109,6 +117,26 @@ class HistoricalDailyBarService:
             status = CoverageStatus.PARTIAL
         dates = tuple(item.record.trading_date for item in bars)
         completed = tuple(item.completed_at for item in attempts)
+        candidate_missing: tuple[date, ...] = ()
+        calendar_complete = False
+        if self._calendar is not None and self._calendar_coverage is not None:
+            calendar_attempts = await self._calendar_coverage.get_attempts(
+                instrument.market, start, end
+            )
+            calendar_confirmed = tuple(
+                item.interval
+                for item in calendar_attempts
+                if item.status is BackfillAttemptStatus.COMPLETED
+            )
+            calendar_complete = not missing_intervals(requested, calendar_confirmed)
+            if calendar_complete:
+                days = await self._calendar.list_days(instrument.market, start, end)
+                stored_dates = set(dates)
+                candidate_missing = tuple(
+                    item.trading_date
+                    for item in days
+                    if item.is_open and item.trading_date not in stored_dates
+                )
         coverage = DailyBarCoverage(
             instrument,
             start,
@@ -119,5 +147,7 @@ class HistoricalDailyBarService:
             status,
             gaps,
             max(completed) if completed else None,
+            candidate_missing,
+            calendar_complete,
         )
         return HistoricalDailyBarSeries(bars, coverage)

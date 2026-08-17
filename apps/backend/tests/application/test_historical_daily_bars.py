@@ -9,6 +9,7 @@ from aic_backend.application.ports import (
     DateInterval,
     PersistedDailyBar,
 )
+from aic_backend.application.ports.calendar import CalendarCoverageAttempt
 from aic_backend.application.use_cases import (
     CoverageStatus,
     HistoricalDailyBarService,
@@ -21,6 +22,12 @@ from aic_backend.domain.market_data import (
     InstrumentIdentity,
     InstrumentType,
     Market,
+    TradingSessionDay,
+    standard_a_share_session,
+)
+from aic_backend.infrastructure.calendar_persistence import (
+    InMemoryCalendarCoverageRepository,
+    InMemoryTradingCalendarRepository,
 )
 from aic_backend.infrastructure.canonical_persistence import InMemoryCanonicalDailyBarRepository
 from aic_backend.infrastructure.historical_persistence import InMemoryBackfillMetadataRepository
@@ -33,13 +40,30 @@ def stored(day: int) -> PersistedDailyBar:
     trading_date = date(2026, 1, day)
     event = datetime(2026, 1, day, 7, tzinfo=UTC)
     provenance = DataProvenance(
-        "fixture", f"source-{day}", f"fixture://daily/{day}", None,
-        False, 0, f"{day:064x}", "v1",
+        "fixture",
+        f"source-{day}",
+        f"fixture://daily/{day}",
+        None,
+        False,
+        0,
+        f"{day:064x}",
+        "v1",
     )
     record = DailyBar(
-        f"record-{day}", "1.0", INSTRUMENT, trading_date, event, NOW, NOW,
-        provenance, Decimal("10"), Decimal("11"), Decimal("9"), Decimal("10"),
-        100, Decimal("1000"),
+        f"record-{day}",
+        "1.0",
+        INSTRUMENT,
+        trading_date,
+        event,
+        NOW,
+        NOW,
+        provenance,
+        Decimal("10"),
+        Decimal("11"),
+        Decimal("9"),
+        Decimal("10"),
+        100,
+        Decimal("1000"),
     )
     return PersistedDailyBar(
         f"observation-{day}", record, DataQualityAssessment(100, 100, 100, 100, 100)
@@ -48,9 +72,18 @@ def stored(day: int) -> PersistedDailyBar:
 
 def attempt(start: int, end: int) -> BackfillAttempt:
     return BackfillAttempt(
-        f"attempt-{start}-{end}", "fixture", "market.daily.read", INSTRUMENT,
-        DateInterval(date(2026, 1, start), date(2026, 1, end)), NOW, NOW,
-        BackfillAttemptStatus.COMPLETED, 0, 0, 0, 0,
+        f"attempt-{start}-{end}",
+        "fixture",
+        "market.daily.read",
+        INSTRUMENT,
+        DateInterval(date(2026, 1, start), date(2026, 1, end)),
+        NOW,
+        NOW,
+        BackfillAttemptStatus.COMPLETED,
+        0,
+        0,
+        0,
+        0,
     )
 
 
@@ -139,3 +172,57 @@ async def test_partial_confirmed_coverage_does_not_invent_trading_days() -> None
         DateInterval(date(2026, 1, 3), date(2026, 1, 5)),
     )
     assert result.coverage.last_backfill_at == NOW
+
+
+async def test_calendar_excludes_closed_dates_and_reports_open_candidate_gap() -> None:
+    bars = InMemoryCanonicalDailyBarRepository()
+    await bars.save(stored(1))
+    calendar = InMemoryTradingCalendarRepository()
+    calendar_coverage = InMemoryCalendarCoverageRepository()
+    provenance = stored(1).record.provenance
+    for day, is_open in ((1, True), (2, False), (3, True)):
+        value = date(2026, 1, day)
+        await calendar.save(
+            TradingSessionDay(
+                Market.CN_SSE,
+                value,
+                is_open,
+                standard_a_share_session(value) if is_open else None,
+                NOW,
+                provenance,
+            )
+        )
+    await calendar_coverage.record(
+        CalendarCoverageAttempt(
+            "calendar-1",
+            "fixture",
+            Market.CN_SSE,
+            DateInterval(date(2026, 1, 1), date(2026, 1, 3)),
+            NOW,
+            NOW,
+            BackfillAttemptStatus.COMPLETED,
+            3,
+            3,
+            0,
+            0,
+        )
+    )
+    result = await HistoricalDailyBarService(
+        bars,
+        InMemoryBackfillMetadataRepository(),
+        calendar,
+        calendar_coverage,
+    ).get_daily_bars(INSTRUMENT, date(2026, 1, 1), date(2026, 1, 3))
+    assert result.coverage.calendar_coverage_complete is True
+    assert result.coverage.expected_missing_dates == (date(2026, 1, 3),)
+
+
+async def test_partial_calendar_coverage_never_claims_candidate_gaps() -> None:
+    result = await HistoricalDailyBarService(
+        InMemoryCanonicalDailyBarRepository(),
+        InMemoryBackfillMetadataRepository(),
+        InMemoryTradingCalendarRepository(),
+        InMemoryCalendarCoverageRepository(),
+    ).get_daily_bars(INSTRUMENT, date(2026, 1, 1), date(2026, 1, 3))
+    assert result.coverage.calendar_coverage_complete is False
+    assert result.coverage.expected_missing_dates == ()
