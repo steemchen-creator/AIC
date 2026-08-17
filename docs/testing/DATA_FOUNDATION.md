@@ -195,3 +195,10 @@ and a deterministic Provider Runtime → RawObservation → PostgreSQL → Histo
 The architecture suite enforces that Application does not import Tushare/HTTP/SQL, Provider
 does not write the database, repository ports are Application-owned and concrete persistence
 is Infrastructure-owned.
+
+# Phase 11 evidence
+
+PIT tests 锁定 available 前/等于/后边界、Unknown、event time 与 availability 分离、
+Historical Research/Operational Replay 差异、DailyBar 排序和 provenance、公司行动与
+因子未来泄漏、RAW-only adjustment、停复牌、日历和 conservative instrument universe。
+PostgreSQL E2E 验证 provider timestamp round-trip，migration 测试验证 0006 ↔ 0007。

@@ -60,6 +60,7 @@ ignore_missing_imports = true
 branch = true
 source = [
   "aic_backend.application.ports.persistence",
+  "aic_backend.application.point_in_time",
   "aic_backend.application.ports.calendar",
   "aic_backend.application.ports.historical",
   "aic_backend.application.ports.corporate_actions",
@@ -71,6 +72,7 @@ source = [
   "aic_backend.application.use_cases.instruments",
   "aic_backend.application.use_cases.ingest_daily_bars",
   "aic_backend.application.use_cases.persist_ingestion",
+  "aic_backend.application.use_cases.point_in_time_market_data",
   "aic_backend.application.use_cases.trading_calendar",
   "aic_backend.data_foundation",
   "aic_backend.domain.market_data",

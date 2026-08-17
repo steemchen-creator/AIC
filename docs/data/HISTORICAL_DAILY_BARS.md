@@ -72,3 +72,8 @@ derived `AdjustedDailyBar` projections while the returned canonical raw bars rem
 Adjusted reads are database-only and never start provider synchronization. Every requested
 bar must have an authoritative factor; otherwise `AdjustmentCoverageIncomplete` is raised.
 See `ADJUSTED_DAILY_BARS.md` for the calculation and field policy.
+
+For historical decisions, use `PointInTimeMarketDataService` instead of this ordinary
+historical view. PIT DailyBars require `provider_timestamp <= as_of` in Historical Research
+or `ingested_at <= as_of` in Operational Replay. Event time alone never proves availability.
+PIT V1 accepts RAW only.

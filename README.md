@@ -10,10 +10,10 @@ Detailed development and security rules are maintained in [AGENTS.md](AGENTS.md)
 
 ## Data Foundation architecture
 
-SPEC-004 Phase 10 adds source-neutral corporate-action and adjustment-factor facts plus
-explicit RAW, forward-adjusted and backward-adjusted DailyBar views. Raw canonical bars,
-volume and turnover are never overwritten. See `docs/data/CORPORATE_ACTIONS.md` and
-`docs/data/ADJUSTED_DAILY_BARS.md`.
+SPEC-004 Phase 11 adds the Point-in-Time/As-Of access layer and explicit no-lookahead
+controls. Historical Research and Operational Replay use different availability evidence;
+unknown availability is never treated as available. See `docs/data/POINT_IN_TIME_DATA.md`
+and `docs/data/NO_LOOKAHEAD_POLICY.md`.
 
 The backend follows inward Clean Architecture dependencies:
 
@@ -122,3 +122,7 @@ Phase 9 adds Instrument Master and explicit daily trading status. Phase 10 adds 
 `adj_factor`/`dividend` adapters, resumable factor backfill and auditable corporate-action
 sync. Adjusted requests fail when factor coverage is incomplete; ordinary historical reads
 remain RAW by default and never trigger provider synchronization.
+
+Phase 11 is the backtest-safe access boundary. Future research must provide an aware `as_of`
+and an explicit availability mode. V1 PIT pricing supports RAW only; PIT front/back-adjusted
+requests fail explicitly so future factors cannot leak into historical decisions.

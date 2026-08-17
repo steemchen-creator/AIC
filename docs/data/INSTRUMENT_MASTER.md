@@ -19,3 +19,7 @@ corporate actions, or a second-provider reconciliation policy.
 Phase 10 corporate actions and adjustment factors reuse this exact exchange-qualified
 `InstrumentIdentity`; vendor codes are normalized at the adapter boundary and are not stored
 as a second permanent identity system.
+
+PIT instrument universe only returns canonical identities，不会把 current display name
+当作历史名称。上市日前排除；只有退市证据在 `as_of` 时已可用才按退市边界排除，证据
+尚不可用时保守保留并返回 warning，避免 survivorship bias。

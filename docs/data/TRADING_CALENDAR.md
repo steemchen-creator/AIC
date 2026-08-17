@@ -33,3 +33,7 @@ security should trade; Phase 9 Instrument Master and Trading Status provide that
 Phase 10 reuses the calendar as market-date context only. Record dates and payment dates are
 not required to be OPEN trading days, and the corporate-action normalizer never invents or
 shifts dates to satisfy the trading calendar.
+
+Phase 11 Historical Research V1 将持久化日历视为 ex-ante known，并返回明确的
+`ex_ante_calendar_policy` evidence。Operational Replay 仍要求 `retrieved_at <= as_of`。
+临时休市和交易所修订仍有 revision risk，未来需独立 Calendar Revision Policy。

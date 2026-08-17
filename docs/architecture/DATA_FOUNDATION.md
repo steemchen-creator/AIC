@@ -295,3 +295,16 @@ Reason: analytical price continuity must not corrupt raw market facts. Impact: c
 explicitly select RAW/front/back adjustment with traceable source record, factor and policy
 version. Risk: provider revisions conflict under V1 insert-or-verify and require an approved
 future revision policy; incomplete factors reject adjusted requests.
+
+# Phase 11: point-in-time access
+
+`PointInTimeMarketDataService` is an Application façade over existing repository ports.
+`DataAvailabilityPolicy` is separate from Provider and persistence adapters and classifies
+records as Available, Not Yet Available or Unknown under a versioned policy. No SQL, HTTP,
+Tushare, strategy or portfolio dependency enters PIT logic.
+
+Historical Research uses persisted `provider_timestamp` evidence. Operational Replay uses
+AIC `ingested_at` for DailyBars and `retrieved_at` for other facts. Migration 0007 preserves
+nullable provider timestamps across Calendar/Instrument/Status/Factor/Action adapters and
+adds PIT indexes; NULL remains Unknown. PIT adjusted views are deliberately unsupported in
+V1, leaving RAW as the only backtest-safe price mode.

@@ -194,3 +194,10 @@ Phase 10 implements the approved A-share Corporate Action and Adjustment Factor 
 It adds explicit RAW/forward/backward DailyBar views without changing canonical raw facts.
 See `docs/data/CORPORATE_ACTIONS.md`, `docs/data/ADJUSTED_DAILY_BARS.md`, and
 `REVIEW-SPEC004-PHASE10.md` for contracts and verification evidence.
+
+# Phase 11 status
+
+Phase 11 implements the approved Point-in-Time/As-Of and No-Lookahead foundation with
+Historical Research and Operational Replay modes. See `docs/data/POINT_IN_TIME_DATA.md`,
+`docs/data/NO_LOOKAHEAD_POLICY.md` and `REVIEW-SPEC004-PHASE11.md`. This is the planned last
+functional SPEC-004 phase; Final Architecture Review is not started by this change.

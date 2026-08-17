@@ -504,6 +504,38 @@ def test_phase_10_corporate_actions_keep_owned_layer_boundaries() -> None:
     ).read_text(encoding="utf-8")
 
 
+def test_phase_11_point_in_time_keeps_no_lookahead_boundaries() -> None:
+    paths = (
+        PACKAGE_ROOT / "application/point_in_time.py",
+        PACKAGE_ROOT / "application/use_cases/point_in_time_market_data.py",
+    )
+    imports: set[str] = set()
+    source = ""
+    for path in paths:
+        imports.update(imported_modules(path))
+        source += path.read_text(encoding="utf-8").casefold()
+    forbidden = (
+        "aic_backend.bootstrap",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "fastapi",
+        "httpx",
+        "sqlalchemy",
+    )
+    assert not {module for module in imports if module.startswith(forbidden)}
+    assert "tushare" not in source
+    assert "select(" not in source
+    assert "latest" not in source
+    assert not any(
+        concept in source
+        for concept in ("strategy", "portfolio", "paper_trading", "live_trading")
+    )
+    service_source = paths[1].read_text(encoding="utf-8")
+    assert "CanonicalDailyBarRepository" in service_source
+    assert "AdjustmentMode.RAW" in service_source
+
+
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:
     callers = {
         path.name

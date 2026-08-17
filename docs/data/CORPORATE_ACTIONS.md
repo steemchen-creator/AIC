@@ -11,3 +11,7 @@ Phase 10 将公司行动保存为与供应商无关的 Canonical Fact。V1 从 T
 同步是显式操作，经 Provider Runtime → RawObservation → Tushare Normalizer → Repository；
 普通历史查询不会触发网络调用。V1 不处理股东账户级现金、股份或配股结算，也不维护完整
 修订历史。供应商后续修订将作为冲突显式暴露，等待独立 Revision Policy。
+
+PIT 查询还要求公司行动的可用证据不晚于 `as_of`。Historical Research 使用
+`provider_timestamp`，Operational Replay 使用 `retrieved_at`；缺失证据为 Unknown，
+未来公告不会泄漏给过去的决策。

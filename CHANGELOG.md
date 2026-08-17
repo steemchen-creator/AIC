@@ -8,6 +8,14 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-004 Phase 11 immutable Point-in-Time context/results, versioned availability policy
+  and Application-owned market-data façade for DailyBars, actions, factors, instruments,
+  trading status and calendar facts.
+- Historical Research versus Operational Replay semantics, explicit Unknown classification,
+  conservative instrument-universe controls and RAW-only PIT price access.
+- Nullable provider-availability provenance round-trip and PIT indexes via migration 0007;
+  existing rows remain Unknown rather than receiving fabricated availability timestamps.
+
 - SPEC-004 Phase 10 canonical corporate-action and adjustment-factor facts, dedicated
   Provider capabilities, deterministic normalizers and idempotent PostgreSQL persistence.
 - Explicit RAW, forward-adjusted and backward-adjusted DailyBar projections with complete
