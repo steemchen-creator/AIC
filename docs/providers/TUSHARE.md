@@ -44,3 +44,9 @@ session times are owned by the source-neutral Session Policy, not attributed to 
 This Provider does not support real-time/minute/L2 data, financials, news, funds,
 institutional holdings, strategies, AI, trading, portfolios, reconciliation, or a
 second real Provider.
+# Instrument APIs
+
+Phase 9 uses separate `instrument.master.read` (`stock_basic`) and
+`instrument.trading_status.read` (`suspend_d`) capabilities. `stock_basic` is limited to
+6000 rows, requires 2000 points and allows 50 calls/minute. `suspend_d` updates
+irregularly and returns suspension/resumption events; empty rows never mean TRADING.

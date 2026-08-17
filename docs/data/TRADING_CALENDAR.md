@@ -24,3 +24,7 @@ Calendar Repository 支持精确日期、inclusive range、上一/下一交易�
 交易所 OPEN 不保证个股有 bar；停牌与数据缺失仍需未来 Instrument Trading Status 区分。
 本阶段没有复权、特殊休市穷举、Redis、调度器、回测、模拟交易或真实交易。未来这些模块
 必须复用同一 Calendar Service，不得各自使用 `weekday < 5` 或私有节假日表。
+# Instrument-level distinction
+
+Calendar answers whether an exchange is open. It does not prove that an individual
+security should trade; Phase 9 Instrument Master and Trading Status provide that layer.

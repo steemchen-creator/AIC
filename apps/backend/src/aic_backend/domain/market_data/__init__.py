@@ -17,6 +17,12 @@ from aic_backend.domain.market_data.errors import (
     InvalidProvenanceError,
     InvalidTimestampError,
 )
+from aic_backend.domain.market_data.instrument import (
+    InstrumentMaster,
+    InstrumentTradingState,
+    InstrumentTradingStatus,
+    ListingStatus,
+)
 from aic_backend.domain.market_data.models import (
     CanonicalRecord,
     DailyBar,
@@ -32,12 +38,16 @@ __all__ = [
     "DataFoundationError",
     "DataProvenance",
     "InstrumentIdentity",
+    "InstrumentMaster",
+    "InstrumentTradingState",
+    "InstrumentTradingStatus",
     "InstrumentType",
     "InvalidInstrumentError",
     "InvalidPayloadError",
     "InvalidProvenanceError",
     "InvalidTimestampError",
     "Market",
+    "ListingStatus",
     "RawObservation",
     "TradingSession",
     "TradingSessionDay",

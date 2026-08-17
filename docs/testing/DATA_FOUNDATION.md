@@ -180,3 +180,8 @@ sessions, exact/previous/next/inclusive reads, deterministic order, normalizatio
 coverage, idempotency, conflicts, chunk/resume boundaries and calendar-aware historical
 candidate gaps. PostgreSQL E2E uses the real Runtime selector/invocation/failover chain,
 sanitized Tushare fixture, migration 0004 and canonical adapters.
+# Phase 9 evidence
+
+Tests cover SH/SZ identity, listing lifecycle, suspend/resume normalization, empty and
+partial coverage, idempotency/conflict, PostgreSQL migration/read-back, Runtime E2E,
+architecture boundaries and all Historical gap-classification outcomes.

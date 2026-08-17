@@ -28,3 +28,8 @@ ranges, Provider/capability attribution, UTC timing, outcome counts and sanitize
 codes. Only `COMPLETED` attempts establish coverage; `PARTIAL` and `FAILED` attempts are
 retained for audit/resume. The composite range index supports instrument-scoped overlap
 queries. Downgrade drops only this operational ledger, not canonical DailyBar facts.
+# Phase 9 tables
+
+Migration 0005 adds `instrument_masters`, `instrument_trading_statuses`, and append-only
+`instrument_sync_attempts`. Canonical identity and instrument/date are unique;
+insert-or-verify rejects conflicting facts without silent updates.

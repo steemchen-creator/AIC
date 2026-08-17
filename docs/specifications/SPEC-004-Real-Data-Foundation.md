@@ -35,6 +35,17 @@ Business modules must not treat raw Provider output as trusted financial facts.
 - Phase 6: reviewer-selected and separately specified real Provider.
 - Phase 7: historical A-share DailyBar query, conservative coverage metadata,
   resumable backfill and PostgreSQL end-to-end verification.
+- Phase 8: SSE/SZSE trading-calendar facts, sessions, persistence and coverage.
+- Phase 9: canonical Instrument Master, daily trading-status evidence and conservative
+  Historical DailyBar gap classification.
+
+## Phase 9 implementation: Instrument identity and trading status
+
+Phase 9 reuses `InstrumentIdentity` and separates slow-changing master data from
+date-specific suspension/resumption facts. Tushare remains behind Provider Runtime;
+Application owns all repository and normalization contracts. PostgreSQL uses
+insert-or-verify semantics and append-only operational coverage. A missing status row
+is `UNKNOWN`, even when the Provider interval was queried successfully.
 
 ## Phase 7 implementation: Historical query and backfill
 

@@ -438,6 +438,35 @@ def test_phase_8_calendar_keeps_provider_and_persistence_boundaries() -> None:
     assert "market.daily.read" in provider
 
 
+def test_phase_9_instruments_keep_application_provider_and_persistence_boundaries() -> None:
+    application = (
+        (PACKAGE_ROOT / "application/use_cases/instruments.py")
+        .read_text(encoding="utf-8")
+        .casefold()
+    )
+    historical = (
+        (PACKAGE_ROOT / "application/use_cases/historical_daily_bars.py")
+        .read_text(encoding="utf-8")
+        .casefold()
+    )
+    provider = (PACKAGE_ROOT / "providers/tushare.py").read_text(encoding="utf-8").casefold()
+    adapter_imports = imported_modules(PACKAGE_ROOT / "infrastructure/instrument_persistence.py")
+    assert "tushare" not in application
+    assert "httpx" not in application
+    assert "sqlalchemy" not in application
+    assert "tushare" not in historical
+    assert "aic_backend.infrastructure" not in provider
+    assert "aic_backend.application.ports.instruments" in adapter_imports
+    assert "instrument.master.read" in provider
+    assert "instrument.trading_status.read" in provider
+    assert "market.daily.read" in provider
+    assert "market.calendar.read" in provider
+    assert not any(
+        concept in application + historical
+        for concept in ("strategy", "portfolio", "paper_trading", "live_trading", "presentation")
+    )
+
+
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:
     callers = {
         path.name

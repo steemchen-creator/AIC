@@ -278,3 +278,9 @@ OPEN/CLOSED dates through a capability separate from DailyBar; a source-neutral 
 supplies standard split sessions. PostgreSQL stores both closed and open facts. Historical
 candidate gaps are computed only under complete calendar coverage, without weekday
 heuristics or a false claim that an exchange-open instrument must have traded.
+# Phase 9 instrument boundary
+
+Instrument Master and daily Trading Status are source-neutral Domain facts. Application
+owns sync, backfill and repository ports; Tushare owns only vendor HTTP/schema mapping;
+Infrastructure owns PostgreSQL. Calendar remains exchange-level while Trading Status is
+instrument-level. Historical classification imports neither Tushare nor SQLAlchemy.

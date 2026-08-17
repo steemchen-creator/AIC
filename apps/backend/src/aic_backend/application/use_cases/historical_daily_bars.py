@@ -13,11 +13,20 @@ from aic_backend.application.ports.historical import (
     BackfillMetadataRepository,
     DateInterval,
 )
+from aic_backend.application.ports.instruments import (
+    InstrumentCoverageRepository,
+    InstrumentMasterRepository,
+    InstrumentTradingStatusRepository,
+)
 from aic_backend.application.ports.persistence import (
     CanonicalDailyBarRepository,
     PersistedDailyBar,
 )
-from aic_backend.domain.market_data import InstrumentIdentity
+from aic_backend.domain.market_data import (
+    InstrumentIdentity,
+    InstrumentTradingState,
+    TradingSessionDay,
+)
 
 
 class CoverageStatus(StrEnum):
@@ -25,6 +34,21 @@ class CoverageStatus(StrEnum):
     PARTIAL = "PARTIAL"
     COVERED = "COVERED"
     UNKNOWN = "UNKNOWN"
+
+
+class GapClassification(StrEnum):
+    NOT_EXPECTED_MARKET_CLOSED = "NOT_EXPECTED_MARKET_CLOSED"
+    NOT_EXPECTED_NOT_LISTED = "NOT_EXPECTED_NOT_LISTED"
+    NOT_EXPECTED_DELISTED = "NOT_EXPECTED_DELISTED"
+    NOT_EXPECTED_SUSPENDED = "NOT_EXPECTED_SUSPENDED"
+    PROBABLE_DATA_GAP = "PROBABLE_DATA_GAP"
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclass(frozen=True, slots=True)
+class DailyBarGap:
+    trading_date: date
+    classification: GapClassification
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,12 +64,20 @@ class DailyBarCoverage:
     last_backfill_at: datetime | None
     expected_missing_dates: tuple[date, ...] = ()
     calendar_coverage_complete: bool = False
+    gap_classifications: tuple[DailyBarGap, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
 class HistoricalDailyBarSeries:
     bars: tuple[PersistedDailyBar, ...]
     coverage: DailyBarCoverage
+
+
+def _dates(start: date, end: date) -> tuple[date, ...]:
+    return tuple(
+        start + timedelta(days=offset)
+        for offset in range((end - start).days + 1)
+    )
 
 
 def missing_intervals(
@@ -84,11 +116,19 @@ class HistoricalDailyBarService:
         metadata: BackfillMetadataRepository,
         calendar: TradingCalendarRepository | None = None,
         calendar_coverage: CalendarCoverageRepository | None = None,
+        instruments: InstrumentMasterRepository | None = None,
+        trading_statuses: InstrumentTradingStatusRepository | None = None,
+        instrument_coverage: InstrumentCoverageRepository | None = None,
+        trading_status_capability: str = "instrument.trading_status.read",
     ) -> None:
         self._repository = repository
         self._metadata = metadata
         self._calendar = calendar
         self._calendar_coverage = calendar_coverage
+        self._instruments = instruments
+        self._trading_statuses = trading_statuses
+        self._instrument_coverage = instrument_coverage
+        self._trading_status_capability = trading_status_capability
 
     async def get_daily_bars(
         self,
@@ -118,6 +158,7 @@ class HistoricalDailyBarService:
         dates = tuple(item.record.trading_date for item in bars)
         completed = tuple(item.completed_at for item in attempts)
         candidate_missing: tuple[date, ...] = ()
+        classifications: tuple[DailyBarGap, ...] = ()
         calendar_complete = False
         if self._calendar is not None and self._calendar_coverage is not None:
             calendar_attempts = await self._calendar_coverage.get_attempts(
@@ -137,6 +178,25 @@ class HistoricalDailyBarService:
                     for item in days
                     if item.is_open and item.trading_date not in stored_dates
                 )
+                if (
+                    self._instruments is not None
+                    and self._trading_statuses is not None
+                    and self._instrument_coverage is not None
+                ):
+                    classifications = await self._classify_gaps(
+                        instrument, start, end, stored_dates, days
+                    )
+            elif (
+                self._instruments is not None
+                and self._trading_statuses is not None
+                and self._instrument_coverage is not None
+            ):
+                stored_dates = set(dates)
+                classifications = tuple(
+                    DailyBarGap(value, GapClassification.UNKNOWN)
+                    for value in _dates(start, end)
+                    if value not in stored_dates
+                )
         coverage = DailyBarCoverage(
             instrument,
             start,
@@ -149,5 +209,53 @@ class HistoricalDailyBarService:
             max(completed) if completed else None,
             candidate_missing,
             calendar_complete,
+            classifications,
         )
         return HistoricalDailyBarSeries(bars, coverage)
+
+    async def _classify_gaps(
+        self,
+        instrument: InstrumentIdentity,
+        start: date,
+        end: date,
+        stored_dates: set[date],
+        calendar_days: tuple[TradingSessionDay, ...],
+    ) -> tuple[DailyBarGap, ...]:
+        assert self._instruments is not None
+        assert self._trading_statuses is not None
+        assert self._instrument_coverage is not None
+        master = await self._instruments.get_instrument(instrument)
+        attempts = await self._instrument_coverage.get_attempts(
+            self._trading_status_capability, instrument.market, instrument, start, end
+        )
+        confirmed = tuple(
+            item.interval
+            for item in attempts
+            if item.status is BackfillAttemptStatus.COMPLETED and item.interval is not None
+        )
+        status_complete = not missing_intervals(DateInterval(start, end), confirmed)
+        calendar_by_date = {item.trading_date: item for item in calendar_days}
+        current = start
+        results: list[DailyBarGap] = []
+        while current <= end:
+            if current not in stored_dates:
+                day = calendar_by_date.get(current)
+                classification = GapClassification.UNKNOWN
+                if day is not None and not day.is_open:
+                    classification = GapClassification.NOT_EXPECTED_MARKET_CLOSED
+                elif day is not None and master is not None and master.listing_date is not None:
+                    if current < master.listing_date:
+                        classification = GapClassification.NOT_EXPECTED_NOT_LISTED
+                    elif master.delisting_date is not None and current > master.delisting_date:
+                        classification = GapClassification.NOT_EXPECTED_DELISTED
+                    elif status_complete:
+                        status = await self._trading_statuses.get_trading_status(
+                            instrument, current
+                        )
+                        if status is not None and status.state is InstrumentTradingState.SUSPENDED:
+                            classification = GapClassification.NOT_EXPECTED_SUSPENDED
+                        elif status is not None and status.state is InstrumentTradingState.TRADING:
+                            classification = GapClassification.PROBABLE_DATA_GAP
+                results.append(DailyBarGap(current, classification))
+            current += timedelta(days=1)
+        return tuple(results)

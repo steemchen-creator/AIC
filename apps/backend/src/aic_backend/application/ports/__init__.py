@@ -14,6 +14,14 @@ from aic_backend.application.ports.historical import (
     BackfillMetadataRepository,
     DateInterval,
 )
+from aic_backend.application.ports.instruments import (
+    InstrumentCoverageAttempt,
+    InstrumentCoverageRepository,
+    InstrumentMasterNormalizer,
+    InstrumentMasterRepository,
+    InstrumentTradingStatusNormalizer,
+    InstrumentTradingStatusRepository,
+)
 from aic_backend.application.ports.persistence import (
     CanonicalDailyBarRepository,
     PersistedDailyBar,
@@ -39,6 +47,12 @@ __all__ = [
     "DateInterval",
     "Event",
     "EventBus",
+    "InstrumentCoverageAttempt",
+    "InstrumentCoverageRepository",
+    "InstrumentMasterNormalizer",
+    "InstrumentMasterRepository",
+    "InstrumentTradingStatusNormalizer",
+    "InstrumentTradingStatusRepository",
     "PersistedDailyBar",
     "PersistenceError",
     "PersistenceErrorCode",

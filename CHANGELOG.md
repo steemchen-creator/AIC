@@ -8,6 +8,11 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-004 Phase 9 canonical A-share Instrument Master and daily trading-status facts,
+  explicit Tushare sync/backfill, PostgreSQL persistence and operational coverage.
+- Evidence-gated Historical DailyBar classification for market closure, listing
+  lifecycle, explicit suspension and probable data gaps.
+
 - SPEC-004 Phase 8 canonical SSE/SZSE trading-calendar facts, standard split-session
   policy, Calendar Provider capability, PostgreSQL repository/coverage and explicit sync.
 - Calendar-aware Historical DailyBar candidate-gap detection that excludes confirmed

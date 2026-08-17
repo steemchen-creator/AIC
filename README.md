@@ -10,6 +10,11 @@ Detailed development and security rules are maintained in [AGENTS.md](AGENTS.md)
 
 ## Data Foundation architecture
 
+SPEC-004 Phase 9 adds source-neutral SSE/SZSE Instrument Master and daily trading-status
+foundations. See `docs/data/INSTRUMENT_MASTER.md` and
+`docs/data/INSTRUMENT_TRADING_STATUS.md`; missing status rows are never assumed to mean
+normal trading.
+
 The backend follows inward Clean Architecture dependencies:
 
 ```text

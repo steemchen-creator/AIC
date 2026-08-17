@@ -58,3 +58,8 @@ raw hash, transformation version, source record/URI/time and failover attributio
   semantics and are not labeled as adjusted.
 - No scheduler, distributed backfill queue, unbounded concurrency, second Provider,
   reconciliation, real-time/minute/Tick/L2 data, business strategy, AI or UI.
+# Phase 9 gap classification
+
+When Calendar, lifecycle and Trading Status evidence are available, missing bars are
+classified as market closed, not listed, delisted, suspended, probable data gap, or
+unknown. Insufficient evidence always produces `UNKNOWN`; probable gaps are not signals.

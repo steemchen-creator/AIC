@@ -62,8 +62,10 @@ source = [
   "aic_backend.application.ports.persistence",
   "aic_backend.application.ports.calendar",
   "aic_backend.application.ports.historical",
+  "aic_backend.application.ports.instruments",
   "aic_backend.application.use_cases.backfill_daily_bars",
   "aic_backend.application.use_cases.historical_daily_bars",
+  "aic_backend.application.use_cases.instruments",
   "aic_backend.application.use_cases.ingest_daily_bars",
   "aic_backend.application.use_cases.persist_ingestion",
   "aic_backend.application.use_cases.trading_calendar",
@@ -72,6 +74,7 @@ source = [
   "aic_backend.infrastructure.canonical_persistence",
   "aic_backend.infrastructure.historical_persistence",
   "aic_backend.infrastructure.calendar_persistence",
+  "aic_backend.infrastructure.instrument_persistence",
   "aic_backend.provider_runtime",
   "aic_backend.providers.tushare",
 ]

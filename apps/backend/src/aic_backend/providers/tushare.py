@@ -30,6 +30,12 @@ from aic_backend.shared.config import get_settings
 
 TUSHARE_DAILY = ProviderCapability("market.daily.read", "1.0.0", CapabilityMode.BATCH)
 TUSHARE_CALENDAR = ProviderCapability("market.calendar.read", "1.0.0", CapabilityMode.BATCH)
+TUSHARE_INSTRUMENT_MASTER = ProviderCapability(
+    "instrument.master.read", "1.0.0", CapabilityMode.BATCH
+)
+TUSHARE_TRADING_STATUS = ProviderCapability(
+    "instrument.trading_status.read", "1.0.0", CapabilityMode.BATCH
+)
 TUSHARE_IMPLEMENTATION = "providers.tushare_daily"
 
 
@@ -91,17 +97,32 @@ class TushareDailyProvider:
         if not self._initialized or self._token is None:
             raise AuthenticationConfigurationError("Tushare credential is unavailable.")
         calendar = request.capability == TUSHARE_CALENDAR
-        if not calendar and request.capability != TUSHARE_DAILY:
+        master = request.capability == TUSHARE_INSTRUMENT_MASTER
+        trading_status = request.capability == TUSHARE_TRADING_STATUS
+        if (
+            not calendar
+            and not master
+            and not trading_status
+            and request.capability != TUSHARE_DAILY
+        ):
             raise InvalidRequestError("Tushare capability is unsupported.")
+        if calendar:
+            api_name, params = "trade_cal", self._calendar_parameters(request.payload)
+            fields = "exchange,cal_date,is_open,pretrade_date"
+        elif master:
+            api_name, params = "stock_basic", self._instrument_parameters(request.payload)
+            fields = "ts_code,symbol,name,exchange,list_status,list_date,delist_date"
+        elif trading_status:
+            api_name, params = "suspend_d", self._status_parameters(request.payload)
+            fields = "ts_code,trade_date,suspend_timing,suspend_type"
+        else:
+            api_name, params = "daily", self._parameters(request.payload)
+            fields = "ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount"
         body = {
-            "api_name": "trade_cal" if calendar else "daily",
+            "api_name": api_name,
             "token": self._token,
-            "params": self._calendar_parameters(request.payload)
-            if calendar
-            else self._parameters(request.payload),
-            "fields": "exchange,cal_date,is_open,pretrade_date"
-            if calendar
-            else "ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount",
+            "params": params,
+            "fields": fields,
         }
         try:
             response = await self._client.post(
@@ -128,14 +149,14 @@ class TushareDailyProvider:
         payload = data.get("data")
         if not isinstance(payload, Mapping):
             raise ProviderInvalidResponseError("Tushare data envelope is malformed.")
-        fields, items = payload.get("fields"), payload.get("items")
-        if not isinstance(fields, list) or not isinstance(items, list):
+        response_fields, items = payload.get("fields"), payload.get("items")
+        if not isinstance(response_fields, list) or not isinstance(items, list):
             raise ProviderInvalidResponseError("Tushare rows are malformed.")
         try:
             rows = [
                 {
                     str(key): str(value) if isinstance(value, float) else value
-                    for key, value in zip(fields, item, strict=True)
+                    for key, value in zip(response_fields, item, strict=True)
                 }
                 for item in items
             ]
@@ -171,6 +192,31 @@ class TushareDailyProvider:
                 result[field] = str(payload[field]).replace("-", "")
         if "start_date" not in result or "end_date" not in result:
             raise InvalidRequestError("Tushare calendar requires a date range.")
+        return result
+
+    @staticmethod
+    def _instrument_parameters(payload: Mapping[str, Any]) -> dict[str, str]:
+        exchange = str(payload.get("exchange", ""))
+        if exchange not in {"SSE", "SZSE"}:
+            raise InvalidRequestError("Tushare instrument exchange is unsupported.")
+        status = str(payload.get("list_status", "L"))
+        if status not in {"L", "D", "P", "G"}:
+            raise InvalidRequestError("Tushare listing status is unsupported.")
+        return {"exchange": exchange, "list_status": status}
+
+    @staticmethod
+    def _status_parameters(payload: Mapping[str, Any]) -> dict[str, str]:
+        market = str(payload.get("market", ""))
+        suffix = {"CN.SSE": "SH", "CN.SZSE": "SZ"}.get(market)
+        symbol = str(payload.get("symbol", "")).strip()
+        if suffix is None or not symbol:
+            raise InvalidRequestError("Tushare trading status instrument is unsupported.")
+        result = {"ts_code": f"{symbol}.{suffix}"}
+        for field in ("start_date", "end_date"):
+            value = payload.get(field)
+            if not value:
+                raise InvalidRequestError("Tushare trading status requires a date range.")
+            result[field] = str(value).replace("-", "")
         return result
 
 
