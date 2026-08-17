@@ -8,6 +8,67 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-004 Phase 11 immutable Point-in-Time context/results, versioned availability policy
+  and Application-owned market-data façade for DailyBars, actions, factors, instruments,
+  trading status and calendar facts.
+- Historical Research versus Operational Replay semantics, explicit Unknown classification,
+  conservative instrument-universe controls and RAW-only PIT price access.
+- Nullable provider-availability provenance round-trip and PIT indexes via migration 0007;
+  existing rows remain Unknown rather than receiving fabricated availability timestamps.
+
+- SPEC-004 Phase 10 canonical corporate-action and adjustment-factor facts, dedicated
+  Provider capabilities, deterministic normalizers and idempotent PostgreSQL persistence.
+- Explicit RAW, forward-adjusted and backward-adjusted DailyBar projections with complete
+  factor coverage enforcement, raw OHLC preservation and unchanged volume/turnover.
+- Resumable adjustment-factor backfill, explicit corporate-action sync, migration and
+  Runtime-to-PostgreSQL-to-Historical deterministic E2E evidence.
+
+- SPEC-004 Phase 9 canonical A-share Instrument Master and daily trading-status facts,
+  explicit Tushare sync/backfill, PostgreSQL persistence and operational coverage.
+- Evidence-gated Historical DailyBar classification for market closure, listing
+  lifecycle, explicit suspension and probable data gaps.
+
+- SPEC-004 Phase 8 canonical SSE/SZSE trading-calendar facts, standard split-session
+  policy, Calendar Provider capability, PostgreSQL repository/coverage and explicit sync.
+- Calendar-aware Historical DailyBar candidate-gap detection that excludes confirmed
+  CLOSED dates while preserving the unresolved instrument-suspension limitation.
+
+- SPEC-004 Phase 7 inclusive historical A-share DailyBar queries, conservative
+  coverage/gap detection and explicit sequential backfill through the existing Runtime.
+- Persistent backfill-attempt ledger, configurable date chunking, partial-failure resume,
+  deterministic ordering, PostgreSQL E2E and concurrent idempotency evidence.
+
+- SPEC-004 Phase 6 Tushare Pro A-share daily Provider, Runtime-selected ingestion,
+  canonical unit conversion, partial batch processing, and idempotent persistence.
+- Reversible canonical `record_id` length migration aligning PostgreSQL storage with
+  the existing deterministic identity contract.
+
+- SPEC-004 Phase 5 Application-owned persistence port, idempotent PostgreSQL adapter,
+  immutable ingestion-time quality snapshots and Alembic schema migration.
+- PostgreSQL contract, concurrency, transaction, read-back and migration tests with
+  exact NUMERIC financial values and stable persistence errors.
+- SPEC-004 Phase 4 deterministic Raw-to-Canonical normalization and ingestion pipeline
+  with immutable structured outcomes and explicit fixture-normalizer registration.
+- Provenance-preserving DailyBar parsing plus existing Validation/Quality integration,
+  100-run determinism, no-mutation and architecture-boundary evidence.
+- SPEC-004 Phase 3 deterministic Data Quality Engine with fixed explainable weighting,
+  immutable assessments/flags and validated-input enforcement.
+- DailyBar freshness, completeness, consistency and configurable source-confidence
+  policies plus exact Decimal conflict representation without reconciliation.
+- Quality identity-stability, no-mutation, 100-run determinism, 10,000-assessment and
+  architecture-isolation tests without changing Provider Runtime Quality Score.
+- SPEC-004 Phase 2 deterministic Validation Engine with immutable issues/results,
+  injected-clock timestamp rules and explicit CanonicalRecord/DailyBar dispatch.
+- Structural validation for schema, timestamps, instruments, provenance and safe
+  payloads plus DailyBar OHLC, non-negative price, volume and turnover rules.
+- Validation purity, determinism, no-auto-correction, architecture-boundary and
+  10,000-record calculation tests without introducing Quality or persistence.
+- SPEC-004 Phase 1 immutable real-data models for market-qualified instruments,
+  canonical envelopes, typed daily bars, raw observations and source provenance.
+- Deterministic SHA-256 record identity and canonical raw-payload hashing with
+  timezone-safe semantics, Decimal financial values and deep immutable mappings.
+- Automated SPEC-004 Phase 1 architecture boundaries and identity, timestamp,
+  provenance, hashing, immutability and serialization tests.
 - SPEC-003 Provider Runtime immutable models, lifecycle and invocation
   protocols, stable errors, and injectable UTC clock and UUID generation.
 - ADR-0003 and automated Provider Runtime dependency boundaries.

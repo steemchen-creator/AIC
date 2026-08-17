@@ -1,0 +1,25 @@
+"""Stable market-data domain codes."""
+
+from enum import StrEnum
+
+
+class Market(StrEnum):
+    CN_SSE = "CN.SSE"
+    CN_SZSE = "CN.SZSE"
+
+
+class InstrumentType(StrEnum):
+    EQUITY = "EQUITY"
+    ETF = "ETF"
+    INDEX = "INDEX"
+
+
+class DataCapability(StrEnum):
+    INSTRUMENT_PROFILE = "INSTRUMENT_PROFILE"
+    DAILY_BAR = "DAILY_BAR"
+    MARKET_SNAPSHOT = "MARKET_SNAPSHOT"
+    TRADING_CALENDAR = "TRADING_CALENDAR"
+    INSTRUMENT_MASTER = "INSTRUMENT_MASTER"
+    INSTRUMENT_TRADING_STATUS = "INSTRUMENT_TRADING_STATUS"
+    ADJUSTMENT_FACTOR = "ADJUSTMENT_FACTOR"
+    CORPORATE_ACTION = "CORPORATE_ACTION"

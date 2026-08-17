@@ -50,6 +50,7 @@ from aic_backend.provider_runtime.models import (
     SelectionDecision,
 )
 from aic_backend.provider_runtime.registry import ProviderRegistry
+from aic_backend.provider_runtime.runtime import ProviderRuntime
 from aic_backend.provider_runtime.scoring import QualityScorer
 from aic_backend.provider_runtime.selector import ProviderSelector
 from aic_backend.provider_runtime.system import UtcClock, UuidIdGenerator
@@ -91,6 +92,7 @@ __all__ = [
     "ProviderLifecycleManager",
     "ProviderRegistration",
     "ProviderRegistry",
+    "ProviderRuntime",
     "ProviderRegistrySnapshot",
     "ProviderRequestContext",
     "ProviderExclusionReason",

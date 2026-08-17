@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     celery_broker_url: str | None = None
     celery_result_backend: str | None = None
     verify_dependencies: bool = False
+    tushare_token: str | None = None
+    historical_chunk_days: int = 365
 
 
 @lru_cache

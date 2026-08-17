@@ -8,9 +8,11 @@ version = "0.2.0"
 description = "AIC backend data foundation"
 requires-python = ">=3.12"
 dependencies = [
+  "alembic>=1.16,<2",
   "asyncpg>=0.30,<1",
   "celery[redis]>=5.5,<6",
   "fastapi>=0.116,<1",
+  "httpx>=0.28,<1",
   "pydantic-settings>=2.10,<3",
   "redis>=6.2,<7",
   "sqlalchemy[asyncio]>=2.0,<3",
@@ -19,7 +21,6 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-  "httpx>=0.28,<1",
   "mypy>=1.17,<2",
   "pytest>=8.4,<9",
   "pytest-asyncio>=0.25,<2",
@@ -52,12 +53,37 @@ files = ["apps/backend/src/aic_backend"]
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["celery"]
+module = ["alembic", "celery"]
 ignore_missing_imports = true
 
 [tool.coverage.run]
 branch = true
-source = ["aic_backend.provider_runtime"]
+source = [
+  "aic_backend.application.ports.persistence",
+  "aic_backend.application.point_in_time",
+  "aic_backend.application.ports.calendar",
+  "aic_backend.application.ports.historical",
+  "aic_backend.application.ports.corporate_actions",
+  "aic_backend.application.ports.instruments",
+  "aic_backend.application.use_cases.backfill_daily_bars",
+  "aic_backend.application.use_cases.adjusted_daily_bars",
+  "aic_backend.application.use_cases.corporate_actions",
+  "aic_backend.application.use_cases.historical_daily_bars",
+  "aic_backend.application.use_cases.instruments",
+  "aic_backend.application.use_cases.ingest_daily_bars",
+  "aic_backend.application.use_cases.persist_ingestion",
+  "aic_backend.application.use_cases.point_in_time_market_data",
+  "aic_backend.application.use_cases.trading_calendar",
+  "aic_backend.data_foundation",
+  "aic_backend.domain.market_data",
+  "aic_backend.infrastructure.canonical_persistence",
+  "aic_backend.infrastructure.historical_persistence",
+  "aic_backend.infrastructure.calendar_persistence",
+  "aic_backend.infrastructure.instrument_persistence",
+  "aic_backend.infrastructure.corporate_action_persistence",
+  "aic_backend.provider_runtime",
+  "aic_backend.providers.tushare",
+]
 
 [tool.coverage.report]
 fail_under = 90

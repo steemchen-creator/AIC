@@ -119,3 +119,8 @@ budget limits switches and defaults to one. Results expose the final source,
 ordered attempts, stable failure codes, and failover count. Failover is local to
 one process and request; no distributed coordination or historical metrics are
 implemented.
+# First production adapter
+
+SPEC-004 Phase 6 registers `providers.tushare_daily` through Bootstrap's explicit
+builder allowlist. Runtime selects `market.daily.read`; Application does not
+instantiate or name Tushare. Missing credentials fail Provider initialization safely.

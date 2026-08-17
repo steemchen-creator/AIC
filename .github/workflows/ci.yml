@@ -25,6 +25,20 @@ jobs:
   backend:
     name: Backend tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: aic_test
+          POSTGRES_USER: aic
+          POSTGRES_PASSWORD: test-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aic -d aic_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -41,8 +55,11 @@ jobs:
       - name: Run backend tests
         env:
           AIC_ENVIRONMENT: testing
+          AIC_DATABASE_URL: postgresql+asyncpg://aic:test-only-password@localhost:5432/aic_test
           AIC_CELERY_BROKER_URL: redis://localhost:6379/1
-        run: pytest --cov --cov-report=term-missing
+        run: |
+          alembic upgrade head
+          pytest --cov --cov-report=term-missing
 
       - name: Lint backend
         run: ruff check apps/backend/src apps/backend/tests
