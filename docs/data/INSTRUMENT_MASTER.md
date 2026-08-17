@@ -15,3 +15,7 @@ Repeated identical facts are `ALREADY_EXISTS`; conflicting facts under the same
 canonical identity fail rather than overwrite. V1 stores the current display name and
 does not implement full name history, temporal revisions, industries, ST labels,
 corporate actions, or a second-provider reconciliation policy.
+
+Phase 10 corporate actions and adjustment factors reuse this exact exchange-qualified
+`InstrumentIdentity`; vendor codes are normalized at the adapter boundary and are not stored
+as a second permanent identity system.

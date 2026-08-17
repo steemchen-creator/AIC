@@ -185,3 +185,13 @@ sanitized Tushare fixture, migration 0004 and canonical adapters.
 Tests cover SH/SZ identity, listing lifecycle, suspend/resume normalization, empty and
 partial coverage, idempotency/conflict, PostgreSQL migration/read-back, Runtime E2E,
 architecture boundaries and all Historical gap-classification outcomes.
+# Phase 10 evidence
+
+Tests cover exact Decimal factor/action normalization, date validation, idempotency and
+identity conflicts, factor coverage/resume/failure behavior, RAW/front/back adjustment math,
+no mutation, preserved volume/turnover, PostgreSQL round trips, migration downgrade/upgrade,
+and a deterministic Provider Runtime → RawObservation → PostgreSQL → Historical E2E.
+
+The architecture suite enforces that Application does not import Tushare/HTTP/SQL, Provider
+does not write the database, repository ports are Application-owned and concrete persistence
+is Infrastructure-owned.

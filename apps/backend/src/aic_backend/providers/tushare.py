@@ -36,6 +36,12 @@ TUSHARE_INSTRUMENT_MASTER = ProviderCapability(
 TUSHARE_TRADING_STATUS = ProviderCapability(
     "instrument.trading_status.read", "1.0.0", CapabilityMode.BATCH
 )
+TUSHARE_ADJUSTMENT_FACTOR = ProviderCapability(
+    "market.adjustment_factor.read", "1.0.0", CapabilityMode.BATCH
+)
+TUSHARE_CORPORATE_ACTION = ProviderCapability(
+    "market.corporate_action.read", "1.0.0", CapabilityMode.BATCH
+)
 TUSHARE_IMPLEMENTATION = "providers.tushare_daily"
 
 
@@ -99,10 +105,14 @@ class TushareDailyProvider:
         calendar = request.capability == TUSHARE_CALENDAR
         master = request.capability == TUSHARE_INSTRUMENT_MASTER
         trading_status = request.capability == TUSHARE_TRADING_STATUS
+        adjustment_factor = request.capability == TUSHARE_ADJUSTMENT_FACTOR
+        corporate_action = request.capability == TUSHARE_CORPORATE_ACTION
         if (
             not calendar
             and not master
             and not trading_status
+            and not adjustment_factor
+            and not corporate_action
             and request.capability != TUSHARE_DAILY
         ):
             raise InvalidRequestError("Tushare capability is unsupported.")
@@ -115,6 +125,15 @@ class TushareDailyProvider:
         elif trading_status:
             api_name, params = "suspend_d", self._status_parameters(request.payload)
             fields = "ts_code,trade_date,suspend_timing,suspend_type"
+        elif adjustment_factor:
+            api_name, params = "adj_factor", self._dated_instrument_parameters(request.payload)
+            fields = "ts_code,trade_date,adj_factor"
+        elif corporate_action:
+            api_name, params = "dividend", self._corporate_action_parameters(request.payload)
+            fields = (
+                "ts_code,ann_date,div_proc,stk_div,stk_bo_rate,stk_co_rate,"
+                "cash_div,cash_div_tax,record_date,ex_date,pay_date,div_listdate,imp_ann_date"
+            )
         else:
             api_name, params = "daily", self._parameters(request.payload)
             fields = "ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount"
@@ -218,6 +237,29 @@ class TushareDailyProvider:
                 raise InvalidRequestError("Tushare trading status requires a date range.")
             result[field] = str(value).replace("-", "")
         return result
+
+    @staticmethod
+    def _instrument_code(payload: Mapping[str, Any]) -> str:
+        market = str(payload.get("market", ""))
+        suffix = {"CN.SSE": "SH", "CN.SZSE": "SZ"}.get(market)
+        symbol = str(payload.get("symbol", "")).strip()
+        if suffix is None or not symbol:
+            raise InvalidRequestError("Tushare instrument is unsupported.")
+        return f"{symbol}.{suffix}"
+
+    @classmethod
+    def _dated_instrument_parameters(cls, payload: Mapping[str, Any]) -> dict[str, str]:
+        result = {"ts_code": cls._instrument_code(payload)}
+        for field in ("start_date", "end_date"):
+            value = payload.get(field)
+            if not value:
+                raise InvalidRequestError("Tushare adjustment factor requires a date range.")
+            result[field] = str(value).replace("-", "")
+        return result
+
+    @classmethod
+    def _corporate_action_parameters(cls, payload: Mapping[str, Any]) -> dict[str, str]:
+        return {"ts_code": cls._instrument_code(payload)}
 
 
 def build_tushare_daily_provider(definition: ProviderDefinition) -> TushareDailyProvider:

@@ -22,7 +22,10 @@ from aic_backend.application.ports.persistence import (
     CanonicalDailyBarRepository,
     PersistedDailyBar,
 )
+from aic_backend.application.use_cases.adjusted_daily_bars import AdjustmentService
 from aic_backend.domain.market_data import (
+    AdjustedDailyBar,
+    AdjustmentMode,
     InstrumentIdentity,
     InstrumentTradingState,
     TradingSessionDay,
@@ -71,6 +74,8 @@ class DailyBarCoverage:
 class HistoricalDailyBarSeries:
     bars: tuple[PersistedDailyBar, ...]
     coverage: DailyBarCoverage
+    adjustment_mode: AdjustmentMode = AdjustmentMode.RAW
+    adjusted_bars: tuple[AdjustedDailyBar, ...] = ()
 
 
 def _dates(start: date, end: date) -> tuple[date, ...]:
@@ -120,6 +125,7 @@ class HistoricalDailyBarService:
         trading_statuses: InstrumentTradingStatusRepository | None = None,
         instrument_coverage: InstrumentCoverageRepository | None = None,
         trading_status_capability: str = "instrument.trading_status.read",
+        adjustment: AdjustmentService | None = None,
     ) -> None:
         self._repository = repository
         self._metadata = metadata
@@ -129,12 +135,14 @@ class HistoricalDailyBarService:
         self._trading_statuses = trading_statuses
         self._instrument_coverage = instrument_coverage
         self._trading_status_capability = trading_status_capability
+        self._adjustment = adjustment
 
     async def get_daily_bars(
         self,
         instrument: InstrumentIdentity,
         start: date,
         end: date,
+        adjustment_mode: AdjustmentMode = AdjustmentMode.RAW,
     ) -> HistoricalDailyBarSeries:
         requested = DateInterval(start, end)
         stored = await self._repository.get_daily_bars(instrument, start, end)
@@ -211,7 +219,12 @@ class HistoricalDailyBarService:
             calendar_complete,
             classifications,
         )
-        return HistoricalDailyBarSeries(bars, coverage)
+        adjusted: tuple[AdjustedDailyBar, ...] = ()
+        if adjustment_mode is not AdjustmentMode.RAW:
+            if self._adjustment is None:
+                raise ValueError("UNSUPPORTED_ADJUSTMENT_MODE")
+            adjusted = await self._adjustment.adjust(bars, adjustment_mode)
+        return HistoricalDailyBarSeries(bars, coverage, adjustment_mode, adjusted)
 
     async def _classify_gaps(
         self,

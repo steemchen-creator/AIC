@@ -63,3 +63,12 @@ raw hash, transformation version, source record/URI/time and failover attributio
 When Calendar, lifecycle and Trading Status evidence are available, missing bars are
 classified as market closed, not listed, delisted, suspended, probable data gap, or
 unknown. Insufficient evidence always produces `UNKNOWN`; probable gaps are not signals.
+# Adjusted historical views (Phase 10)
+
+`HistoricalDailyBarService.get_daily_bars` accepts an optional `AdjustmentMode`. The default
+is `RAW`, preserving all existing callers. `FORWARD_ADJUSTED` and `BACKWARD_ADJUSTED` return
+derived `AdjustedDailyBar` projections while the returned canonical raw bars remain unchanged.
+
+Adjusted reads are database-only and never start provider synchronization. Every requested
+bar must have an authoritative factor; otherwise `AdjustmentCoverageIncomplete` is raised.
+See `ADJUSTED_DAILY_BARS.md` for the calculation and field policy.

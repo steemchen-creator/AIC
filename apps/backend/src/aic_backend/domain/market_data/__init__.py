@@ -5,6 +5,13 @@ from aic_backend.domain.market_data.calendar import (
     TradingSessionDay,
     standard_a_share_session,
 )
+from aic_backend.domain.market_data.corporate_actions import (
+    AdjustedDailyBar,
+    AdjustmentFactor,
+    AdjustmentMode,
+    CorporateAction,
+    CorporateActionType,
+)
 from aic_backend.domain.market_data.enums import (
     DataCapability,
     InstrumentType,
@@ -32,6 +39,11 @@ from aic_backend.domain.market_data.models import (
 )
 
 __all__ = [
+    "AdjustedDailyBar",
+    "AdjustmentFactor",
+    "AdjustmentMode",
+    "CorporateAction",
+    "CorporateActionType",
     "CanonicalRecord",
     "DailyBar",
     "DataCapability",

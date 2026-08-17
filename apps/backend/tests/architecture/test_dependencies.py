@@ -467,6 +467,43 @@ def test_phase_9_instruments_keep_application_provider_and_persistence_boundarie
     )
 
 
+def test_phase_10_corporate_actions_keep_owned_layer_boundaries() -> None:
+    application_paths = (
+        PACKAGE_ROOT / "application/ports/corporate_actions.py",
+        PACKAGE_ROOT / "application/use_cases/adjusted_daily_bars.py",
+        PACKAGE_ROOT / "application/use_cases/corporate_actions.py",
+    )
+    application_imports: set[str] = set()
+    for path in application_paths:
+        application_imports.update(imported_modules(path))
+    forbidden = (
+        "aic_backend.bootstrap",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "httpx",
+        "sqlalchemy",
+    )
+    assert not {module for module in application_imports if module.startswith(forbidden)}
+
+    normalizer_imports = imported_modules(
+        PACKAGE_ROOT / "data_foundation/tushare_corporate_actions.py"
+    )
+    assert not {
+        module
+        for module in normalizer_imports
+        if module.startswith(("aic_backend.infrastructure", "httpx", "sqlalchemy"))
+    }
+    persistence_imports = imported_modules(
+        PACKAGE_ROOT / "infrastructure/corporate_action_persistence.py"
+    )
+    assert "aic_backend.application.ports.persistence" in persistence_imports
+    assert any(module.startswith("sqlalchemy") for module in persistence_imports)
+    assert "aic_backend.infrastructure" not in (
+        PACKAGE_ROOT / "providers/tushare.py"
+    ).read_text(encoding="utf-8")
+
+
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:
     callers = {
         path.name

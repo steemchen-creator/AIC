@@ -188,3 +188,9 @@ raises `PERSISTENCE_IDENTITY_CONFLICT`. No update or last-write-wins path exists
 Prices use `NUMERIC(28,10)`, turnover uses `NUMERIC(38,10)`, and scores use
 `NUMERIC(5,2)`. Alembic owns the reversible schema migration. Phase 6 and real Provider
 selection have not started; Redis is not canonical storage.
+# Phase 10 status
+
+Phase 10 implements the approved A-share Corporate Action and Adjustment Factor foundation.
+It adds explicit RAW/forward/backward DailyBar views without changing canonical raw facts.
+See `docs/data/CORPORATE_ACTIONS.md`, `docs/data/ADJUSTED_DAILY_BARS.md`, and
+`REVIEW-SPEC004-PHASE10.md` for contracts and verification evidence.

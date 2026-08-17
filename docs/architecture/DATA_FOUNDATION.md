@@ -284,3 +284,14 @@ Instrument Master and daily Trading Status are source-neutral Domain facts. Appl
 owns sync, backfill and repository ports; Tushare owns only vendor HTTP/schema mapping;
 Infrastructure owns PostgreSQL. Calendar remains exchange-level while Trading Status is
 instrument-level. Historical classification imports neither Tushare nor SQLAlchemy.
+# Phase 10: corporate actions and adjusted views
+
+The Application owns factor/action repository and normalizer protocols. Tushare HTTP and
+field mapping remain in Provider/Data Foundation adapters; SQLAlchemy remains in
+Infrastructure. `AdjustmentService` derives immutable projections from canonical raw bars
+and authoritative factors. It does not persist a second DailyBar source of truth.
+
+Reason: analytical price continuity must not corrupt raw market facts. Impact: callers can
+explicitly select RAW/front/back adjustment with traceable source record, factor and policy
+version. Risk: provider revisions conflict under V1 insert-or-verify and require an approved
+future revision policy; incomplete factors reject adjusted requests.

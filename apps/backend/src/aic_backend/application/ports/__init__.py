@@ -7,6 +7,11 @@ from aic_backend.application.ports.calendar import (
     CalendarNormalizer,
     TradingCalendarRepository,
 )
+from aic_backend.application.ports.corporate_actions import (
+    AdjustmentCoverageRepository,
+    AdjustmentFactorRepository,
+    CorporateActionRepository,
+)
 from aic_backend.application.ports.event_bus import Event, EventBus
 from aic_backend.application.ports.historical import (
     BackfillAttempt,
@@ -34,6 +39,9 @@ from aic_backend.application.ports.provider import DataProvider
 from aic_backend.application.ports.repository import DataRepository
 
 __all__ = [
+    "AdjustmentCoverageRepository",
+    "AdjustmentFactorRepository",
+    "CorporateActionRepository",
     "BackfillAttempt",
     "BackfillAttemptStatus",
     "BackfillMetadataRepository",

@@ -10,10 +10,10 @@ Detailed development and security rules are maintained in [AGENTS.md](AGENTS.md)
 
 ## Data Foundation architecture
 
-SPEC-004 Phase 9 adds source-neutral SSE/SZSE Instrument Master and daily trading-status
-foundations. See `docs/data/INSTRUMENT_MASTER.md` and
-`docs/data/INSTRUMENT_TRADING_STATUS.md`; missing status rows are never assumed to mean
-normal trading.
+SPEC-004 Phase 10 adds source-neutral corporate-action and adjustment-factor facts plus
+explicit RAW, forward-adjusted and backward-adjusted DailyBar views. Raw canonical bars,
+volume and turnover are never overwritten. See `docs/data/CORPORATE_ACTIONS.md` and
+`docs/data/ADJUSTED_DAILY_BARS.md`.
 
 The backend follows inward Clean Architecture dependencies:
 
@@ -117,3 +117,8 @@ with `AIC_HISTORICAL_CHUNK_DAYS` (default 365). See
 Phase 8 adds the authoritative SSE/SZSE trading-calendar foundation: persisted OPEN and
 CLOSED facts, timezone-aware split sessions, explicit calendar sync and calendar-aware
 DailyBar candidate gaps. See [Trading Calendar](docs/data/TRADING_CALENDAR.md).
+
+Phase 9 adds Instrument Master and explicit daily trading status. Phase 10 adds Tushare
+`adj_factor`/`dividend` adapters, resumable factor backfill and auditable corporate-action
+sync. Adjusted requests fail when factor coverage is incomplete; ordinary historical reads
+remain RAW by default and never trigger provider synchronization.

@@ -8,6 +8,13 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-004 Phase 10 canonical corporate-action and adjustment-factor facts, dedicated
+  Provider capabilities, deterministic normalizers and idempotent PostgreSQL persistence.
+- Explicit RAW, forward-adjusted and backward-adjusted DailyBar projections with complete
+  factor coverage enforcement, raw OHLC preservation and unchanged volume/turnover.
+- Resumable adjustment-factor backfill, explicit corporate-action sync, migration and
+  Runtime-to-PostgreSQL-to-Historical deterministic E2E evidence.
+
 - SPEC-004 Phase 9 canonical A-share Instrument Master and daily trading-status facts,
   explicit Tushare sync/backfill, PostgreSQL persistence and operational coverage.
 - Evidence-gated Historical DailyBar classification for market closure, listing

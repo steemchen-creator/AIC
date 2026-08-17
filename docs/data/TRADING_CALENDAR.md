@@ -28,3 +28,8 @@ Calendar Repository 支持精确日期、inclusive range、上一/下一交易�
 
 Calendar answers whether an exchange is open. It does not prove that an individual
 security should trade; Phase 9 Instrument Master and Trading Status provide that layer.
+# Corporate-action dates
+
+Phase 10 reuses the calendar as market-date context only. Record dates and payment dates are
+not required to be OPEN trading days, and the corporate-action normalizer never invents or
+shifts dates to satisfy the trading calendar.
