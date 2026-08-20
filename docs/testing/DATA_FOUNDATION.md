@@ -202,3 +202,18 @@ PIT tests 锁定 available 前/等于/后边界、Unknown、event time 与 avail
 Historical Research/Operational Replay 差异、DailyBar 排序和 provenance、公司行动与
 因子未来泄漏、RAW-only adjustment、停复牌、日历和 conservative instrument universe。
 PostgreSQL E2E 验证 provider timestamp round-trip，migration 测试验证 0006 ↔ 0007。
+
+# SPEC-005 evidence
+
+Tests cover Decimal value invariants, order state transitions, configurable fees and
+deterministic slippage, weighted-average cost, partial sells, cash settlement, realized
+and unrealized PnL, no-negative-cash/no-short rules, immutable snapshots and audit IDs.
+The deterministic E2E starts with CNY 500,000, trades three instruments across calendar
+sessions, compares two complete replays and verifies gross/cost/tax/slippage/net results.
+
+No-lookahead tests leave a future bar physically present in the fixture but unavailable
+at the current `as_of`; the engine rejects the trade instead of borrowing that fact.
+Architecture tests prohibit direct canonical/historical repositories, latest-row reads,
+Tushare, HTTP, SQL, UI, leverage, AI and strategy implementations in Domain/Application.
+PostgreSQL 17 tests verify normalized row evidence, insert-or-verify identity conflicts,
+read-back, migration 0007 ↔ 0008, and fresh upgrade to head.

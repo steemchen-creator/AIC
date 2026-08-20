@@ -308,3 +308,18 @@ AIC `ingested_at` for DailyBars and `retrieved_at` for other facts. Migration 00
 nullable provider timestamps across Calendar/Instrument/Status/Factor/Action adapters and
 adds PIT indexes; NULL remains Unknown. PIT adjusted views are deliberately unsupported in
 V1, leaving RAW as the only backtest-safe price mode.
+
+# SPEC-005: deterministic portfolio and backtest boundary
+
+SPEC-005 depends on the approved PIT façade rather than extending or bypassing Data
+Foundation. `domain/portfolio` owns value semantics, order/fill facts, cash/position
+accounting, snapshots and replaceable fee/slippage policy protocols. It imports no
+Application, database, Provider, HTTP, UI or strategy implementation.
+
+`application/backtest.py` advances only PIT-visible exchange sessions and obtains every
+trade/mark/benchmark price from `PointInTimeMarketDataService` under Historical Research,
+an aware `as_of`, and RAW adjustment mode. The Application-owned persistence port accepts
+complete deterministic evidence; Infrastructure maps it to normalized PostgreSQL tables.
+
+This is intentionally long-only, unlevered daily replay. It does not create a second
+historical-data path, a Strategy Engine, broker, AI Brain, Shadow Portfolio or UI.

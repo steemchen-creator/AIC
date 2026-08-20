@@ -15,6 +15,19 @@ controls. Historical Research and Operational Replay use different availability 
 unknown availability is never treated as available. See `docs/data/POINT_IN_TIME_DATA.md`
 and `docs/data/NO_LOOKAHEAD_POLICY.md`.
 
+## Deterministic backtest and portfolio foundation
+
+SPEC-005 adds a provider-neutral portfolio accounting domain and a deterministic daily
+replay application. Historical prices and trading days are available to the engine only
+through `PointInTimeMarketDataService` with `HISTORICAL_RESEARCH`, an explicit aware
+`as_of`, and RAW prices. Direct historical/latest repository reads are prohibited.
+
+V1 supports multiple long-only positions, CNY cash, weighted-average cost, immutable
+orders/fills, auditable cash and event ledgers, configurable fees, fixed-bps slippage,
+daily NAV, a benchmark result, and normalized PostgreSQL evidence. It does not implement
+partial fills, leverage, short selling, a strategy engine, live trading, AI or UI.
+See `docs/backtest/BACKTEST_FOUNDATION.md` and `docs/portfolio/PORTFOLIO_ACCOUNTING.md`.
+
 The backend follows inward Clean Architecture dependencies:
 
 ```text
@@ -34,6 +47,7 @@ apps/backend/
 |   |-- presentation/    HTTP boundary
 |   |-- application/     Use cases and outbound ports
 |   |-- domain/          Framework-independent models and events
+|   |   `-- portfolio/   Deterministic accounting and cost policies
 |   |-- data_foundation/ Deterministic real-data identity and construction helpers
 |   |-- providers/       Data-source adapters
 |   |-- infrastructure/  Repository, cache, event, and operational adapters

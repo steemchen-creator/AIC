@@ -499,9 +499,9 @@ def test_phase_10_corporate_actions_keep_owned_layer_boundaries() -> None:
     )
     assert "aic_backend.application.ports.persistence" in persistence_imports
     assert any(module.startswith("sqlalchemy") for module in persistence_imports)
-    assert "aic_backend.infrastructure" not in (
-        PACKAGE_ROOT / "providers/tushare.py"
-    ).read_text(encoding="utf-8")
+    assert "aic_backend.infrastructure" not in (PACKAGE_ROOT / "providers/tushare.py").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_phase_11_point_in_time_keeps_no_lookahead_boundaries() -> None:
@@ -528,12 +528,67 @@ def test_phase_11_point_in_time_keeps_no_lookahead_boundaries() -> None:
     assert "select(" not in source
     assert "latest" not in source
     assert not any(
-        concept in source
-        for concept in ("strategy", "portfolio", "paper_trading", "live_trading")
+        concept in source for concept in ("strategy", "portfolio", "paper_trading", "live_trading")
     )
     service_source = paths[1].read_text(encoding="utf-8")
     assert "CanonicalDailyBarRepository" in service_source
     assert "AdjustmentMode.RAW" in service_source
+
+
+def test_spec_005_backtest_keeps_pit_and_clean_architecture_boundaries() -> None:
+    portfolio_root = PACKAGE_ROOT / "domain/portfolio"
+    application_paths = (
+        PACKAGE_ROOT / "application/backtest.py",
+        PACKAGE_ROOT / "application/ports/backtest.py",
+    )
+    domain_imports = package_imports("domain/portfolio")
+    forbidden_domain = (
+        "aic_backend.application",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "fastapi",
+        "httpx",
+        "sqlalchemy",
+    )
+    assert not {module for module in domain_imports if module.startswith(forbidden_domain)}
+    application_imports: set[str] = set()
+    for path in application_paths:
+        application_imports.update(imported_modules(path))
+    forbidden_application = (
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "fastapi",
+        "httpx",
+        "requests",
+        "sqlalchemy",
+    )
+    assert not {
+        module for module in application_imports if module.startswith(forbidden_application)
+    }
+    source = "\n".join(path.read_text(encoding="utf-8") for path in application_paths).casefold()
+    domain_source = "\n".join(
+        path.read_text(encoding="utf-8") for path in portfolio_root.rglob("*.py")
+    ).casefold()
+    assert "pointintimemarketdataservice" in source
+    assert "canonicaldailybarrepository" not in source
+    assert "historicaldailybar" not in source
+    assert "latest" not in source
+    assert not any(
+        term in source + domain_source
+        for term in (
+            "tushare",
+            "postgresql",
+            "strategyengine",
+            "aibrain",
+            "shadowportfolio",
+            "leveragepolicy",
+            "fastapi",
+            "wpf",
+        )
+    )
+    assert "feepolicy" in source and "slippagepolicy" in source
 
 
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:
