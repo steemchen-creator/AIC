@@ -8,6 +8,13 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-005 deterministic daily backtest and multi-position portfolio accounting foundation
+  with PIT-only RAW market-data access and trading-calendar replay.
+- Immutable order/fill/audit facts, cash ledger, weighted-average position accounting,
+  realized/unrealized PnL, daily NAV, benchmark and transparent fee/tax/slippage results.
+- Application-owned backtest persistence port, normalized PostgreSQL evidence tables,
+  reversible migration 0008, deterministic E2E and no-lookahead architecture tests.
+
 - SPEC-004 Phase 11 immutable Point-in-Time context/results, versioned availability policy
   and Application-owned market-data façade for DailyBars, actions, factors, instruments,
   trading status and calendar facts.
