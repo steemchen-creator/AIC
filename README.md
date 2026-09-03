@@ -28,6 +28,20 @@ daily NAV, a benchmark result, and normalized PostgreSQL evidence. It does not i
 partial fills, leverage, short selling, a strategy engine, live trading, AI or UI.
 See `docs/backtest/BACKTEST_FOUNDATION.md` and `docs/portfolio/PORTFOLIO_ACCOUNTING.md`.
 
+## A-share execution and pre-trade risk foundation
+
+SPEC-006 adds a deterministic cash-account execution gate for A-share replay. Orders are
+checked against PIT trading-calendar, instrument lifecycle/status and RAW DailyBars before
+lot, price-limit, T+1 sellable-position, cash and configurable portfolio-risk rules.
+Unknown required evidence is conservatively rejected; no latest-data fallback is allowed.
+
+V1 enforces no short selling, no margin, no hidden leverage and non-negative cash. It records
+stable RiskDecision, RiskSnapshot, settlement and audit evidence in PostgreSQL through an
+Application-owned port. It does not implement strategy selection, Kelly sizing, dynamic
+leverage, live trading, broker connectivity or UI. See
+`docs/execution/A_SHARE_EXECUTION.md`, `docs/risk/PRE_TRADE_RISK.md` and
+`docs/portfolio/T1_SETTLEMENT.md`.
+
 The backend follows inward Clean Architecture dependencies:
 
 ```text
@@ -48,6 +62,7 @@ apps/backend/
 |   |-- application/     Use cases and outbound ports
 |   |-- domain/          Framework-independent models and events
 |   |   `-- portfolio/   Deterministic accounting and cost policies
+|   |   `-- execution/   A-share eligibility, T+1 and risk policies
 |   |-- data_foundation/ Deterministic real-data identity and construction helpers
 |   |-- providers/       Data-source adapters
 |   |-- infrastructure/  Repository, cache, event, and operational adapters
