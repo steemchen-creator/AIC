@@ -42,3 +42,12 @@ Migration `20260903_0009` adds immutable `risk_decisions`, post-trade
 insert-or-verify; a reused identity with different content raises an identity conflict and
 is never silently overwritten. The migration is reversible to `20260820_0008`; production
 downgrades require backup and explicit operational authorization.
+
+# SPEC-007 Forward Paper Trading
+
+Migration `20260904_0010` adds `paper_accounts`, `paper_sessions`,
+`paper_order_intents`, `paper_performance_snapshots`, `paper_trade_episodes` and
+`paper_account_state_events`. The account row stores the atomic recovery projection;
+normalized tables preserve queryable audit evidence. Stable identities are insert-or-verify,
+and finalized sessions are immutable. Downgrade to `20260903_0009` removes only these Paper
+Trading tables and therefore requires backup and explicit authorization outside isolated tests.
