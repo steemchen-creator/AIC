@@ -29,6 +29,7 @@ def test_domain_uses_standard_library_only() -> None:
         "datetime",
         "decimal",
         "enum",
+        "hashlib",
         "types",
         "typing",
         "urllib",
@@ -589,6 +590,63 @@ def test_spec_005_backtest_keeps_pit_and_clean_architecture_boundaries() -> None
         )
     )
     assert "feepolicy" in source and "slippagepolicy" in source
+
+
+def test_spec_006_execution_risk_keeps_pit_and_clean_architecture_boundaries() -> None:
+    domain_imports = package_imports("domain/execution")
+    application_paths = (
+        PACKAGE_ROOT / "application/execution.py",
+        PACKAGE_ROOT / "application/ports/execution.py",
+    )
+    application_imports: set[str] = set()
+    for path in application_paths:
+        application_imports.update(imported_modules(path))
+    forbidden = (
+        "aic_backend.bootstrap",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "fastapi",
+        "httpx",
+        "sqlalchemy",
+    )
+    assert not {module for module in domain_imports if module.startswith(forbidden)}
+    assert not {module for module in application_imports if module.startswith(forbidden)}
+    source = "\n".join(path.read_text(encoding="utf-8") for path in application_paths).casefold()
+    domain_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (PACKAGE_ROOT / "domain/execution").rglob("*.py")
+    ).casefold()
+    combined = source + domain_source
+    assert "pointintimemarketdataservice" in source
+    assert "list_calendar_as_of" in source
+    assert "list_instruments_as_of" in source
+    assert "list_trading_status_as_of" in source
+    assert "canonicaldailybarrepository" not in source
+    assert "select(" not in source
+    assert "latest" not in source
+    assert not any(
+        term in combined
+        for term in (
+            "tushare",
+            "strategyengine",
+            "llm",
+            "aibrain",
+            "kelly",
+            "opportunityradar",
+            "shadowportfolio",
+            "marginaccount",
+            "dynamicleverage",
+            "fastapi",
+            "wpf",
+        )
+    )
+    assert 'max_gross_exposure_pct <= decimal("1")' in domain_source
+    assert "sellable_quantity" in domain_source
+
+    adapter_imports = imported_modules(PACKAGE_ROOT / "infrastructure/execution_persistence.py")
+    assert "aic_backend.application.ports.execution" in adapter_imports
+    assert any(module.startswith("sqlalchemy") for module in adapter_imports)
 
 
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:

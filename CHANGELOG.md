@@ -8,6 +8,16 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-006 deterministic A-share cash-account execution and pre-trade risk foundation,
+  including PIT session/instrument eligibility, conservative unknown handling and stable
+  acceptance/rejection evidence.
+- T+1 total/sellable/today-bought quantity tracking with Trading Calendar-gated rollover,
+  board-lot and explicit price-limit policies, suspension handling and no-short invariants.
+- Configurable concentration, gross-exposure, cash-buffer, daily order/fill/turnover guards,
+  post-trade risk snapshots and versioned execution/risk policies without hidden leverage.
+- Application-owned execution evidence port, PostgreSQL insert-or-verify adapter, reversible
+  migration 0009, deterministic E2E, PIT/no-lookahead and architecture-boundary tests.
+
 - SPEC-005 deterministic daily backtest and multi-position portfolio accounting foundation
   with PIT-only RAW market-data access and trading-calendar replay.
 - Immutable order/fill/audit facts, cash ledger, weighted-average position accounting,

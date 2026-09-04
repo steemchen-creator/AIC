@@ -33,3 +33,12 @@ queries. Downgrade drops only this operational ledger, not canonical DailyBar fa
 Migration 0005 adds `instrument_masters`, `instrument_trading_statuses`, and append-only
 `instrument_sync_attempts`. Canonical identity and instrument/date are unique;
 insert-or-verify rejects conflicting facts without silent updates.
+
+# SPEC-006 execution and risk evidence
+
+Migration `20260903_0009` adds immutable `risk_decisions`, post-trade
+`execution_risk_snapshots`, `settlement_rollovers`, `settlement_position_evidence` and
+`execution_audit_events`. Stable IDs are primary keys. Replaying identical evidence is
+insert-or-verify; a reused identity with different content raises an identity conflict and
+is never silently overwritten. The migration is reversible to `20260820_0008`; production
+downgrades require backup and explicit operational authorization.
