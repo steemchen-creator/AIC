@@ -63,6 +63,7 @@ apps/backend/
 |   |-- domain/          Framework-independent models and events
 |   |   `-- portfolio/   Deterministic accounting and cost policies
 |   |   `-- execution/   A-share eligibility, T+1 and risk policies
+|   |   `-- paper/       Forward paper account, session and performance models
 |   |-- data_foundation/ Deterministic real-data identity and construction helpers
 |   |-- providers/       Data-source adapters
 |   |-- infrastructure/  Repository, cache, event, and operational adapters
@@ -70,6 +71,19 @@ apps/backend/
 |   `-- shared/          Outer-layer configuration and logging
 `-- tests/               Domain through architecture verification
 ```
+
+## Forward Paper Trading 与 Champion Portfolio
+
+SPEC-007 新增严格向前推进的模拟交易运行时和官方 `AIC Champion Paper Portfolio`。
+账户以 500,000 CNY 启动并连续复利，不按日重置；所有交易日、标的、状态、公司行动、开盘成交价
+与收盘盯市价都必须通过 PIT Service，以 `OPERATIONAL_REPLAY` 语义读取。Unknown 或缺失证据
+不会回退到历史数据库“最新完整数据”。
+
+V1 使用前一时点已形成的 Intent 在下一交易日开盘执行，复用 SPEC-006 A 股风险与 T+1 规则，
+并生成连续 NAV、回撤、收益/风险、Benchmark、成本和完整持仓周期统计。崩溃恢复、重复 Session、
+缺失盯市和公司行动均采用确定性或安全暂停处理。详见
+`docs/paper/PAPER_TRADING_RUNTIME.md`、`docs/paper/CHAMPION_PORTFOLIO.md` 和
+`docs/performance/PERFORMANCE_BASELINE.md`。
 
 ## Foundation prerequisites
 
