@@ -102,6 +102,18 @@ PostgreSQL 恢复。
 MarketVenue + Currency` 保持兼容，但本阶段不实现海外交易、换汇、AI、策略引擎或 UI。详见
 `docs/experiments/SHADOW_PORTFOLIOS.md` 和 `docs/performance/SHADOW_COMPARISON.md`。
 
+## 境内 ETF、指数与纳指 QDII 暴露
+
+SPEC-009 将 SSE/SZSE 上市 ETF 作为第一个可执行的第二资产类别。A 股与境内 ETF 可在同一个
+CNY Portfolio 中持有、估值和审计；产品级 PIT 执行 profile 决定 board lot、T0/T1 与规则版本，
+未知规则安全拒绝。指数使用不可交易 `REFERENCE.INDEX` 身份，只能作为 Benchmark 或 ETF
+跟踪目标。
+
+纳斯达克 V1 能力仅通过境内上市、CNY 交易的 QDII ETF 提供底层暴露，不是直接美股或 QQQ/QQQM
+交易，也不包含 USD 账户、FX、美国交易日历或跨币种 NAV。详见
+`docs/etf/ETF_INSTRUMENTS.md`、`docs/etf/NASDAQ_QDII_EXPOSURE.md`、
+`docs/index/INDEX_REFERENCES.md` 和 ADR-0006。
+
 ## Foundation prerequisites
 
 - .NET 8 SDK

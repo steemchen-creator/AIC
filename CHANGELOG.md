@@ -8,6 +8,13 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-009 境内 ETF 与指数参考基础：来源中立的 ETF Master、QDII/底层暴露元数据、
+  ETF-index relationship、指数参考、ETF/Index DailyBar、Adjustment Factor 与估值快照。
+- Tushare ETF/指数显式 Provider capability 与严格 Normalizer，包含手/份、千元/元、万份/份
+  单位转换、确定性 RawObservation/provenance、空结果 coverage 语义和 PostgreSQL 可逆迁移 0013。
+- 产品级 PIT Execution Profile、T0/T1/Unknown 安全规则、asset-aware fee/tax、指数不可交易门禁，
+  以及 Champion/Shadow 的 Equity+ETF CNY 混合组合、账户隔离与无未来数据泄漏证据。
+
 - SPEC-008 架构审计整改：新增可审计的角色头像引用更新、Role Activity Board 当前状态投影、
   处理顺序独立性与中断后幂等恢复证明，以及 Shadow 关键模块 95% 以上分支覆盖率门禁证据。
 - 可逆迁移 0012 与 `shadow_role_profile_events` 追加式审计表；头像变化不改写不可变 Manifest、

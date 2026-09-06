@@ -10,6 +10,11 @@ from aic_backend.domain.market_data import (
     AdjustmentFactor,
     AdjustmentMode,
     CorporateAction,
+    ETFInstrumentProfile,
+    ETFTracksIndex,
+    ETFValuationSnapshot,
+    IndexReference,
+    InstrumentExecutionProfile,
     InstrumentMaster,
     InstrumentTradingStatus,
     TradingSessionDay,
@@ -20,6 +25,11 @@ PITRecord = (
     PersistedDailyBar
     | AdjustmentFactor
     | CorporateAction
+    | ETFInstrumentProfile
+    | ETFTracksIndex
+    | ETFValuationSnapshot
+    | IndexReference
+    | InstrumentExecutionProfile
     | InstrumentMaster
     | InstrumentTradingStatus
     | TradingSessionDay
@@ -154,6 +164,35 @@ class DataAvailabilityPolicy:
                 self.VERSION,
             )
         return self._at(value.identity, value.retrieved_at, "retrieved_at", context)
+
+    def etf_profile(
+        self, value: ETFInstrumentProfile, context: PointInTimeContext
+    ) -> AvailabilityDecision:
+        return self._at(
+            value.instrument.canonical_key, value.available_at, "available_at", context
+        )
+
+    def index_reference(
+        self, value: IndexReference, context: PointInTimeContext
+    ) -> AvailabilityDecision:
+        return self._at(
+            value.index_identity.canonical_key, value.available_at, "available_at", context
+        )
+
+    def etf_relationship(
+        self, value: ETFTracksIndex, context: PointInTimeContext
+    ) -> AvailabilityDecision:
+        return self._at(value.relationship_id, value.available_at, "available_at", context)
+
+    def etf_valuation(
+        self, value: ETFValuationSnapshot, context: PointInTimeContext
+    ) -> AvailabilityDecision:
+        return self._at(value.valuation_id, value.available_at, "available_at", context)
+
+    def execution_profile(
+        self, value: InstrumentExecutionProfile, context: PointInTimeContext
+    ) -> AvailabilityDecision:
+        return self._at(value.profile_id, value.available_at, "available_at", context)
 
     def _retrieved(
         self,

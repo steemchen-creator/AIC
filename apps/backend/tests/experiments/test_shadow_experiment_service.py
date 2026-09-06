@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 
+from aic_backend.application.etf import ETFPointInTimeService
 from aic_backend.application.execution import AShareExecutionService
 from aic_backend.application.experiments import (
     CreateShadowExperiment,
@@ -15,6 +16,7 @@ from aic_backend.application.point_in_time import (
     AvailabilityClassification,
     AvailabilityDecision,
     AvailabilityMode,
+    DataAvailabilityPolicy,
     PointInTimeDataResult,
 )
 from aic_backend.domain.execution import PreTradeRiskPolicy, PriceLimitBand, RiskPolicyConfig
@@ -38,15 +40,25 @@ from aic_backend.domain.experiments import (
     TradingStyle,
 )
 from aic_backend.domain.market_data import (
+    Currency as MarketCurrency,
+)
+from aic_backend.domain.market_data import (
+    InstrumentExecutionProfile,
     InstrumentIdentity,
     InstrumentTradingState,
     InstrumentType,
     Market,
+    SettlementCapability,
     standard_a_share_session,
 )
 from aic_backend.domain.paper import PaperOrderIntent
 from aic_backend.domain.portfolio.models import Money, OrderSide, Quantity
-from aic_backend.domain.portfolio.policies import ConfigurableFeePolicy, FixedBpsSlippagePolicy
+from aic_backend.domain.portfolio.policies import (
+    ConfigurableFeePolicy,
+    ConfiguredAssetFeePolicy,
+    FixedBpsSlippagePolicy,
+)
+from aic_backend.infrastructure.etf_persistence import InMemoryETFDataRepository
 from aic_backend.infrastructure.experiment_persistence import (
     InMemoryShadowExperimentRepository,
 )
@@ -234,15 +246,36 @@ def populated_pit() -> PitFixture:
     return pit
 
 
-def paper_runtime(pit, clock, repository):
+def paper_runtime(pit, clock, repository, etf_repository=None):
+    equity_fee = ConfigurableFeePolicy(
+        Decimal("0.0003"), Decimal("5"), Decimal("0.001")
+    )
     execution = AShareExecutionService(
         pit,
-        ConfigurableFeePolicy(Decimal("0.0003"), Decimal("5"), Decimal("0.001")),
+        equity_fee,
         FixedBpsSlippagePolicy(Decimal("0")),
         PreTradeRiskPolicy(RiskPolicyConfig(Decimal("0.4"), Decimal("1"))),
         availability_mode=AvailabilityMode.OPERATIONAL_REPLAY,
         reference_price_field="open",
         execution_policy_version="next-session-open/v1",
+        etf_point_in_time=(
+            None
+            if etf_repository is None
+            else ETFPointInTimeService(etf_repository, DataAvailabilityPolicy())
+        ),
+        asset_fee_policy=(
+            None
+            if etf_repository is None
+            else ConfiguredAssetFeePolicy(
+                {
+                    InstrumentType.EQUITY: equity_fee,
+                    InstrumentType.ETF: ConfigurableFeePolicy(
+                        Decimal("0"), Decimal("0"), Decimal("0"), "etf-fee/v1"
+                    ),
+                },
+                "shadow-asset-fee/v1",
+            )
+        ),
     )
     from aic_backend.application.paper import PaperTradingRuntime
 
@@ -313,14 +346,21 @@ def create_command(group_id: str = "shadow-lab-1") -> CreateShadowExperiment:
     )
 
 
-def order(account_id: str, role: str, trading_date: date, symbol: str, quantity: str):
+def order(
+    account_id: str,
+    role: str,
+    trading_date: date,
+    symbol: str,
+    quantity: str,
+    kind: InstrumentType = InstrumentType.EQUITY,
+):
     return PaperOrderIntent(
         f"{role}-{trading_date.isoformat()}",
         account_id,
         datetime.combine(trading_date - timedelta(days=1), datetime.min.time(), UTC)
         + timedelta(hours=8),
         trading_date,
-        instrument(symbol),
+        instrument(symbol, kind),
         OrderSide.BUY,
         Quantity(Decimal(quantity)),
         f"fixture:{role}",
@@ -419,6 +459,74 @@ async def test_minimum_group_runs_independent_compounding_and_deterministic_rest
         context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
         for context in pit.contexts
     )
+
+
+@pytest.mark.asyncio
+async def test_shadow_member_can_hold_etf_without_cross_account_leakage() -> None:
+    pit = populated_pit()
+    etf = instrument("ETF_QDII_FIXTURE", InstrumentType.ETF)
+    pit.instruments.add(etf)
+    pit.bars[(etf.canonical_key, DAYS[0])] = (
+        Decimal("10"),
+        Decimal("10.2"),
+        datetime.combine(DAYS[0], datetime.min.time(), UTC)
+        + timedelta(hours=7, minutes=30),
+    )
+    etf_repository = InMemoryETFDataRepository()
+    await etf_repository.save_execution_profile(
+        InstrumentExecutionProfile(
+            "fixture-etf-t1/v1",
+            etf,
+            MarketCurrency.CNY,
+            100,
+            SettlementCapability.T1,
+            "fixture-price-limit/v1",
+            Market.CN_SSE,
+            "fixture://exchange-rule",
+            datetime.combine(DAYS[0], datetime.min.time(), UTC) + timedelta(hours=5),
+            DAYS[0],
+            "fixture-etf-execution/v1",
+        )
+    )
+    clock = MutableClock(datetime(2026, 9, 7, 8, tzinfo=UTC))
+    paper_repository = InMemoryPaperTradingRepository()
+    service = ShadowExperimentService(
+        paper_runtime(pit, clock, paper_repository, etf_repository),
+        InMemoryShadowExperimentRepository(),
+        clock,
+    )
+    manifest = await service.create(create_command("etf-shadow-lab"))
+    assigned = sources(manifest)
+    atlas = next(
+        member
+        for member in manifest.members
+        if member.definition.profile.role_identity is RoleIdentity.ATLAS
+    )
+    assigned[atlas.definition.decision_source.source_id] = ScriptedPaperDecisionSource(
+        atlas.definition.decision_source.source_id,
+        (
+            order(
+                atlas.account_id,
+                RoleIdentity.ATLAS.value,
+                DAYS[0],
+                etf.symbol,
+                "100",
+                InstrumentType.ETF,
+            ),
+        ),
+    )
+
+    result = await service.run_session(manifest.group_id, DAYS[0], assigned)
+    assert result.status is GroupSessionStatus.FINALIZED
+    atlas_record = await paper_repository.get(atlas.account_id)
+    assert atlas_record is not None
+    assert {item.key.instrument for item in atlas_record.portfolio_state.positions} == {etf}
+    for member in manifest.members:
+        if member.account_id == atlas.account_id:
+            continue
+        record = await paper_repository.get(member.account_id)
+        assert record is not None
+        assert etf not in {item.key.instrument for item in record.portfolio_state.positions}
 
 
 @pytest.mark.asyncio

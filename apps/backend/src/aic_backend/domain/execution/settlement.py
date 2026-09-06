@@ -46,7 +46,7 @@ class SettlementBook:
             self.VERSION,
         )
 
-    def apply_fill(self, fill: Fill) -> SettlementPosition:
+    def apply_fill(self, fill: Fill, *, same_day_sellable: bool = False) -> SettlementPosition:
         key = fill.instrument.canonical_key
         current = self.positions.get(
             key, SettlementPosition(fill.instrument, Decimal("0"), Decimal("0"), Decimal("0"))
@@ -56,8 +56,16 @@ class SettlementBook:
             updated = SettlementPosition(
                 fill.instrument,
                 current.total_quantity + quantity,
-                current.sellable_quantity,
-                current.today_bought_quantity + quantity,
+                (
+                    current.sellable_quantity + quantity
+                    if same_day_sellable
+                    else current.sellable_quantity
+                ),
+                (
+                    current.today_bought_quantity
+                    if same_day_sellable
+                    else current.today_bought_quantity + quantity
+                ),
             )
         else:
             if quantity > current.sellable_quantity:

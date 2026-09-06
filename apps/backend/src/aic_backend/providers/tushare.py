@@ -1,4 +1,4 @@
-"""Infrastructure-owned Tushare Pro A-share daily Provider."""
+"""Infrastructure-owned Tushare Pro market-data Provider."""
 
 from collections.abc import Mapping
 from datetime import UTC, datetime
@@ -42,6 +42,27 @@ TUSHARE_ADJUSTMENT_FACTOR = ProviderCapability(
 TUSHARE_CORPORATE_ACTION = ProviderCapability(
     "market.corporate_action.read", "1.0.0", CapabilityMode.BATCH
 )
+TUSHARE_ETF_MASTER = ProviderCapability(
+    "instrument.etf_master.read", "1.0.0", CapabilityMode.BATCH
+)
+TUSHARE_ETF_BENCHMARK = ProviderCapability(
+    "instrument.etf_benchmark.read", "1.0.0", CapabilityMode.BATCH
+)
+TUSHARE_ETF_DAILY = ProviderCapability(
+    "market.etf_daily.read", "1.0.0", CapabilityMode.BATCH
+)
+TUSHARE_ETF_ADJUSTMENT_FACTOR = ProviderCapability(
+    "market.etf_adjustment_factor.read", "1.0.0", CapabilityMode.BATCH
+)
+TUSHARE_ETF_VALUATION = ProviderCapability(
+    "market.etf_valuation.read", "1.0.0", CapabilityMode.BATCH
+)
+TUSHARE_INDEX_REFERENCE = ProviderCapability(
+    "market.index_reference.read", "1.0.0", CapabilityMode.BATCH
+)
+TUSHARE_INDEX_DAILY = ProviderCapability(
+    "market.index_daily.read", "1.0.0", CapabilityMode.BATCH
+)
 TUSHARE_IMPLEMENTATION = "providers.tushare_daily"
 
 
@@ -69,7 +90,7 @@ class TushareDailyProvider:
     def metadata(self) -> ProviderMetadata:
         return ProviderMetadata(
             self._definition.provider_id,
-            "Tushare Pro Daily",
+            "Tushare Pro Market Data",
             ProviderType.MARKET_DATA,
             "1.0.0",
             vendor="Tushare",
@@ -107,12 +128,26 @@ class TushareDailyProvider:
         trading_status = request.capability == TUSHARE_TRADING_STATUS
         adjustment_factor = request.capability == TUSHARE_ADJUSTMENT_FACTOR
         corporate_action = request.capability == TUSHARE_CORPORATE_ACTION
+        etf_master = request.capability == TUSHARE_ETF_MASTER
+        etf_benchmark = request.capability == TUSHARE_ETF_BENCHMARK
+        etf_daily = request.capability == TUSHARE_ETF_DAILY
+        etf_adjustment = request.capability == TUSHARE_ETF_ADJUSTMENT_FACTOR
+        etf_valuation = request.capability == TUSHARE_ETF_VALUATION
+        index_reference = request.capability == TUSHARE_INDEX_REFERENCE
+        index_daily = request.capability == TUSHARE_INDEX_DAILY
         if (
             not calendar
             and not master
             and not trading_status
             and not adjustment_factor
             and not corporate_action
+            and not etf_master
+            and not etf_benchmark
+            and not etf_daily
+            and not etf_adjustment
+            and not etf_valuation
+            and not index_reference
+            and not index_daily
             and request.capability != TUSHARE_DAILY
         ):
             raise InvalidRequestError("Tushare capability is unsupported.")
@@ -134,6 +169,29 @@ class TushareDailyProvider:
                 "ts_code,ann_date,div_proc,stk_div,stk_bo_rate,stk_co_rate,"
                 "cash_div,cash_div_tax,record_date,ex_date,pay_date,div_listdate,imp_ann_date"
             )
+        elif etf_master:
+            api_name, params = "etf_basic", self._etf_master_parameters(request.payload)
+            fields = (
+                "ts_code,csname,extname,cname,index_code,index_name,setup_date,list_date,"
+                "list_status,exchange,mgr_name,custod_name,mgt_fee,etf_type"
+            )
+        elif etf_benchmark or index_reference:
+            api_name, params = "etf_index", self._index_reference_parameters(request.payload)
+            fields = (
+                "ts_code,indx_name,indx_csname,pub_party_name,pub_date,base_date,bp,adj_circle"
+            )
+        elif etf_daily:
+            api_name, params = "fund_daily", self._parameters(request.payload)
+            fields = "ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount"
+        elif etf_adjustment:
+            api_name, params = "fund_adj", self._dated_instrument_parameters(request.payload)
+            fields = "ts_code,trade_date,adj_factor"
+        elif etf_valuation:
+            api_name, params = "etf_share_size", self._parameters(request.payload)
+            fields = "trade_date,ts_code,etf_name,total_share,total_size,nav,close,exchange"
+        elif index_daily:
+            api_name, params = "index_daily", self._parameters(request.payload)
+            fields = "ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount"
         else:
             api_name, params = "daily", self._parameters(request.payload)
             fields = "ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount"
@@ -222,6 +280,34 @@ class TushareDailyProvider:
         if status not in {"L", "D", "P", "G"}:
             raise InvalidRequestError("Tushare listing status is unsupported.")
         return {"exchange": exchange, "list_status": status}
+
+    @staticmethod
+    def _etf_master_parameters(payload: Mapping[str, Any]) -> dict[str, str]:
+        result: dict[str, str] = {}
+        market = str(payload.get("market", ""))
+        exchange = {"CN.SSE": "SH", "CN.SZSE": "SZ", "SH": "SH", "SZ": "SZ"}.get(
+            market
+        )
+        if market and exchange is None:
+            raise InvalidRequestError("Tushare ETF exchange is unsupported.")
+        if exchange is not None:
+            result["exchange"] = exchange
+        status = str(payload.get("list_status", "L"))
+        if status not in {"L", "D", "P"}:
+            raise InvalidRequestError("Tushare ETF listing status is unsupported.")
+        result["list_status"] = status
+        for field in ("ts_code", "index_code", "list_date", "mgr"):
+            if payload.get(field):
+                result[field] = str(payload[field]).replace("-", "")
+        return result
+
+    @staticmethod
+    def _index_reference_parameters(payload: Mapping[str, Any]) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for field in ("ts_code", "pub_date", "base_date"):
+            if payload.get(field):
+                result[field] = str(payload[field]).replace("-", "")
+        return result
 
     @staticmethod
     def _status_parameters(payload: Mapping[str, Any]) -> dict[str, str]:

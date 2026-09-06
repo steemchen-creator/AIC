@@ -8,6 +8,7 @@ from enum import StrEnum
 from hashlib import sha256
 from typing import Literal
 
+from aic_backend.application.etf import ETFPointInTimeService
 from aic_backend.application.point_in_time import AvailabilityMode, PointInTimeContext
 from aic_backend.application.ports.execution import ExecutionEvidenceRepository
 from aic_backend.application.use_cases.point_in_time_market_data import PointInTimeMarketDataService
@@ -34,9 +35,12 @@ from aic_backend.domain.execution import (
 )
 from aic_backend.domain.market_data import (
     AdjustmentMode,
+    InstrumentExecutionProfile,
     InstrumentIdentity,
     InstrumentTradingState,
+    InstrumentType,
     Market,
+    SettlementCapability,
 )
 from aic_backend.domain.portfolio.accounting import PortfolioAccount
 from aic_backend.domain.portfolio.models import (
@@ -56,7 +60,11 @@ from aic_backend.domain.portfolio.models import (
     Price,
     Quantity,
 )
-from aic_backend.domain.portfolio.policies import FeePolicy, SlippagePolicy
+from aic_backend.domain.portfolio.policies import (
+    AssetAwareFeePolicy,
+    FeePolicy,
+    SlippagePolicy,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +135,8 @@ class AShareExecutionService:
         availability_mode: AvailabilityMode = AvailabilityMode.HISTORICAL_RESEARCH,
         reference_price_field: Literal["open", "close"] = "close",
         execution_policy_version: str | None = None,
+        etf_point_in_time: ETFPointInTimeService | None = None,
+        asset_fee_policy: AssetAwareFeePolicy | None = None,
     ) -> None:
         self._pit = pit_market_data
         self._fee = fee_policy
@@ -137,6 +147,8 @@ class AShareExecutionService:
         self._price_limit = price_limit_policy or ExplicitPriceLimitPolicy()
         self.availability_mode = availability_mode
         self._reference_price_field = reference_price_field
+        self._etf_point_in_time = etf_point_in_time
+        self._asset_fee_policy = asset_fee_policy
         if reference_price_field not in {"open", "close"}:
             raise ValueError("reference_price_field must be open or close")
         self.execution_policy_version = execution_policy_version or self.EXECUTION_VERSION
@@ -185,7 +197,25 @@ class AShareExecutionService:
             intent.requested_price,
             as_of,
         )
+        if intent.instrument.instrument_type is InstrumentType.INDEX:
+            outcome = self._reject(
+                state,
+                order,
+                as_of,
+                {RiskReasonCode.NON_TRADABLE_REFERENCE_INSTRUMENT},
+                state.last_snapshot,
+                state.pending_settlement_event,
+                TradingEligibility(False, False, False, False, False),
+                PriceLimitClassification.UNKNOWN_LIMIT,
+                metadata={"instrument_type": InstrumentType.INDEX.value},
+            )
+            return await self._record(state, outcome)
         reasons: set[RiskReasonCode] = set()
+        execution_profile = await self._execution_profile(intent.instrument, as_of, context)
+        policy_versions = self._policy_versions(execution_profile)
+        execution_metadata = self._execution_metadata(intent.instrument, execution_profile)
+        if intent.instrument.instrument_type is InstrumentType.ETF and execution_profile is None:
+            reasons.add(RiskReasonCode.UNSUPPORTED_RULE)
 
         calendar = await self._pit.list_calendar_as_of(
             intent.instrument.market, as_of.date(), as_of.date(), context
@@ -219,7 +249,15 @@ class AShareExecutionService:
         if reference_price is None:
             reasons.add(RiskReasonCode.PIT_DATA_UNAVAILABLE)
         rule_price = intent.requested_price or reference_price
-        if not self._lot.validate(intent.side, intent.quantity):
+        lot_policy = self._lot
+        if execution_profile is not None:
+            lot_policy = AShareBoardLotPolicy(
+                execution_profile.board_lot,
+                f"{execution_profile.policy_version}/lot",
+            )
+            if execution_profile.settlement_capability is SettlementCapability.UNKNOWN:
+                reasons.add(RiskReasonCode.UNSUPPORTED_RULE)
+        if not lot_policy.validate(intent.side, intent.quantity):
             reasons.add(RiskReasonCode.INVALID_LOT_SIZE)
         effective_band = (
             price_limit_band
@@ -252,13 +290,22 @@ class AShareExecutionService:
                 state.pending_settlement_event,
                 eligibility,
                 price_classification,
+                policy_versions=policy_versions,
+                metadata=execution_metadata,
             )
             return await self._record(state, outcome)
 
         fill_price, slippage = self._slippage.apply(
             intent.side, intent.requested_price or reference_price, intent.quantity
         )
-        fee, tax = self._fee.calculate(intent.side, intent.quantity, fill_price)
+        if self._asset_fee_policy is not None:
+            fee, tax = self._asset_fee_policy.calculate_for(
+                intent.instrument, intent.side, intent.quantity, fill_price
+            )
+        else:
+            fee, tax = self._fee.calculate(intent.side, intent.quantity, fill_price)
+            if intent.instrument.instrument_type is InstrumentType.ETF:
+                reasons.add(RiskReasonCode.UNSUPPORTED_RULE)
         settlement_position = state.settlement.get(intent.instrument)
         if intent.side is OrderSide.SELL:
             if intent.quantity.value > settlement_position.total_quantity:
@@ -292,6 +339,8 @@ class AShareExecutionService:
                 eligibility,
                 price_classification,
                 self._risk.summarize(risk_input),
+                policy_versions,
+                execution_metadata,
             )
             return await self._record(state, outcome)
 
@@ -313,7 +362,7 @@ class AShareExecutionService:
             fee,
             tax,
             slippage,
-            self.execution_policy_version,
+            policy_versions.execution,
         )
         if checkpoint is not None:
             checkpoint(ExecutionCheckpoint.FILL_CREATED)
@@ -323,7 +372,13 @@ class AShareExecutionService:
         if tax.amount:
             entry_ids.append(_stable_id("cash", fill.fill_id.value, "tax"))
         cash_entries = state.account.apply_fill(fill, tuple(entry_ids))
-        updated_settlement = state.settlement.apply_fill(fill)
+        updated_settlement = state.settlement.apply_fill(
+            fill,
+            same_day_sellable=(
+                execution_profile is not None
+                and execution_profile.settlement_capability is SettlementCapability.T0
+            ),
+        )
         if checkpoint is not None:
             checkpoint(ExecutionCheckpoint.ACCOUNTING_APPLIED)
         order = order.transition(OrderStatus.FILLED)
@@ -356,11 +411,57 @@ class AShareExecutionService:
             updated_settlement,
             event,
             risk_snapshot,
-            self.policy_versions,
+            policy_versions,
             audit_events,
-            {"price_limit": price_classification.value, "snapshot_as_of": as_of.isoformat()},
+            {
+                "price_limit": price_classification.value,
+                "snapshot_as_of": as_of.isoformat(),
+                **execution_metadata,
+            },
         )
         return await self._record(state, outcome)
+
+    async def _execution_profile(
+        self, instrument: InstrumentIdentity, as_of: datetime, context: PointInTimeContext
+    ) -> InstrumentExecutionProfile | None:
+        if instrument.instrument_type is not InstrumentType.ETF:
+            return None
+        if self._etf_point_in_time is None:
+            return None
+        return await self._etf_point_in_time.execution_profile_as_of(
+            instrument, as_of.date(), context
+        )
+
+    def _policy_versions(
+        self, profile: InstrumentExecutionProfile | None
+    ) -> ExecutionPolicyVersions:
+        if profile is None:
+            return self.policy_versions
+        return ExecutionPolicyVersions(
+            self.execution_policy_version,
+            f"{profile.policy_version}/lot",
+            self._price_limit.version,
+            f"{profile.policy_version}/settlement/{profile.settlement_capability.value}",
+            self._risk.version,
+        )
+
+    def _execution_metadata(
+        self,
+        instrument: InstrumentIdentity,
+        profile: InstrumentExecutionProfile | None,
+    ) -> dict[str, str]:
+        metadata = {"instrument_type": instrument.instrument_type.value}
+        if profile is not None:
+            metadata.update(
+                {
+                    "execution_profile_version": profile.policy_version,
+                    "settlement_capability": profile.settlement_capability.value,
+                    "board_lot": str(profile.board_lot),
+                }
+            )
+        fee_policy = self._asset_fee_policy if self._asset_fee_policy is not None else self._fee
+        metadata["fee_policy_version"] = fee_policy.version
+        return metadata
 
     async def _tradability(
         self, instrument: InstrumentIdentity, as_of: datetime, context: PointInTimeContext
@@ -464,6 +565,8 @@ class AShareExecutionService:
         eligibility: TradingEligibility,
         price_classification: PriceLimitClassification,
         summary: RiskInputSummary | None = None,
+        policy_versions: ExecutionPolicyVersions | None = None,
+        metadata: dict[str, str] | None = None,
     ) -> ExecutionOutcome:
         state.orders_today += 1 if summary is None else 0
         summary = summary or self._neutral_summary(state, snapshot)
@@ -481,11 +584,12 @@ class AShareExecutionService:
             None,
             event,
             None,
-            self.policy_versions,
+            policy_versions or self.policy_versions,
             audit_events,
             {
                 "price_limit": price_classification.value,
                 "snapshot_as_of": snapshot.as_of.isoformat(),
+                **(metadata or {}),
             },
         )
 

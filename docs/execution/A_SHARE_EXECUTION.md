@@ -41,3 +41,12 @@ RiskDecision、RiskSnapshot、SettlementRolloverEvent 与审计事件均使用�
 Settlement Position、Risk Snapshot 和 NAV。
 
 未来做 T、Kelly、动态杠杆、策略引擎、实盘和 UI 不属于本阶段。
+
+## SPEC-009 ETF 执行扩展
+
+境内 ETF 复用同一执行与风险管线，但在下单前从 PIT 可见的
+`InstrumentExecutionProfile` 读取产品级 board lot、T0/T1、涨跌幅规则引用、日历引用和版本。
+明确 T0 才允许当日买入后卖出；T1 在下一个确认开市日释放；Unknown 或缺失 profile 安全拒绝。
+
+ETF 与 Equity 使用独立 fee/tax profile。指数订单在读取行情前以
+`NON_TRADABLE_REFERENCE_INSTRUMENT` 拒绝。该扩展不实现直接美股、FX、保证金、杠杆或策略。

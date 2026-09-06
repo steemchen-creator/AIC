@@ -17,3 +17,12 @@ Research；在 2020 Operational Replay 中仍不可见。Calendar 的 Historical
 PIT instrument universe 复用 listing lifecycle；上市日前排除，退市只有在退市知识已可用
 时排除，未知退市知识保守保留并给 warning。返回 canonical identity，不把当前名称冒充
 历史名称。
+
+## ETF / Index 扩展
+
+ETF profile、ETF-index relationship、valuation、index reference 和产品级 execution profile
+都必须通过 `ETFPointInTimeService`。关系还必须满足交易日的 effective range；执行 profile
+选择当时已可见、已生效的最新版本。QDII 延迟净值和未来规则不能泄漏到历史决策。
+
+指数 DailyBar 继续使用现有 DailyBar PIT 语义，但指数身份不可交易。Historical Research 与
+Operational Replay 不共享隐式 fallback；Unknown 不按 Available 处理。

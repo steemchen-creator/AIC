@@ -233,8 +233,11 @@ def test_instrument_models_validate_boundaries_and_normalize_reason() -> None:
             master,
             instrument=InstrumentIdentity(cast(Market, "US"), "ABC", InstrumentType.EQUITY),
         )
-    with pytest.raises(ValueError, match="equities"):
-        replace(master, instrument=InstrumentIdentity(Market.CN_SZSE, "159001", InstrumentType.ETF))
+    with pytest.raises(ValueError, match="equities and ETFs"):
+        replace(
+            master,
+            instrument=InstrumentIdentity(Market.CN_SZSE, "399001", InstrumentType.INDEX),
+        )
     with pytest.raises(ValueError, match="requires"):
         replace(master, listing_date=None, delisting_date=date(2026, 8, 17))
     with pytest.raises(ValueError, match="timezone"):

@@ -88,3 +88,12 @@ Champion/Role Identity 规范化；正序与逆序运行产生相同的逐 Portf
 
 SPEC-008 不实现海外日历、成交规则、换汇、保证金、做空或实时经纪商。现有 Forward Paper 运行仍为
 A 股、CNY、long-only、无杠杆，并继续强制 `OPERATIONAL_REPLAY` 和 PIT no-lookahead。
+
+## SPEC-009 ETF 集成
+
+Experiment AssetUniverse 中的 ETF 现已成为真实可执行资产，而不再只是兼容枚举。自动化测试让
+Atlas Shadow 通过同一 Manifest、PIT、Execution、Risk、Fee 与 Paper Runtime 买入并持有境内 ETF，
+同时证明 Champion、Sage、Aegis 账户没有该持仓。ETF 产品 profile 差异属于 instrument fact，
+不改变 Fairness Contract；Comparison 仍以各账户独立的 CNY NAV 和同一 Benchmark 计算。
+
+持有纳指 QDII ETF 仅表示境内产品暴露，不表示 Shadow 已在美国市场执行。

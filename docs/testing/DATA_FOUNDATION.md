@@ -217,3 +217,22 @@ Architecture tests prohibit direct canonical/historical repositories, latest-row
 Tushare, HTTP, SQL, UI, leverage, AI and strategy implementations in Domain/Application.
 PostgreSQL 17 tests verify normalized row evidence, insert-or-verify identity conflicts,
 read-back, migration 0007 ↔ 0008, and fresh upgrade to head.
+
+# SPEC-009 evidence
+
+测试覆盖 ETF/Index Domain invariant、QDII 显式分类、Vendor 单位、Raw-to-Normalized 数据、
+估值溢折价、Adjustment Factor、Provider allowlist、PIT future/Unknown、coverage 空结果语义、
+PostgreSQL insert-or-verify、0012 ↔ 0013 迁移、T0/T1/Unknown、asset-aware fee、指数下单拒绝、
+Equity+ETF Champion 混合持仓和 Shadow 账户隔离。
+
+普通 CI 不访问 Tushare。PostgreSQL 集成使用 CI service；模块覆盖率门禁至少为：
+
+```text
+domain.market_data.etf >= 95%
+application.etf >= 95%
+data_foundation.tushare_etf >= 95%
+infrastructure.etf_persistence >= 90%
+```
+
+除全仓 pytest/branch coverage、Ruff、Mypy strict 和 Architecture Tests 外，还执行迁移 round-trip、
+WPF Release、Compose config、`git diff --check` 与 secret/governance checks。

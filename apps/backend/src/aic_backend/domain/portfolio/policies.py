@@ -1,9 +1,12 @@
 """Deterministic, injectable transaction-cost policies."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal
+from types import MappingProxyType
 from typing import Protocol
 
+from aic_backend.domain.market_data import InstrumentIdentity, InstrumentType
 from aic_backend.domain.portfolio.models import Money, OrderSide, Price, Quantity
 
 
@@ -12,6 +15,18 @@ class FeePolicy(Protocol):
 
     def calculate(
         self, side: OrderSide, quantity: Quantity, price: Price
+    ) -> tuple[Money, Money]: ...
+
+
+class AssetAwareFeePolicy(Protocol):
+    version: str
+
+    def calculate_for(
+        self,
+        instrument: InstrumentIdentity,
+        side: OrderSide,
+        quantity: Quantity,
+        price: Price,
     ) -> tuple[Money, Money]: ...
 
 
@@ -42,6 +57,31 @@ class ConfigurableFeePolicy:
         commission = max(notional * self.commission_rate, self.minimum_commission)
         tax = notional * self.sell_stamp_tax_rate if side is OrderSide.SELL else Decimal("0")
         return Money(commission), Money(tax)
+
+
+@dataclass(frozen=True, slots=True)
+class ConfiguredAssetFeePolicy:
+    profiles: Mapping[InstrumentType, ConfigurableFeePolicy]
+    version: str = "asset-aware-fee/v1"
+
+    def __post_init__(self) -> None:
+        if not self.version.strip():
+            raise ValueError("asset-aware fee version must not be empty")
+        if not {InstrumentType.EQUITY, InstrumentType.ETF} <= set(self.profiles):
+            raise ValueError("asset-aware fee policy requires equity and ETF profiles")
+        object.__setattr__(self, "profiles", MappingProxyType(dict(self.profiles)))
+
+    def calculate_for(
+        self,
+        instrument: InstrumentIdentity,
+        side: OrderSide,
+        quantity: Quantity,
+        price: Price,
+    ) -> tuple[Money, Money]:
+        profile = self.profiles.get(instrument.instrument_type)
+        if profile is None:
+            raise ValueError("asset class has no fee profile")
+        return profile.calculate(side, quantity, price)
 
 
 @dataclass(frozen=True, slots=True)
