@@ -1,4 +1,4 @@
-# SPEC-009 Premature Merge Governance Exception and Closeout
+# SPEC-009 Premature Merge Governance Exception and Publication Status
 
 ## Record identity and authority
 
@@ -11,9 +11,20 @@
 | merge_commit | `45f5791f98d3cb5cffbdaa960066aefa2be6bae9` |
 | occurred_at | `2026-09-06T15:28:48Z` / `2026-09-06 23:28:48 +08:00` |
 | classification | `GOVERNANCE_PROCESS_DEVIATION` |
-| approved_by | Project owner through the explicit `FIX-SPEC009-002` execution authorization and its conditional closeout instruction. No separate Architecture Review sign-off is asserted. |
-| architecture_review_reference | Owner-provided `FIX-SPEC009-002-Post-Merge-Governance-Exception-and-Closeout.md`, preceding `FIX-SPEC009-001-Final-HEAD-Draft-PR-CI-Attestation.md`, and [REVIEW-SPEC009](../../REVIEW-SPEC009.md). This remediation record is submitted for Architecture Review. |
-| status | `RECORDED`; conditional SPEC-009 closeout and branch-cleanup verification are described below. |
+| remediation_authorized_by | Project owner via explicit `FIX-SPEC009-002` execution authorization; `FIX-SPEC009-003` authorizes this documentation correction. |
+| architecture_review_status | `APPROVED WITH NON-BLOCKING DEBT` |
+| architecture_review_reference | External Chief Investment Architect review of `FIX-SPEC009-002`, performed after independent verification of PR #11, Feature HEAD CI, merged-main CI, and governance record content, as reported in sections 1-2 of the owner-provided `FIX-SPEC009-003-Governance-Semantics-Publication-and-Final-Closeout.md`. |
+| architecture_review_scope | The external review verified the technical remediation and accepted the incident classification; `FIX-SPEC009-003` addresses its remaining authorization/approval and publication semantics blockers. |
+| publication_reference | [Draft PR #11](https://github.com/steemchen-creator/AIC/pull/11), `feature/spec009-governance-closeout`, targeting `main`. |
+| status | `REVIEWED_PENDING_PUBLICATION` |
+
+Execution authorization permits the remediation work; it does not constitute
+Architecture Approval. The architecture review status above comes from the
+external review reported in `FIX-SPEC009-003`, independently of the owner's
+execution authorization. The exception has been substantively reviewed and
+approved, but formal repository closeout remains pending human merge of PR #11
+and the post-publication verification below. While PR #11 is unmerged, this
+record exists on the governance branch and has not been published to `main`.
 
 This record preserves **PROCESS DEVIATION OCCURRED**. Successful technical
 verification does not make the original merge process compliant. The incident is
@@ -81,15 +92,16 @@ do not waive the three task-mandated checks or the human review requirement.
 
 ## Latest main and fresh regression
 
-At this closeout, local `main` and live remote `main` both identify
-`45f5791f98d3cb5cffbdaa960066aefa2be6bae9`. The SPEC-009 merge commit is therefore
-the current main head; `git merge-base --is-ancestor` also succeeds.
+At the `FIX-SPEC009-002` technical verification, local `main` and live remote
+`main` both identified
+`45f5791f98d3cb5cffbdaa960066aefa2be6bae9`. The SPEC-009 merge commit was therefore
+the main head at that verification; `git merge-base --is-ancestor` also succeeded.
 
-The existing main push workflow was explicitly rerun for this task:
+The existing main push workflow was explicitly rerun for `FIX-SPEC009-002`:
 [CI run 34042433176, attempt 2](https://github.com/steemchen-creator/AIC/actions/runs/34042433176/attempts/2).
 It started at `2026-09-06T15:51:01Z`, completed at `2026-09-06T15:52:39Z`, and
 reports `head_sha = 45f5791f98d3cb5cffbdaa960066aefa2be6bae9` with success.
-This is a new regression on merged main, not reuse of the feature-head run.
+This was a new regression on merged main, not reuse of the feature-head run.
 
 | Main regression gate | Result |
 |---|---|
@@ -133,12 +145,18 @@ and the feature-branch closeout. This record adds incident classification,
 impact analysis, review authority, remediation, and prevention; it is not a
 commit whose only purpose is to record its own SHA or a CI run identifier.
 
-The governance documentation is submitted on the separate
-`feature/spec009-governance-closeout` branch through a Draft PR targeting
-`main`. It does not replace or reopen implementation PR #10. Its own commit
-SHA, PR number, and checks are reported externally in the delivery response;
-they are not written back into this record in a self-reference loop. The
-documentation PR remains for Architecture Review and human disposition.
+The governance documentation is submitted on
+`feature/spec009-governance-closeout` through the existing Draft PR #11 targeting
+`main`. It does not replace or reopen implementation PR #10. The correction's
+own commit SHA and exact-head CI results are reported externally in the
+delivery response and PR, avoiding a self-reference commit loop.
+
+Publication to the governance branch establishes a reviewable document, but
+formal repository recording requires human merge of PR #11 into `main` and
+verification that the corrected record is present there. Deletion of the old
+ETF implementation branch and a clean workspace do not satisfy that publication
+gate. The current status remains `REVIEWED_PENDING_PUBLICATION` until the
+post-merge closeout checks are complete.
 
 ## Prevention
 
@@ -152,29 +170,66 @@ documentation PR remains for Architecture Review and human disposition.
 5. Retain this exception and its deviation classification in later reviews;
    do not represent SPEC-009 as having followed the original process fully.
 
-These are recorded workflow requirements. This task does not claim to have
-enabled GitHub branch protection, required checks, or approval enforcement.
+### Non-blocking governance hardening debt
 
-## Formal closeout and stop condition
+`main` currently has no Branch Protection / Required Approval enforcement.
+The external review treats this as non-blocking governance debt for this
+closeout. Future Governance Hardening should consider protecting `main`,
+restricting direct pushes, requiring checks and PR reviews/approvals,
+preventing merge while Draft, and including a human Architecture Approval
+checklist in the merge process.
 
-The owner-authorized closeout classification, once the final branch cleanup
-and clean-main checks in the external delivery attestation pass, is:
+The prevention items above are documented workflow requirements. This task
+does not change administrator-level repository settings or claim that these
+automated enforcement controls have been enabled.
+
+## Pre-publication stop condition
+
+`FIX-SPEC009-003` corrects the governance documentation on the existing branch
+and PR. Before handoff, commit and publish the correction, verify that local
+HEAD, remote governance branch HEAD, and PR #11 Head match, and wait for the
+Governance baseline, Backend tests, and Desktop build checks at that exact
+HEAD to pass. Confirm that the PR contains documentation changes only and the
+workspace is clean.
+
+After those checks pass, the handoff state is:
+
+```text
+Record status: REVIEWED_PENDING_PUBLICATION
+PR #11: DRAFT / OPEN / NOT MERGED
+Architecture remediation: READY FOR HUMAN MERGE
+Formal repository closeout: PENDING HUMAN MERGE AND POST-PUBLICATION VERIFICATION
+SPEC-010: NOT STARTED
+```
+
+`READY FOR HUMAN MERGE` is the remediation handoff status; PR #11 remains
+Draft. AI must stop for Architecture Review / human merge, must not merge PR
+#11, and must not claim formal Closeout is complete at this pre-publication
+stage. The governance branch must remain available until human publication.
+
+## Post-publication formal closeout
+
+Only after the user manually merges PR #11 may the subsequent final closeout:
+
+1. Verify PR #11 is `MERGED` and identify its actual merge commit.
+2. Switch to `main` and synchronize with `origin/main` without rewriting history.
+3. Verify the corrected governance record is present in `main` and that `main`
+   contains the PR #11 merge commit.
+4. Confirm local main equals live `origin/main`.
+5. Delete the local and remote `feature/spec009-governance-closeout` branches
+   after verifying that they have no unmerged work.
+6. Confirm a clean workspace on `main` and SPEC-010 still not started.
+
+The previous `feature/etf-index-exposure` branch cleanup remains completed;
+it does not substitute for publication and cleanup of the governance branch.
+When all post-publication checks above pass, the final attestation may state:
 
 ```text
 SPEC-009 FINAL APPROVED WITH NON-BLOCKING DEBT
 GOVERNANCE EXCEPTION RECORDED
 PROCESS DEVIATION OCCURRED
+FORMAL CLOSEOUT COMPLETE
 ```
 
-The external attestation must confirm removal of the local and remote
-`feature/etf-index-exposure` branches, current branch `main`, clean workspace,
-local main equal to live `origin/main`, and SPEC-010 not started. Deletion is
-limited to those exact feature refs after rechecking their expected head and
-the preserved merged tree; the governance documentation branch remains for
-review. Branch names are not required to keep the immutable PR, commits and CI
-evidence accessible.
-
-This conditional status is the owner's requested post-merge disposition, not
-a fabricated independent Architecture Review approval. After the final
-attestation, work stops for Architecture Review. No SPEC-010 work is authorized
-or started by this closeout.
+These are post-publication states, not the status of this unmerged PR. No
+SPEC-010 work is authorized by this remediation or by the subsequent closeout.

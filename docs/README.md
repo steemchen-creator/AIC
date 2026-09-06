@@ -18,4 +18,4 @@ Documentation must be updated in the same Pull Request as the change it describe
 - [Testing](testing/README.md)
 - [Acceptance reports](acceptance/README.md)
 - [Architecture audits](audits/README.md)
-- [SPEC-009 premature merge governance exception](governance/SPEC009_PREMATURE_MERGE_EXCEPTION.md)
+- [SPEC-009 governance exception and publication status](governance/SPEC009_PREMATURE_MERGE_EXCEPTION.md)

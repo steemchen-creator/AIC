@@ -10,7 +10,12 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 - FIX-SPEC009-002 governance exception for the premature merge of PR #10,
   including tree equivalence, exact feature-head CI, fresh main regression,
-  impact assessment, prevention rules, and owner-authorized closeout conditions.
+  impact assessment, prevention rules, and post-publication closeout requirements.
+- FIX-SPEC009-003 separates remediation execution authorization from external
+  Architecture Approval, marks the record `REVIEWED_PENDING_PUBLICATION`, and
+  requires human merge of PR #11 plus main verification before formal closeout.
+  Missing main branch protection / approval enforcement remains non-blocking
+  governance hardening debt; administrator settings are unchanged.
 
 - SPEC-009 境内 ETF 与指数参考基础：来源中立的 ETF Master、QDII/底层暴露元数据、
   ETF-index relationship、指数参考、ETF/Index DailyBar、Adjustment Factor 与估值快照。
