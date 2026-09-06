@@ -8,6 +8,15 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-008 Champion 与至少三个 Shadow Portfolio 的公平实验组，包含独立账户、组合状态、
+  连续复利、Decision Source assignment、Group Trading Session 和单成员故障隔离。
+- 不可变 Experiment Manifest、Fairness Contract 与规范化 Policy Bundle Hash，冻结 PIT、日历、
+  执行、风控、费率、滑点、Benchmark、初始资金和开始日期。
+- 多维 Performance Comparison、短样本保护、确定性 Leaderboard、真实 Role Activity 聚合以及
+  AssetClass/MarketVenue/Currency 多资产兼容元数据。
+- Application-owned Experiment Port、PostgreSQL 恢复投影与规范化证据、可逆迁移 0011、
+  独立性/重启/故障隔离/架构边界测试。
+
 - SPEC-007 forward-only Paper Trading Runtime and official 500,000 CNY Champion Portfolio,
   with explicit activation, pause/resume/stop, trading-session state machines and continuous
   compounding without daily capital reset.

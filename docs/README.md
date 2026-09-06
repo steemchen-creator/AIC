@@ -7,6 +7,8 @@ Documentation must be updated in the same Pull Request as the change it describe
 - [Architecture](architecture/README.md)
 - [Forward Paper Trading](paper/PAPER_TRADING_RUNTIME.md)
 - [Performance Baseline](performance/PERFORMANCE_BASELINE.md)
+- [Shadow Portfolio Experiments](experiments/SHADOW_PORTFOLIOS.md)
+- [Shadow Performance Comparison](performance/SHADOW_COMPARISON.md)
 - [API](api/README.md)
 - [Testing](testing/README.md)
 - [Acceptance reports](acceptance/README.md)

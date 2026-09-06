@@ -51,3 +51,12 @@ Migration `20260904_0010` adds `paper_accounts`, `paper_sessions`,
 normalized tables preserve queryable audit evidence. Stable identities are insert-or-verify,
 and finalized sessions are immutable. Downgrade to `20260903_0009` removes only these Paper
 Trading tables and therefore requires backup and explicit authorization outside isolated tests.
+
+# SPEC-008 Shadow Portfolio Experiments
+
+Migration `20260906_0011` adds `shadow_experiment_groups`, `shadow_experiment_members`,
+`shadow_group_sessions`, `shadow_comparison_snapshots` and `shadow_role_activities`.
+The group row stores the atomic recovery projection; normalized rows preserve queryable,
+insert-or-verify evidence. Manifest, Fairness Contract and Policy Bundle Hash are immutable;
+sessions, comparisons and activity are append-only. Downgrade to `20260904_0010` removes only
+SPEC-008 experiment evidence and requires backup plus explicit authorization outside isolated tests.

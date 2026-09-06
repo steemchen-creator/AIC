@@ -30,6 +30,7 @@ def test_domain_uses_standard_library_only() -> None:
         "decimal",
         "enum",
         "hashlib",
+        "json",
         "types",
         "typing",
         "urllib",
@@ -705,6 +706,68 @@ def test_spec_007_paper_runtime_keeps_forward_pit_and_clean_architecture_boundar
 
     adapter_imports = imported_modules(PACKAGE_ROOT / "infrastructure/paper_persistence.py")
     assert "aic_backend.application.ports.paper" in adapter_imports
+    assert any(module.startswith("sqlalchemy") for module in adapter_imports)
+
+
+def test_spec_008_shadow_experiments_keep_fairness_and_clean_architecture_boundaries() -> None:
+    domain_imports = package_imports("domain/experiments")
+    application_paths = (
+        PACKAGE_ROOT / "application/experiments.py",
+        PACKAGE_ROOT / "application/ports/experiments.py",
+    )
+    application_imports: set[str] = set()
+    for path in application_paths:
+        application_imports.update(imported_modules(path))
+    forbidden = (
+        "aic_backend.bootstrap",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "fastapi",
+        "httpx",
+        "requests",
+        "sqlalchemy",
+    )
+    assert not {module for module in domain_imports if module.startswith(forbidden)}
+    assert not {module for module in application_imports if module.startswith(forbidden)}
+
+    source = "\n".join(path.read_text(encoding="utf-8") for path in application_paths)
+    domain_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (PACKAGE_ROOT / "domain/experiments").rglob("*.py")
+    )
+    folded = (source + domain_source).casefold()
+    assert "experimentpaperruntime" in folded
+    assert "policy_bundle" in folded
+    assert "qualified_winner_account_id" in folded
+    assert "a_stock_portfolio" not in folded
+    assert "astockportfolio" not in folded
+    assert not any(
+        term in folded
+        for term in (
+            "tushare",
+            "aibrain",
+            "llm",
+            "strategyengine",
+            "investmentcommittee",
+            "opportunityradar",
+            "kelly",
+            "memoryretrieval",
+            "learninglab",
+            "governancecenter",
+            "marginaccount",
+            "dynamicleverage",
+            "level2",
+            "livebroker",
+            "fastapi",
+            "wpf",
+        )
+    )
+
+    adapter_imports = imported_modules(
+        PACKAGE_ROOT / "infrastructure/experiment_persistence.py"
+    )
+    assert "aic_backend.application.ports.experiments" in adapter_imports
     assert any(module.startswith("sqlalchemy") for module in adapter_imports)
 
 
