@@ -649,6 +649,65 @@ def test_spec_006_execution_risk_keeps_pit_and_clean_architecture_boundaries() -
     assert any(module.startswith("sqlalchemy") for module in adapter_imports)
 
 
+def test_spec_007_paper_runtime_keeps_forward_pit_and_clean_architecture_boundaries() -> None:
+    domain_imports = package_imports("domain/paper")
+    application_paths = (
+        PACKAGE_ROOT / "application/paper.py",
+        PACKAGE_ROOT / "application/ports/paper.py",
+    )
+    application_imports: set[str] = set()
+    for path in application_paths:
+        application_imports.update(imported_modules(path))
+    forbidden = (
+        "aic_backend.bootstrap",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "fastapi",
+        "httpx",
+        "requests",
+        "sqlalchemy",
+    )
+    assert not {module for module in domain_imports if module.startswith(forbidden)}
+    assert not {module for module in application_imports if module.startswith(forbidden)}
+
+    source = "\n".join(path.read_text(encoding="utf-8") for path in application_paths)
+    folded = source.casefold()
+    assert "pointintimemarketdataservice" in folded
+    assert "ashareexecutionservice" in folded
+    assert "availabilitymode.operational_replay" in folded
+    assert "availabilitymode.historical_research" not in folded
+    assert "canonicaldailybarrepository" not in folded
+    assert "select(" not in folded
+    assert "latest" not in folded
+    assert not any(
+        term in folded
+        for term in (
+            "tushare",
+            "strategyengine",
+            "aibrain",
+            "llm",
+            "shadowportfolio",
+            "opportunityradar",
+            "memoryretrieval",
+            "governanceui",
+            "roleactivityboardui",
+            "marginaccount",
+            "dynamicleverage",
+        )
+    )
+    assert "short selling" not in folded
+    assert "leverage" not in folded
+
+    backtest_source = (PACKAGE_ROOT / "application/backtest.py").read_text(encoding="utf-8")
+    assert "AvailabilityMode.HISTORICAL_RESEARCH" in backtest_source
+    assert "AvailabilityMode.OPERATIONAL_REPLAY" in source
+
+    adapter_imports = imported_modules(PACKAGE_ROOT / "infrastructure/paper_persistence.py")
+    assert "aic_backend.application.ports.paper" in adapter_imports
+    assert any(module.startswith("sqlalchemy") for module in adapter_imports)
+
+
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:
     callers = {
         path.name

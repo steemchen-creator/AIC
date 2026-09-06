@@ -8,6 +8,16 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-007 forward-only Paper Trading Runtime and official 500,000 CNY Champion Portfolio,
+  with explicit activation, pause/resume/stop, trading-session state machines and continuous
+  compounding without daily capital reset.
+- OPERATIONAL_REPLAY/PIT-only NEXT_OPEN execution, closing mark-to-market, conservative
+  missing-data/corporate-action blocking and reuse of SPEC-006 A-share execution and risk.
+- Immutable daily performance, drawdown, benchmark, cost and closed Trade Episode evidence,
+  atomic restart recovery, four crash checkpoints and deterministic idempotency tests.
+- Application-owned Paper ports, PostgreSQL persistence, reversible migration 0010,
+  architecture boundaries and Paper Runtime/Domain/Persistence coverage gates.
+
 - SPEC-006 deterministic A-share cash-account execution and pre-trade risk foundation,
   including PIT session/instrument eligibility, conservative unknown handling and stable
   acceptance/rejection evidence.

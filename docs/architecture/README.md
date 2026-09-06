@@ -7,4 +7,7 @@ High-level system boundaries, component relationships, quality attributes, and a
 - [A 股确定性执行](../execution/A_SHARE_EXECUTION.md)
 - [盘前风险门禁](../risk/PRE_TRADE_RISK.md)
 - [T+1 结算](../portfolio/T1_SETTLEMENT.md)
+- [Forward Paper Trading Runtime](../paper/PAPER_TRADING_RUNTIME.md)
+- [Champion Portfolio](../paper/CHAMPION_PORTFOLIO.md)
+- [Paper Performance Baseline](../performance/PERFORMANCE_BASELINE.md)
 - [Architecture Decision Records](../adr/README.md)

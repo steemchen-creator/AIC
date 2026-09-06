@@ -1,9 +1,12 @@
 """Deterministic A-share cash-account execution and pre-trade risk orchestration."""
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
+from enum import StrEnum
 from hashlib import sha256
+from typing import Literal
 
 from aic_backend.application.point_in_time import AvailabilityMode, PointInTimeContext
 from aic_backend.application.ports.execution import ExecutionEvidenceRepository
@@ -64,6 +67,12 @@ class ExecutionOrderIntent:
     requested_price: Price | None = None
 
 
+class ExecutionCheckpoint(StrEnum):
+    RISK_DECISION_RECORDED = "RISK_DECISION_RECORDED"
+    FILL_CREATED = "FILL_CREATED"
+    ACCOUNTING_APPLIED = "ACCOUNTING_APPLIED"
+
+
 @dataclass(slots=True)
 class ExecutionState:
     account: PortfolioAccount
@@ -115,6 +124,9 @@ class AShareExecutionService:
         repository: ExecutionEvidenceRepository | None = None,
         lot_policy: LotPolicy | None = None,
         price_limit_policy: PriceLimitPolicy | None = None,
+        availability_mode: AvailabilityMode = AvailabilityMode.HISTORICAL_RESEARCH,
+        reference_price_field: Literal["open", "close"] = "close",
+        execution_policy_version: str | None = None,
     ) -> None:
         self._pit = pit_market_data
         self._fee = fee_policy
@@ -123,8 +135,15 @@ class AShareExecutionService:
         self._repository = repository
         self._lot = lot_policy or AShareBoardLotPolicy()
         self._price_limit = price_limit_policy or ExplicitPriceLimitPolicy()
+        self.availability_mode = availability_mode
+        self._reference_price_field = reference_price_field
+        if reference_price_field not in {"open", "close"}:
+            raise ValueError("reference_price_field must be open or close")
+        self.execution_policy_version = execution_policy_version or self.EXECUTION_VERSION
+        if not self.execution_policy_version.strip():
+            raise ValueError("execution_policy_version must not be empty")
         self.policy_versions = ExecutionPolicyVersions(
-            self.EXECUTION_VERSION,
+            self.execution_policy_version,
             self._lot.version,
             self._price_limit.version,
             SettlementBook.VERSION,
@@ -152,6 +171,7 @@ class AShareExecutionService:
         order_id: OrderId,
         as_of: datetime,
         price_limit_band: PriceLimitBand | None,
+        checkpoint: Callable[[ExecutionCheckpoint], None] | None = None,
     ) -> ExecutionOutcome:
         context = self._context(as_of)
         state.begin_activity(as_of.date())
@@ -278,6 +298,8 @@ class AShareExecutionService:
         decision = self._decision(
             order, as_of, (), self._risk.summarize(risk_input), RiskDecisionType.ALLOW
         )
+        if checkpoint is not None:
+            checkpoint(ExecutionCheckpoint.RISK_DECISION_RECORDED)
         order = order.transition(OrderStatus.ACCEPTED)
         fill = Fill(
             FillId(_stable_id("fill", order_id.value, as_of.isoformat())),
@@ -291,8 +313,10 @@ class AShareExecutionService:
             fee,
             tax,
             slippage,
-            self.EXECUTION_VERSION,
+            self.execution_policy_version,
         )
+        if checkpoint is not None:
+            checkpoint(ExecutionCheckpoint.FILL_CREATED)
         entry_ids = [_stable_id("cash", fill.fill_id.value, "settlement")]
         if fee.amount:
             entry_ids.append(_stable_id("cash", fill.fill_id.value, "fee"))
@@ -300,6 +324,8 @@ class AShareExecutionService:
             entry_ids.append(_stable_id("cash", fill.fill_id.value, "tax"))
         cash_entries = state.account.apply_fill(fill, tuple(entry_ids))
         updated_settlement = state.settlement.apply_fill(fill)
+        if checkpoint is not None:
+            checkpoint(ExecutionCheckpoint.ACCOUNTING_APPLIED)
         order = order.transition(OrderStatus.FILLED)
         state.filled_orders_today += 1
         state.daily_turnover += intent.quantity.value * fill_price.value
@@ -388,7 +414,7 @@ class AShareExecutionService:
             (item.record for item in result.records if item.record.trading_date == as_of.date()),
             None,
         )
-        return None if bar is None else Price(bar.close)
+        return None if bar is None else Price(getattr(bar, self._reference_price_field))
 
     async def _snapshot(
         self,
@@ -657,9 +683,8 @@ class AShareExecutionService:
             payload,
         )
 
-    @staticmethod
-    def _context(as_of: datetime) -> PointInTimeContext:
-        return PointInTimeContext(as_of, AvailabilityMode.HISTORICAL_RESEARCH, AdjustmentMode.RAW)
+    def _context(self, as_of: datetime) -> PointInTimeContext:
+        return PointInTimeContext(as_of, self.availability_mode, AdjustmentMode.RAW)
 
 
 def _stable_id(prefix: str, *parts: str) -> str:
