@@ -6,7 +6,10 @@ Build AIC (AI Investment Command Center) into a complete institution-grade intel
 
 ## Current stage
 
-Project Governance: establish the durable rules, documentation structure, and review mechanisms required for long-term development.
+SPEC-009 foundation and its post-publication governance Closeout are complete.
+DEV-GOV-001 is the currently authorized development-infrastructure task; it must
+complete Architecture Review and Chairman manual merge before activation.
+SPEC-010 remains not started. The long-term roadmap below is unchanged.
 
 ## Roadmap
 

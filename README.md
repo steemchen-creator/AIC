@@ -10,8 +10,22 @@ Detailed development and security rules are maintained in [AGENTS.md](AGENTS.md)
 
 SPEC-009 post-merge governance remediation is documented in the
 [premature merge exception and publication status](docs/governance/SPEC009_PREMATURE_MERGE_EXCEPTION.md).
-Its status is `REVIEWED_PENDING_PUBLICATION`; formal repository closeout requires
-human merge of PR #11 into `main` and post-publication verification.
+The record retains its pre-publication `REVIEWED_PENDING_PUBLICATION` snapshot.
+PR #11 was manually merged and Post-Publication Closeout was confirmed by the Chief
+Investment Architect as relayed by the owner; see [project memory](docs/project/AIC_MASTER_PROJECT_MEMORY_V2.md).
+
+## Autonomous development pipeline (DEV-GOV-001)
+
+The separate `aic_dev_governance` package adds deterministic state/events, independent
+state-branch persistence, SHA-bound review/CI/merge gates, bounded task bridges,
+AI budget guard, audit and closeout. It does not change investment functionality.
+All activation/auto-merge switches default OFF; DEV-GOV-001 requires external review
+and Chairman manual merge. SPEC-010 is not started.
+
+See [overview](docs/dev-governance/OVERVIEW.md), [setup checklist](SETUP-DEV-GOV-001-CHAIRMAN.md)
+and [review](REVIEW-DEV-GOV-001.md). After installing `.[test]`, run
+`python -m aic_dev_governance status` for local status; `run` is the protected event
+entry point and exits without effects while disabled.
 
 ## Data Foundation architecture
 
