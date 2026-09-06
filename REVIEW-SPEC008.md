@@ -10,7 +10,8 @@
 
 本阶段建立了 Champion 与至少三个 Shadow Portfolio 的公平实验基础。实现复用 SPEC-007 Paper
 Runtime 和 SPEC-006 执行/风险边界，没有复制交易引擎，也没有加入 AI、策略引擎、UI 或海外交易
-规则。
+规则。FIX-SPEC008-001 已补齐头像可修改性、角色活动可审计投影、处理顺序独立性和关键模块覆盖率
+证据。
 
 ## 2. SPEC-007 Closeout 证据
 
@@ -26,11 +27,12 @@ Runtime 和 SPEC-006 执行/风险边界，没有复制交易引擎，也没有�
 domain.experiments
   immutable Manifest / Policy Bundle / Fairness Contract
   member, role/profile, asset compatibility metadata
-  group-session result, role activity, comparison and leaderboard
+  avatar audit event, group-session result, role activity/view, comparison and leaderboard
 
 application.experiments
   create group -> create and activate independent Paper accounts
   run group session -> stable per-member execution with failure isolation
+  update avatar -> append audit event without investment-state mutation
   build comparison -> sample-gated multi-dimensional result
                   |
                   v
@@ -58,20 +60,83 @@ PIT、风控、成本、记账或状态机语义。
 | 独立组合与连续复利 | 每个成员有唯一 Paper Account/Portfolio；复用 Paper Runtime 的连续状态 |
 | Experiment Manifest | `ExperimentPolicyBundle`、成员、创建时间和资产范围不可变 |
 | Fairness Contract | `FairnessContract` 绑定成员、Policy Hash、相同初始资金和九项共享维度 |
-| Decision Source | `SCRIPTED`、`MANUAL`、`FIXTURE` assignment；运行时校验 source ID |
+| Decision Source | `SCRIPTED`、`MANUAL`、`FIXTURE` assignment；运行时校验 source ID 与 version |
 | Group Trading Session | `ShadowExperimentService.run_session()` |
 | Failure isolation | 单成员异常转为稳定失败结果及 ERROR activity，循环继续其他成员 |
 | Deterministic comparison | 稳定 ID、成员排序、同分 account ID 破序、相同日期幂等返回 |
 | Performance comparison | `PerformanceComparisonSnapshot` |
 | Multi-dimensional leaderboard | 收益、Sharpe/Sortino/Calmar、回撤、成本共同参与综合顺序 |
 | Sample sufficiency | `INSUFFICIENT_SAMPLE`、`PROVISIONAL`、`QUALIFIED`；未达标无正式 winner |
-| Role/Profile/Avatar | `ManagerProfile` + `RoleIdentity` + `avatar_reference` |
-| Role activity aggregation | 只从实际 READY/PROCESSING/WAITING/ERROR 事件聚合最新状态 |
+| Role/Profile/Avatar | `UpdateRoleAvatarReference` + `RoleAvatarReferenceUpdated` 追加审计，Manifest 不变 |
+| Role activity aggregation | 六种状态与 `RoleActivityView`；只从真实活动返回任务、会话和输出引用 |
 | Multi-asset compatibility | `AssetClass`、`MarketVenue`、`Currency` 元数据，不创建 `AStockPortfolio` |
-| PostgreSQL | 恢复投影 + 五类规范化 evidence 表；insert-or-verify |
-| Migration | `20260906_0011`，可逆到 `20260904_0010` |
+| PostgreSQL | 恢复投影 + 六类规范化 evidence 表；insert-or-verify |
+| Migration | `20260906_0011` + `20260906_0012`，均可逆 |
 
-## 5. 公平性与独立性证明
+## 5. FIX-SPEC008-001 审计整改证据
+
+### Avatar Update Command
+
+`UpdateRoleAvatarReference(group_id, manager_id, avatar_reference)` 由 Application Service 执行。
+引用会去除首尾空白，并拒绝空值、超过 512 字符或包含控制字符的值；相同有效引用重放为幂等 no-op。
+
+### Avatar Audit Event
+
+每次实际变化追加不可变 `RoleAvatarReferenceUpdated`，包含稳定 event ID、group/account/manager、
+previous/new reference 与带时区时间。事件进入 Group recovery projection，并由迁移 0012 的
+`shadow_role_profile_events` 保存为 insert-or-verify 审计事实。
+
+### Avatar / Track Record Invariance
+
+有效头像由初始 Manifest 和追加事件投影。测试在已产生订单、成交、持仓、NAV 和绩效后修改 Atlas
+头像，并证明 Manifest、Session、Comparison、Activity 以及全部 Paper Trading Record 完全不变；
+manager/account/portfolio/membership identity 不变，重启后可 read-back 新头像。
+
+### Role Activity State Model
+
+模型可表达 `IDLE`、`READY`、`PROCESSING`、`WAITING`、`PAUSED`、`ERROR`。Activity Board 缺少活动
+证据时返回 `IDLE`；运行产生的状态来自真实 Group Session/Runtime 事件，不生成伪活动。
+
+### Current Task / Output References
+
+`RoleActivityView` 返回 manager/display/avatar、paper account、current status、current task、最近
+Group Session、最近 output 和事件时间。成功输出指向 Performance Snapshot；WAITING/ERROR 保留
+对应 Group Session task reference。头像变化不会改变这些引用。
+
+### Processing Order Independence
+
+`test_portfolio_processing_order_does_not_change_business_evidence` 分别以
+`Champion -> Atlas -> Sage -> Aegis` 和逆序输入运行同一公平环境，逐账户比较 Account、Intent、
+Risk/Execution Outcome、Portfolio State、Performance、Audit Event 与 Trade Episode，结果完全相同。
+
+### Comparison Policy Version
+
+V1 policy 为 `shadow-comparison/v1`，由不可变 Policy Bundle identity 绑定。Return、风险调整
+（Sharpe/Sortino/Calmar）、Drawdown、Cost 四类名次合计为 composite rank，同分按 account ID 升序。
+少于 5 个 Session 为 `INSUFFICIENT_SAMPLE`，5 至 19 为 `PROVISIONAL`，20 个及以上为 `QUALIFIED`；
+短样本不产生 qualified winner，winner 也不会自动 Promotion。Policy 变化形成新 identity，无法
+改写已有 Manifest 或历史 Comparison Snapshot。
+
+### Coverage Remediation
+
+- Experiment Application：100%
+- Experiment Domain：99%
+- Experiment PostgreSQL Adapter：98%
+
+均为 branch coverage，未降低门槛、未增加 `pragma: no cover`、未删除有效分支。
+
+### Exact Tests Added
+
+- `test_domain_rejects_invalid_manifest_policy_and_session_boundaries`
+- `test_avatar_event_and_activity_board_preserve_identity_and_real_references`
+- `test_experiment_record_rejects_unbound_activity_and_avatar_audit_evidence`
+- `test_avatar_update_is_audited_restart_safe_and_investment_invariant`
+- `test_closed_group_session_exposes_real_waiting_activity_without_output`
+- `test_portfolio_processing_order_does_not_change_business_evidence`
+- `test_group_save_failure_resumes_without_duplicate_portfolio_evidence`
+- `test_postgresql_avatar_update_audit_and_restart_read_back`
+
+## 6. 公平性与独立性证明
 
 E2E fixture 创建：
 
@@ -85,9 +150,11 @@ E2E fixture 创建：
 不同持仓和四个不同 NAV；第二交易日重启 Service 后继续原现金、持仓和 NAV，而不是重置本金。
 
 隔离测试令 Sage Decision Source 抛出异常：Sage 记录 `FAILED/ERROR` 且没有 Performance；Champion、
-Atlas、Aegis 仍全部完成并保存各自 Performance。缺失或 source ID 不匹配同样只失败被分配成员。
+Atlas、Aegis 仍全部完成并保存各自 Performance。缺失、source ID 或 version 不匹配同样只失败被
+分配成员。Group recovery projection 最终保存被模拟中断时，各 Paper Session 已独立持久化；重启
+重放依赖 Paper 幂等语义恢复 Group，且不会重复 Session 或 Performance。
 
-## 6. 比较语义
+## 7. 比较语义
 
 每个比较快照保存：
 
@@ -101,7 +168,10 @@ Atlas、Aegis 仍全部完成并保存各自 Performance。缺失或 source ID �
 Leaderboard 不是只按收益排名。短样本下 `qualified_winner_account_id = None`。即使后续达到
 `QUALIFIED`，该字段也只是可审核比较结果，不会自动替换 Champion、分配资金或触发晋升。
 
-## 7. 数据库与迁移
+默认阈值和稳定 tie-break 见上文 `Comparison Policy Version`。比较策略版本属于 Policy Bundle；
+历史快照保存 bundle identity，Persistence 拒绝使用同一 group identity 重写策略。
+
+## 8. 数据库与迁移
 
 新增表：
 
@@ -110,23 +180,26 @@ Leaderboard 不是只按收益排名。短样本下 `qualified_winner_account_id
 - `shadow_group_sessions`
 - `shadow_comparison_snapshots`
 - `shadow_role_activities`
+- `shadow_role_profile_events`
 
 Group row 保存原子 recovery projection；规范化表保存查询和审核证据。Manifest/Fairness Contract
-不可变，Session/Comparison/Activity append-only，重复相同写入幂等，身份冲突拒绝。
+不可变，Session/Comparison/Activity/Profile Event append-only，重复相同写入幂等，身份冲突拒绝。
 
-Migration round-trip 已在一次性 PostgreSQL 17 容器验证：`0010 -> 0011 -> 0010 -> head`。降级会删除
-SPEC-008 实验证据，不删除既有 Paper Account；非隔离环境执行前必须备份并再次授权。
+Migration round-trip 已在一次性 PostgreSQL 17 无卷容器验证：
+`0010 -> 0011 -> 0010 -> 0011 -> head` 及 `base -> head`。0012 降级只删除头像事件；0011 继续降级
+会删除 SPEC-008 实验证据但不删除既有 Paper Account。非隔离环境执行前必须备份并再次授权。
 
-## 8. API、依赖与兼容性影响
+## 9. API、依赖与兼容性影响
 
 - HTTP API：无新增、无修改。
+- Application API：新增头像更新、当前角色资料和 Activity Board 查询；不影响现有接口。
 - 第三方 Python 依赖：无新增。
 - WPF：无功能或 UI 修改。
 - 现有 Champion API：兼容。
 - 现有 SPEC-005/006/007 执行结果：不变。
-- PostgreSQL：新增五张表和三个索引。
+- PostgreSQL：在原五张表基础上新增头像审计表和索引。
 
-## 9. 修改文件
+## 10. 修改文件
 
 核心代码：
 
@@ -137,6 +210,7 @@ SPEC-008 实验证据，不删除既有 Paper Account；非隔离环境执行前
 - `apps/backend/src/aic_backend/infrastructure/experiment_persistence.py`
 - `apps/backend/src/aic_backend/application/paper.py`
 - `migrations/versions/20260906_0011_shadow_portfolios.py`
+- `migrations/versions/20260906_0012_shadow_role_profile_events.py`
 
 测试与质量：
 
@@ -156,16 +230,16 @@ SPEC-008 实验证据，不删除既有 Paper Account；非隔离环境执行前
 - 文档索引、数据库与测试说明
 - `REVIEW-SPEC008.md`
 
-## 10. Test Evidence
+## 11. Test Evidence
 
 本地最终预提交验证环境：Windows、Python 3.12.10、PostgreSQL 17 临时无卷容器、.NET 8。
 
 | 门禁 | 命令/结果 |
 |---|---|
-| 全部 Python 测试 | `pytest --cov --cov-report=term-missing`：563 passed |
-| 全仓 branch coverage | 96.87%，门槛 90% |
-| Experiment Application | 94% |
-| Experiment Domain | 91% |
+| 全部 Python 测试 | `pytest --cov --cov-report=term-missing`：571 passed |
+| 全仓 branch coverage | 97.47%，门槛 90% |
+| Experiment Application | 100% |
+| Experiment Domain | 99% |
 | Experiment Port | 100% |
 | Experiment PostgreSQL Adapter | 98% |
 | Architecture Tests | 28 passed（包含 SPEC-008 边界） |
@@ -174,12 +248,12 @@ SPEC-008 实验证据，不删除既有 Paper Account；非隔离环境执行前
 | WPF Release Build | Passed，0 warnings / 0 errors |
 | Docker Compose config | 设置 test-only password 后 `docker compose config --quiet`：Passed |
 | PostgreSQL health | `pg_isready`：accepting connections |
-| Migration | 0010/0011 downgrade/upgrade/head：Passed |
+| Migration | 0010/0011/0012 downgrade/upgrade/head + fresh/base to head：Passed |
 
 Windows 本地全量测试需把 `.venv/Scripts` 加入 PATH，因为旧测试通过裸 `alembic` 子进程执行迁移。
-未设置 PATH 的第一次尝试为环境 setup failure，补齐后同一完整测试集 563/563 通过。
+本次整改以隔离 PostgreSQL 17 无卷容器验证；同一完整测试集 571/571 通过。
 
-## 11. 安全与边界检查
+## 12. 安全与边界检查
 
 - 未提交 `.env`、密码、Token、证书、日志、缓存或构建产物；
 - 测试数据库只使用一次性 test-only credential 和无持久卷容器；
@@ -188,7 +262,7 @@ Windows 本地全量测试需把 `.venv/Scripts` 加入 PATH，因为旧测试�
 - 未实现海外市场日历、换汇、交易时段、结算或监管规则；
 - 未实现 Shadow 自动晋升或自动资金分配。
 
-## 12. 已知风险与非阻塞债务
+## 13. 已知风险与非阻塞债务
 
 - V1 Group 与各 Paper Account 分别持久化，跨 aggregate 不提供分布式事务；Paper Session 幂等使
   Group 保存重试可恢复，未来如引入跨服务部署需另行设计 Outbox/Saga。
@@ -196,8 +270,12 @@ Windows 本地全量测试需把 `.venv/Scripts` 加入 PATH，因为旧测试�
   在独立规格中定义汇率、日历、费用、税务和结算规则。
 - Comparison 阈值当前由确定性的 `ComparisonPolicy` 提供；生产启用前应由独立治理决策批准具体
   样本门槛，但不得绕开 `QUALIFIED` 保护。
+- Activity Board 是后端只读基础投影，不是完整实时 UI；PROCESSING 中间事件随 Group 最终投影
+  原子保存，未来若需要跨进程实时观察，应另立规格设计事件流，不能伪造活动。
+- “Multi-asset compatibility foundation”仅指元数据兼容；本阶段没有 Nasdaq/海外执行、USD 会计、
+  FX、海外日历、税务或跨市场结算。
 
-## 13. Final HEAD / CI 说明
+## 14. Final HEAD / CI 说明
 
 本文件属于待提交树，无法在不产生自引用新提交的情况下把自身最终 Commit SHA 写入自身。最终
 Local HEAD = Remote Branch HEAD = PR Head、对应 GitHub Actions Run 和 required checks 状态，应以

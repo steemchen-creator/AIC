@@ -1,11 +1,15 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 import pytest
 
 from aic_backend.application.execution import AShareExecutionService
-from aic_backend.application.experiments import CreateShadowExperiment, ShadowExperimentService
+from aic_backend.application.experiments import (
+    CreateShadowExperiment,
+    ShadowExperimentService,
+    UpdateRoleAvatarReference,
+)
 from aic_backend.application.paper import ScriptedPaperDecisionSource
 from aic_backend.application.point_in_time import (
     AvailabilityClassification,
@@ -196,6 +200,7 @@ class PitFixture:
 class FailingDecisionSource:
     def __init__(self, source_id: str) -> None:
         self.source_id = source_id
+        self.version = "v1"
 
     async def intents_for(self, account_id, trading_date):
         raise RuntimeError("isolated fixture failure")
@@ -474,11 +479,21 @@ async def test_missing_or_mismatched_decision_source_fails_only_assigned_member(
     manifest = await service.create(create_command("source-contract-lab"))
     assigned = sources(manifest)
     missing_source_id = manifest.members[-1].definition.decision_source.source_id
+    mismatched_source_id = manifest.members[-2].definition.decision_source.source_id
     del assigned[missing_source_id]
+    assigned[mismatched_source_id] = ScriptedPaperDecisionSource(
+        mismatched_source_id,
+        (),
+        "v2",
+    )
     result = await service.run_session(manifest.group_id, DAYS[0], assigned)
     assert result.status is GroupSessionStatus.FINALIZED_WITH_FAILURES
     missing = next(item for item in result.member_results if item.source_id == missing_source_id)
     assert missing.error_code == "DECISION_SOURCE_UNAVAILABLE"
+    mismatched = next(
+        item for item in result.member_results if item.source_id == mismatched_source_id
+    )
+    assert mismatched.error_code == "DECISION_SOURCE_CONTRACT_MISMATCH"
 
 
 @pytest.mark.asyncio
@@ -510,5 +525,221 @@ async def test_create_and_session_are_idempotent_and_unknown_group_is_rejected()
                 command.members[:3],
             )
         )
+    with pytest.raises(ValueError, match="must not be empty"):
+        await service.create(replace(command, group_id=" "))
+    duplicate_manager = replace(
+        command.members[-1],
+        profile=replace(
+            command.members[-1].profile,
+            manager_id=command.members[1].profile.manager_id,
+        ),
+    )
+    with pytest.raises(ValueError, match="manager_id values must be unique"):
+        await service.create(
+            replace(
+                command,
+                group_id="duplicate-manager",
+                members=(*command.members[:-1], duplicate_manager),
+            )
+        )
     with pytest.raises(LookupError, match="not found"):
         await service.run_session("missing", DAYS[0], {})
+
+
+@pytest.mark.asyncio
+async def test_avatar_update_is_audited_restart_safe_and_investment_invariant() -> None:
+    pit = populated_pit()
+    clock = MutableClock(datetime(2026, 9, 7, 8, tzinfo=UTC))
+    paper_repository = InMemoryPaperTradingRepository()
+    experiment_repository = InMemoryShadowExperimentRepository()
+    service = ShadowExperimentService(
+        paper_runtime(pit, clock, paper_repository), experiment_repository, clock
+    )
+    manifest = await service.create(create_command("avatar-lab"))
+    await service.run_session(manifest.group_id, DAYS[0], sources(manifest))
+    before = await service.get(manifest.group_id)
+    assert before is not None
+    paper_before = {
+        member.account_id: await paper_repository.get(member.account_id)
+        for member in manifest.members
+    }
+
+    atlas = next(
+        member
+        for member in manifest.members
+        if member.definition.profile.role_identity is RoleIdentity.ATLAS
+    )
+    clock.value += timedelta(minutes=1)
+    updated = await service.update_role_avatar_reference(
+        UpdateRoleAvatarReference(
+            manifest.group_id,
+            atlas.definition.profile.manager_id,
+            "avatars/atlas-v2.svg",
+        )
+    )
+    assert updated.avatar_reference == "avatars/atlas-v2.svg"
+
+    after = await service.get(manifest.group_id)
+    assert after is not None
+    assert after.manifest == before.manifest
+    assert after.sessions == before.sessions
+    assert after.comparisons == before.comparisons
+    assert after.activities == before.activities
+    assert len(after.profile_events) == 1
+    event = after.profile_events[0]
+    assert event.manager_id == atlas.definition.profile.manager_id
+    assert event.previous_avatar_reference == "avatars/atlas.svg"
+    assert event.new_avatar_reference == "avatars/atlas-v2.svg"
+    assert {
+        member.account_id: await paper_repository.get(member.account_id)
+        for member in manifest.members
+    } == paper_before
+
+    idempotent = await service.update_role_avatar_reference(
+        UpdateRoleAvatarReference(
+            manifest.group_id,
+            atlas.definition.profile.manager_id,
+            " avatars/atlas-v2.svg ",
+        )
+    )
+    assert idempotent == updated
+    unchanged = await service.get(manifest.group_id)
+    assert unchanged is not None and unchanged.profile_events == after.profile_events
+
+    restarted = ShadowExperimentService(
+        paper_runtime(pit, clock, paper_repository), experiment_repository, clock
+    )
+    profiles = await restarted.role_profiles(manifest.group_id)
+    assert next(
+        profile for profile in profiles if profile.manager_id == updated.manager_id
+    ).avatar_reference == "avatars/atlas-v2.svg"
+    board = await restarted.role_activity_board(manifest.group_id)
+    atlas_activity = next(item for item in board if item.manager_id == updated.manager_id)
+    assert atlas_activity.avatar_reference == "avatars/atlas-v2.svg"
+    assert atlas_activity.current_status is RoleActivityStatus.READY
+    assert atlas_activity.current_task_reference is None
+    assert atlas_activity.latest_session_reference is not None
+    assert atlas_activity.latest_output_reference is not None
+
+    with pytest.raises(ValueError, match="safe reference"):
+        await restarted.update_role_avatar_reference(
+            UpdateRoleAvatarReference(
+                manifest.group_id,
+                updated.manager_id,
+                "avatars/atlas\nunsafe.svg",
+            )
+        )
+    with pytest.raises(LookupError, match="manager not found"):
+        await restarted.update_role_avatar_reference(
+            UpdateRoleAvatarReference(manifest.group_id, "manager-unknown", "avatars/x.svg")
+        )
+    with pytest.raises(ValueError, match="must not be empty"):
+        await restarted.update_role_avatar_reference(
+            UpdateRoleAvatarReference(" ", updated.manager_id, "avatars/x.svg")
+        )
+
+
+@pytest.mark.asyncio
+async def test_closed_group_session_exposes_real_waiting_activity_without_output() -> None:
+    clock = MutableClock(datetime(2026, 9, 9, 8, tzinfo=UTC))
+    repository = InMemoryShadowExperimentRepository()
+    service = ShadowExperimentService(
+        paper_runtime(populated_pit(), clock, InMemoryPaperTradingRepository()),
+        repository,
+        clock,
+    )
+    manifest = await service.create(create_command("waiting-lab"))
+    closed_day = date(2026, 9, 9)
+    session = await service.run_session(manifest.group_id, closed_day, sources(manifest))
+    assert session.status is GroupSessionStatus.SKIPPED
+    assert all(item.status is MemberSessionStatus.SKIPPED for item in session.member_results)
+    saved = await service.get(manifest.group_id)
+    assert saved is not None and saved.comparisons == ()
+    board = await service.role_activity_board(manifest.group_id)
+    assert {item.current_status for item in board} == {RoleActivityStatus.WAITING}
+    assert {item.current_task_reference for item in board} == {session.group_session_id}
+    assert {item.latest_session_reference for item in board} == {session.group_session_id}
+    assert {item.latest_output_reference for item in board} == {None}
+
+
+@pytest.mark.asyncio
+async def test_portfolio_processing_order_does_not_change_business_evidence() -> None:
+    command = create_command("processing-order-lab")
+
+    async def execute(candidate: CreateShadowExperiment):
+        pit = populated_pit()
+        clock = MutableClock(datetime(2026, 9, 7, 8, tzinfo=UTC))
+        paper_repository = InMemoryPaperTradingRepository()
+        experiment_repository = InMemoryShadowExperimentRepository()
+        service = ShadowExperimentService(
+            paper_runtime(pit, clock, paper_repository), experiment_repository, clock
+        )
+        manifest = await service.create(candidate)
+        session = await service.run_session(manifest.group_id, DAYS[0], sources(manifest))
+        group = await service.get(manifest.group_id)
+        papers = {
+            member.account_id: await paper_repository.get(member.account_id)
+            for member in manifest.members
+        }
+        return manifest, session, group, papers
+
+    run_a = await execute(command)
+    run_b = await execute(replace(command, members=tuple(reversed(command.members))))
+    assert run_a[:3] == run_b[:3]
+    assert run_a[3].keys() == run_b[3].keys()
+    for account_id in run_a[3]:
+        first = run_a[3][account_id]
+        second = run_b[3][account_id]
+        assert first is not None and second is not None
+        assert first.account == second.account
+        assert first.intents == second.intents
+        assert first.outcomes == second.outcomes
+        assert first.portfolio_state == second.portfolio_state
+        assert first.performance == second.performance
+        assert first.events == second.events
+        assert first.episodes == second.episodes
+
+
+@pytest.mark.asyncio
+async def test_group_save_failure_resumes_without_duplicate_portfolio_evidence() -> None:
+    class FailOnceRepository(InMemoryShadowExperimentRepository):
+        def __init__(self) -> None:
+            super().__init__()
+            self.failed = False
+
+        async def save(self, record) -> None:
+            if record.sessions and not self.failed:
+                self.failed = True
+                raise RuntimeError("simulated group projection interruption")
+            await super().save(record)
+
+    pit = populated_pit()
+    clock = MutableClock(datetime(2026, 9, 7, 8, tzinfo=UTC))
+    paper_repository = InMemoryPaperTradingRepository()
+    experiment_repository = FailOnceRepository()
+    service = ShadowExperimentService(
+        paper_runtime(pit, clock, paper_repository), experiment_repository, clock
+    )
+    manifest = await service.create(create_command("resume-lab"))
+    assigned_sources = sources(manifest)
+
+    with pytest.raises(RuntimeError, match="projection interruption"):
+        await service.run_session(manifest.group_id, DAYS[0], assigned_sources)
+    interrupted = await service.get(manifest.group_id)
+    assert interrupted is not None and interrupted.sessions == ()
+    for member in manifest.members:
+        paper = await paper_repository.get(member.account_id)
+        assert paper is not None and len(paper.sessions) == 1
+
+    restarted = ShadowExperimentService(
+        paper_runtime(pit, clock, paper_repository), experiment_repository, clock
+    )
+    resumed = await restarted.run_session(manifest.group_id, DAYS[0], assigned_sources)
+    assert resumed.status is GroupSessionStatus.FINALIZED
+    recovered = await restarted.get(manifest.group_id)
+    assert recovered is not None and recovered.sessions == (resumed,)
+    for member in manifest.members:
+        paper = await paper_repository.get(member.account_id)
+        assert paper is not None
+        assert len(paper.sessions) == 1
+        assert len(paper.performance) == 1

@@ -80,6 +80,19 @@ shadow_role_activities = Table(
     Column("payload", JSON, nullable=False),
 )
 
+shadow_role_profile_events = Table(
+    "shadow_role_profile_events",
+    metadata,
+    Column("event_id", String(80), primary_key=True),
+    Column("group_id", String(80), nullable=False),
+    Column("account_id", String(80), nullable=False),
+    Column("manager_id", String(80), nullable=False),
+    Column("occurred_at", DateTime(timezone=True), nullable=False),
+    Column("previous_avatar_reference", String(512), nullable=False),
+    Column("new_avatar_reference", String(512), nullable=False),
+    Column("payload", JSON, nullable=False),
+)
+
 _RECORD_ADAPTER = TypeAdapter(ShadowExperimentRecord)
 
 
@@ -102,7 +115,7 @@ def _validate_update(
             PersistenceErrorCode.IDENTITY_CONFLICT,
             "experiment group identity identifies a different immutable manifest",
         )
-    for collection_name in ("sessions", "comparisons", "activities"):
+    for collection_name in ("sessions", "comparisons", "activities", "profile_events"):
         old_items = getattr(existing, collection_name)
         new_items = getattr(incoming, collection_name)
         if any(item not in new_items for item in old_items):
@@ -240,6 +253,26 @@ class PostgreSQLShadowExperimentRepository(ShadowExperimentRepository):
                             "occurred_at": activity.occurred_at,
                             "status": activity.status.value,
                             "reason_code": activity.reason_code,
+                            "payload": payload,
+                        },
+                    )
+                for event, payload in zip(
+                    record.profile_events,
+                    cast(list[dict[str, Any]], projection["profile_events"]),
+                    strict=True,
+                ):
+                    await _insert_or_verify(
+                        connection,
+                        shadow_role_profile_events,
+                        "event_id",
+                        {
+                            "event_id": event.event_id,
+                            "group_id": event.group_id,
+                            "account_id": event.account_id,
+                            "manager_id": event.manager_id,
+                            "occurred_at": event.occurred_at,
+                            "previous_avatar_reference": event.previous_avatar_reference,
+                            "new_avatar_reference": event.new_avatar_reference,
                             "payload": payload,
                         },
                     )

@@ -3,14 +3,15 @@
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import date, datetime
+from typing import cast
 
 from aic_backend.application.ports.experiments import (
     ExperimentClock,
+    ExperimentDecisionSource,
     ExperimentPaperRuntime,
     ShadowExperimentRecord,
     ShadowExperimentRepository,
 )
-from aic_backend.application.ports.paper import PaperDecisionSource
 from aic_backend.domain.experiments import (
     ComparisonPolicy,
     ExperimentManifest,
@@ -20,12 +21,17 @@ from aic_backend.domain.experiments import (
     FairnessContract,
     GroupSessionStatus,
     GroupTradingSession,
+    ManagerProfile,
     MemberSessionResult,
     MemberSessionStatus,
     PortfolioRole,
     RoleActivity,
     RoleActivityStatus,
+    RoleActivityView,
+    RoleAvatarReferenceUpdated,
     build_comparison_snapshot,
+    build_role_activity_board,
+    current_manager_profile,
     latest_role_activity,
     stable_experiment_id,
 )
@@ -38,6 +44,13 @@ class CreateShadowExperiment:
     display_name: str
     policy_bundle: ExperimentPolicyBundle
     members: tuple[ExperimentMemberDefinition, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class UpdateRoleAvatarReference:
+    group_id: str
+    manager_id: str
+    avatar_reference: str
 
 
 class ShadowExperimentService:
@@ -122,7 +135,7 @@ class ShadowExperimentService:
         self,
         group_id: str,
         trading_date: date,
-        decision_sources: Mapping[str, PaperDecisionSource],
+        decision_sources: Mapping[str, ExperimentDecisionSource],
     ) -> GroupTradingSession:
         record = await self._required_record(group_id)
         existing = next(
@@ -143,11 +156,20 @@ class ShadowExperimentService:
                     session_id,
                     RoleActivityStatus.PROCESSING,
                     started_at,
+                    task_reference=session_id,
                 )
             )
             assignment = member.definition.decision_source
             source = decision_sources.get(assignment.source_id)
-            if source is None or source.source_id != assignment.source_id:
+            source_error = None
+            if source is None:
+                source_error = "DECISION_SOURCE_UNAVAILABLE"
+            elif (
+                source.source_id != assignment.source_id
+                or getattr(source, "version", None) != assignment.version
+            ):
+                source_error = "DECISION_SOURCE_CONTRACT_MISMATCH"
+            if source_error is not None:
                 results.append(
                     MemberSessionResult(
                         member.account_id,
@@ -155,7 +177,7 @@ class ShadowExperimentService:
                         MemberSessionStatus.FAILED,
                         None,
                         None,
-                        "DECISION_SOURCE_UNAVAILABLE",
+                        source_error,
                     )
                 )
                 activities.append(
@@ -165,10 +187,12 @@ class ShadowExperimentService:
                         session_id,
                         RoleActivityStatus.ERROR,
                         self._clock.now(),
-                        "DECISION_SOURCE_UNAVAILABLE",
+                        source_error,
+                        task_reference=session_id,
                     )
                 )
                 continue
+            source = cast(ExperimentDecisionSource, source)
             try:
                 result = await self._paper_runtime.process_session(
                     member.account_id, trading_date, source
@@ -197,6 +221,7 @@ class ShadowExperimentService:
                         RoleActivityStatus.ERROR,
                         self._clock.now(),
                         code,
+                        task_reference=session_id,
                     )
                 )
                 continue
@@ -211,6 +236,8 @@ class ShadowExperimentService:
                     )
                 )
                 activity_status = RoleActivityStatus.WAITING
+                task_reference = session_id
+                output_reference = None
             else:
                 results.append(
                     MemberSessionResult(
@@ -223,6 +250,8 @@ class ShadowExperimentService:
                 )
                 performance.append(result.performance)
                 activity_status = RoleActivityStatus.READY
+                task_reference = None
+                output_reference = result.performance.snapshot_id
             activities.append(
                 self._activity(
                     record.manifest,
@@ -230,6 +259,8 @@ class ShadowExperimentService:
                     session_id,
                     activity_status,
                     self._clock.now(),
+                    task_reference=task_reference,
+                    output_reference=output_reference,
                 )
             )
         finalized_at = self._clock.now()
@@ -292,6 +323,61 @@ class ShadowExperimentService:
         record = await self._required_record(group_id)
         return latest_role_activity(record.activities)
 
+    async def role_activity_board(self, group_id: str) -> tuple[RoleActivityView, ...]:
+        record = await self._required_record(group_id)
+        return build_role_activity_board(
+            record.manifest,
+            record.activities,
+            record.profile_events,
+        )
+
+    async def role_profiles(self, group_id: str) -> tuple[ManagerProfile, ...]:
+        record = await self._required_record(group_id)
+        return tuple(
+            current_manager_profile(member, record.profile_events)
+            for member in record.manifest.members
+        )
+
+    async def update_role_avatar_reference(
+        self, command: UpdateRoleAvatarReference
+    ) -> ManagerProfile:
+        if not command.group_id.strip() or not command.manager_id.strip():
+            raise ValueError("group_id and manager_id must not be empty")
+        record = await self._required_record(command.group_id)
+        member = next(
+            (
+                item
+                for item in record.manifest.members
+                if item.definition.profile.manager_id == command.manager_id.strip()
+            ),
+            None,
+        )
+        if member is None:
+            raise LookupError(f"manager not found in shadow experiment: {command.manager_id}")
+        current = current_manager_profile(member, record.profile_events)
+        normalized_reference = command.avatar_reference.strip()
+        if current.avatar_reference == normalized_reference:
+            return current
+        occurred_at = self._clock.now()
+        event = RoleAvatarReferenceUpdated(
+            stable_experiment_id(
+                "avatar-update",
+                record.manifest.group_id,
+                member.account_id,
+                len(record.profile_events) + 1,
+            ),
+            record.manifest.group_id,
+            member.account_id,
+            current.manager_id,
+            current.avatar_reference,
+            normalized_reference,
+            occurred_at,
+        )
+        await self._repository.save(
+            replace(record, profile_events=record.profile_events + (event,))
+        )
+        return replace(current, avatar_reference=event.new_avatar_reference)
+
     async def _required_record(self, group_id: str) -> ShadowExperimentRecord:
         record = await self._repository.get(group_id)
         if record is None:
@@ -340,6 +426,9 @@ class ShadowExperimentService:
         status: RoleActivityStatus,
         occurred_at: datetime,
         reason_code: str | None = None,
+        *,
+        task_reference: str | None = None,
+        output_reference: str | None = None,
     ) -> RoleActivity:
         return RoleActivity(
             stable_experiment_id(
@@ -356,4 +445,6 @@ class ShadowExperimentService:
             occurred_at,
             status,
             reason_code,
+            task_reference,
+            output_reference,
         )

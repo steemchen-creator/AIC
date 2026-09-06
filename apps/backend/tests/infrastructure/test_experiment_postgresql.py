@@ -9,6 +9,10 @@ import pytest
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
+from aic_backend.application.experiments import (
+    ShadowExperimentService,
+    UpdateRoleAvatarReference,
+)
 from aic_backend.application.ports.experiments import ShadowExperimentRecord
 from aic_backend.application.ports.persistence import PersistenceError, PersistenceErrorCode
 from aic_backend.domain.experiments import (
@@ -36,6 +40,7 @@ from aic_backend.domain.experiments import (
     PortfolioRole,
     RoleActivity,
     RoleActivityStatus,
+    RoleAvatarReferenceUpdated,
     RoleIdentity,
     TradingStyle,
 )
@@ -48,6 +53,7 @@ from aic_backend.infrastructure.experiment_persistence import (
     shadow_experiment_members,
     shadow_group_sessions,
     shadow_role_activities,
+    shadow_role_profile_events,
 )
 
 NOW = datetime(2026, 9, 7, 8, tzinfo=UTC)
@@ -72,6 +78,7 @@ async def engine() -> AsyncEngine:
     value = create_async_engine(os.environ["AIC_DATABASE_URL"], pool_pre_ping=True)
     async with value.begin() as connection:
         for table in (
+            shadow_role_profile_events,
             shadow_role_activities,
             shadow_comparison_snapshots,
             shadow_group_sessions,
@@ -238,11 +245,37 @@ async def test_in_memory_experiment_manifest_and_evidence_are_immutable() -> Non
     await repository.save(value)
     assert await repository.get(value.manifest.group_id) == value
     with pytest.raises(PersistenceError) as error:
-        await repository.save(replace(value, sessions=()))
+        await repository.save(replace(value, activities=()))
     assert error.value.code is PersistenceErrorCode.IDENTITY_CONFLICT
     with pytest.raises(PersistenceError) as error:
         await repository.save(
             replace(value, manifest=replace(value.manifest, display_name="Changed"))
+        )
+    assert error.value.code is PersistenceErrorCode.IDENTITY_CONFLICT
+
+    new_bundle = replace(
+        value.manifest.policy_bundle,
+        comparison_policy_version="shadow-comparison/v2",
+    )
+    new_members = tuple(
+        replace(item, policy_bundle_id=new_bundle.identity)
+        for item in value.manifest.members
+    )
+    new_contract = replace(
+        value.manifest.fairness_contract,
+        policy_bundle_id=new_bundle.identity,
+    )
+    with pytest.raises(PersistenceError) as error:
+        await repository.save(
+            replace(
+                value,
+                manifest=replace(
+                    value.manifest,
+                    policy_bundle=new_bundle,
+                    members=new_members,
+                    fairness_contract=new_contract,
+                ),
+            )
         )
     assert error.value.code is PersistenceErrorCode.IDENTITY_CONFLICT
 
@@ -266,9 +299,62 @@ async def test_postgresql_experiment_round_trip_normalized_evidence_and_idempote
                 shadow_group_sessions,
                 shadow_comparison_snapshots,
                 shadow_role_activities,
+                shadow_role_profile_events,
             )
         ]
-    assert counts == [1, 4, 1, 1, 1]
+    assert counts == [1, 4, 1, 1, 1, 0]
+
+
+@pytest.mark.asyncio
+async def test_postgresql_avatar_update_audit_and_restart_read_back(
+    engine: AsyncEngine,
+) -> None:
+    repository = PostgreSQLShadowExperimentRepository(engine)
+    value = record()
+    await repository.save(value)
+
+    class Clock:
+        def now(self) -> datetime:
+            return NOW
+
+    service = ShadowExperimentService(object(), repository, Clock())  # type: ignore[arg-type]
+    target = value.manifest.members[1]
+    updated = await service.update_role_avatar_reference(
+        UpdateRoleAvatarReference(
+            value.manifest.group_id,
+            target.definition.profile.manager_id,
+            "avatars/atlas-v2.svg",
+        )
+    )
+    assert updated.avatar_reference == "avatars/atlas-v2.svg"
+
+    restarted = ShadowExperimentService(object(), repository, Clock())  # type: ignore[arg-type]
+    restored = await restarted.get(value.manifest.group_id)
+    assert restored is not None
+    assert restored.manifest == value.manifest
+    assert restored.sessions == value.sessions
+    assert restored.comparisons == value.comparisons
+    assert len(restored.profile_events) == 1
+    event = restored.profile_events[0]
+    assert isinstance(event, RoleAvatarReferenceUpdated)
+    assert event.previous_avatar_reference == target.definition.profile.avatar_reference
+    assert event.new_avatar_reference == "avatars/atlas-v2.svg"
+    profiles = await restarted.role_profiles(value.manifest.group_id)
+    assert next(
+        profile for profile in profiles if profile.manager_id == updated.manager_id
+    ).avatar_reference == "avatars/atlas-v2.svg"
+    activity = await restarted.role_activity_board(value.manifest.group_id)
+    assert next(
+        item for item in activity if item.manager_id == updated.manager_id
+    ).avatar_reference == "avatars/atlas-v2.svg"
+
+    async with engine.connect() as connection:
+        stored_event = (
+            await connection.execute(select(shadow_role_profile_events))
+        ).mappings().one()
+    assert stored_event["event_id"] == event.event_id
+    assert stored_event["manager_id"] == event.manager_id
+    assert stored_event["new_avatar_reference"] == "avatars/atlas-v2.svg"
 
 
 @pytest.mark.asyncio
@@ -308,6 +394,9 @@ def test_shadow_experiment_migration_upgrade_downgrade_and_head() -> None:
         ("downgrade", "20260904_0010"),
         ("upgrade", "20260906_0011"),
         ("downgrade", "20260904_0010"),
+        ("upgrade", "20260906_0011"),
+        ("upgrade", "head"),
+        ("downgrade", "base"),
         ("upgrade", "head"),
     ):
         subprocess.run(

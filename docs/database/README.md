@@ -60,3 +60,8 @@ The group row stores the atomic recovery projection; normalized rows preserve qu
 insert-or-verify evidence. Manifest, Fairness Contract and Policy Bundle Hash are immutable;
 sessions, comparisons and activity are append-only. Downgrade to `20260904_0010` removes only
 SPEC-008 experiment evidence and requires backup plus explicit authorization outside isolated tests.
+
+Migration `20260906_0012` adds append-only `shadow_role_profile_events`. Avatar changes are stored
+as old/new reference audit facts while the original Manifest and normalized member row stay immutable.
+The group recovery projection includes these events so the effective role profile and activity board can
+be reconstructed after restart. Downgrade to `20260906_0011` removes only profile-update audit events.

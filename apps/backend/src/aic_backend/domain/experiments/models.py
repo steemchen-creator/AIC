@@ -1,7 +1,7 @@
 """Immutable models for fair Champion and Shadow portfolio experiments."""
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
@@ -22,6 +22,13 @@ def _aware(value: datetime, field_name: str) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
         raise ValueError(f"{field_name} must include timezone information")
     return value
+
+
+def _avatar_reference(value: str) -> str:
+    normalized = _text(value, "avatar_reference")
+    if len(normalized) > 512 or any(ord(character) < 32 for character in normalized):
+        raise ValueError("avatar_reference must be a safe reference of at most 512 characters")
+    return normalized
 
 
 def stable_experiment_id(prefix: str, *parts: object) -> str:
@@ -206,14 +213,9 @@ class ManagerProfile:
     trading_styles: tuple[TradingStyle, ...]
 
     def __post_init__(self) -> None:
-        for field_name in (
-            "manager_id",
-            "display_name",
-            "role_title",
-            "mandate",
-            "avatar_reference",
-        ):
+        for field_name in ("manager_id", "display_name", "role_title", "mandate"):
             object.__setattr__(self, field_name, _text(getattr(self, field_name), field_name))
+        object.__setattr__(self, "avatar_reference", _avatar_reference(self.avatar_reference))
         if not self.horizons or not self.trading_styles:
             raise ValueError("manager profile requires horizon and trading-style metadata")
 
@@ -466,6 +468,34 @@ class PerformanceComparisonSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class RoleAvatarReferenceUpdated:
+    event_id: str
+    group_id: str
+    account_id: str
+    manager_id: str
+    previous_avatar_reference: str
+    new_avatar_reference: str
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        for field_name in ("event_id", "group_id", "account_id", "manager_id"):
+            object.__setattr__(self, field_name, _text(getattr(self, field_name), field_name))
+        object.__setattr__(
+            self,
+            "previous_avatar_reference",
+            _avatar_reference(self.previous_avatar_reference),
+        )
+        object.__setattr__(
+            self,
+            "new_avatar_reference",
+            _avatar_reference(self.new_avatar_reference),
+        )
+        _aware(self.occurred_at, "occurred_at")
+        if self.previous_avatar_reference == self.new_avatar_reference:
+            raise ValueError("avatar_reference update must change the effective reference")
+
+
+@dataclass(frozen=True, slots=True)
 class RoleActivity:
     activity_id: str
     group_id: str
@@ -475,11 +505,35 @@ class RoleActivity:
     occurred_at: datetime
     status: RoleActivityStatus
     reason_code: str | None = None
+    task_reference: str | None = None
+    output_reference: str | None = None
 
     def __post_init__(self) -> None:
         for field_name in ("activity_id", "group_id", "account_id", "manager_id"):
             object.__setattr__(self, field_name, _text(getattr(self, field_name), field_name))
+        for field_name in (
+            "group_session_id",
+            "reason_code",
+            "task_reference",
+            "output_reference",
+        ):
+            value = getattr(self, field_name)
+            if value is not None:
+                object.__setattr__(self, field_name, _text(value, field_name))
         _aware(self.occurred_at, "occurred_at")
+
+
+@dataclass(frozen=True, slots=True)
+class RoleActivityView:
+    manager_id: str
+    display_name: str
+    avatar_reference: str
+    paper_account_id: str
+    current_status: RoleActivityStatus
+    current_task_reference: str | None
+    latest_session_reference: str | None
+    latest_output_reference: str | None
+    latest_event_at: datetime
 
 
 def latest_role_activity(activities: tuple[RoleActivity, ...]) -> tuple[RoleActivity, ...]:
@@ -487,6 +541,85 @@ def latest_role_activity(activities: tuple[RoleActivity, ...]) -> tuple[RoleActi
     for activity in activities:
         latest[activity.account_id] = activity
     return tuple(latest[key] for key in sorted(latest))
+
+
+def current_manager_profile(
+    member: ExperimentMember,
+    avatar_events: tuple[RoleAvatarReferenceUpdated, ...],
+) -> ManagerProfile:
+    profile = member.definition.profile
+    for event in avatar_events:
+        if event.account_id == member.account_id:
+            profile = replace(profile, avatar_reference=event.new_avatar_reference)
+    return profile
+
+
+def build_role_activity_board(
+    manifest: ExperimentManifest,
+    activities: tuple[RoleActivity, ...],
+    avatar_events: tuple[RoleAvatarReferenceUpdated, ...],
+) -> tuple[RoleActivityView, ...]:
+    latest_by_account = {item.account_id: item for item in activities}
+    views: list[RoleActivityView] = []
+    for member in sorted(manifest.members, key=lambda item: item.account_id):
+        profile = current_manager_profile(member, avatar_events)
+        activity = latest_by_account.get(member.account_id)
+        views.append(
+            RoleActivityView(
+                profile.manager_id,
+                profile.display_name,
+                profile.avatar_reference,
+                member.account_id,
+                activity.status if activity is not None else RoleActivityStatus.IDLE,
+                activity.task_reference if activity is not None else None,
+                activity.group_session_id if activity is not None else None,
+                activity.output_reference if activity is not None else None,
+                activity.occurred_at if activity is not None else manifest.created_at,
+            )
+        )
+    return tuple(views)
+
+
+def validate_experiment_evidence(
+    manifest: ExperimentManifest,
+    sessions: tuple[GroupTradingSession, ...],
+    activities: tuple[RoleActivity, ...],
+    avatar_events: tuple[RoleAvatarReferenceUpdated, ...],
+) -> None:
+    members = {item.account_id: item for item in manifest.members}
+    session_ids = {item.group_session_id for item in sessions}
+    for activity in activities:
+        member = members.get(activity.account_id)
+        if member is None:
+            raise ValueError("role activity account must belong to the experiment")
+        if activity.group_id != manifest.group_id:
+            raise ValueError("role activity group must match the experiment")
+        if activity.manager_id != member.definition.profile.manager_id:
+            raise ValueError("role activity manager must match the experiment member")
+        if (
+            activity.group_session_id is not None
+            and activity.group_session_id not in session_ids
+        ):
+            raise ValueError("role activity session must belong to the experiment")
+
+    references = {
+        item.account_id: item.definition.profile.avatar_reference for item in manifest.members
+    }
+    event_ids: set[str] = set()
+    for event in avatar_events:
+        if event.event_id in event_ids:
+            raise ValueError("role profile audit event identities must be unique")
+        event_ids.add(event.event_id)
+        member = members.get(event.account_id)
+        if member is None:
+            raise ValueError("role profile event account must belong to the experiment")
+        if event.group_id != manifest.group_id:
+            raise ValueError("role profile event group must match the experiment")
+        if event.manager_id != member.definition.profile.manager_id:
+            raise ValueError("role profile event manager must match the experiment member")
+        if event.previous_avatar_reference != references[event.account_id]:
+            raise ValueError("role profile event must continue the avatar audit chain")
+        references[event.account_id] = event.new_avatar_reference
 
 
 def _rank(

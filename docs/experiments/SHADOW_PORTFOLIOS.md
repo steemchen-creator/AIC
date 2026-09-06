@@ -48,6 +48,21 @@ group/date 重放直接返回已保存结果，不重复生成证据。
 角色活动只聚合真实状态：`IDLE`、`READY`、`PROCESSING`、`WAITING`、`PAUSED`、`ERROR`。本阶段
 没有 UI，也不生成与实际运行无关的动画状态。
 
+`RoleActivityView` 至少提供 `manager_id`、`display_name`、`avatar_reference`、
+`paper_account_id`、当前状态、当前任务引用、最近 Group Session、最近输出以及最新事件时间。
+这些值来自已持久化的 Group Session/Role Activity；没有活动证据时状态为 `IDLE`，不会伪造任务。
+成功成员的最近输出指向 Performance Snapshot，等待或错误成员保留对应 Group Session 任务引用。
+
+## 头像更新与审计
+
+`UpdateRoleAvatarReference` 只更新角色的有效头像引用。初始头像仍属于不可变 Manifest；每次实际
+变化追加 `RoleAvatarReferenceUpdated`，保存 manager/account、前后引用和 UTC 时间。相同引用重放
+是幂等 no-op。引用不能为空、不能超过 512 字符，也不能包含控制字符。
+
+当前资料由初始 Manifest 与追加事件投影，因此 manager、Portfolio、Account、Experiment membership
+以及历史 NAV、Order、Fill、Decision 和 Track Record 均不改变。头像上传、裁剪、对象存储和 WPF
+编辑 UI 不在 SPEC-008 范围内。
+
 ## 比较与 Leaderboard
 
 每个 Comparison Snapshot 包含 NAV、Return、Drawdown、Sharpe、Sortino、Calmar、Benchmark、
@@ -61,6 +76,10 @@ Excess Return、Turnover、Costs、Exposure、Cash 和 Position Count。综合�
 - `QUALIFIED`：满足比较门槛。
 
 没有 `QUALIFIED` 成员时，`qualified_winner_account_id` 必须为空。
+
+Comparison Policy 版本通过不可变 Policy Bundle 绑定历史快照。调用方提供的成员顺序会在创建时按
+Champion/Role Identity 规范化；正序与逆序运行产生相同的逐 Portfolio 订单、风控、成交、现金、
+持仓、结算、NAV、绩效和业务审计证据。
 
 ## 多资产兼容边界
 

@@ -740,6 +740,8 @@ def test_spec_008_shadow_experiments_keep_fairness_and_clean_architecture_bounda
     assert "experimentpaperruntime" in folded
     assert "policy_bundle" in folded
     assert "qualified_winner_account_id" in folded
+    assert "updateroleavatarreference" in folded
+    assert "roleactivityview" in folded
     assert "a_stock_portfolio" not in folded
     assert "astockportfolio" not in folded
     assert not any(
@@ -769,6 +771,10 @@ def test_spec_008_shadow_experiments_keep_fairness_and_clean_architecture_bounda
     )
     assert "aic_backend.application.ports.experiments" in adapter_imports
     assert any(module.startswith("sqlalchemy") for module in adapter_imports)
+    adapter_source = (
+        PACKAGE_ROOT / "infrastructure/experiment_persistence.py"
+    ).read_text(encoding="utf-8")
+    assert "shadow_role_profile_events" in adapter_source
 
 
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:

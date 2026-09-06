@@ -26,11 +26,16 @@ from aic_backend.domain.experiments.models import (
     PortfolioRole,
     RoleActivity,
     RoleActivityStatus,
+    RoleActivityView,
+    RoleAvatarReferenceUpdated,
     RoleIdentity,
     TradingStyle,
     build_comparison_snapshot,
+    build_role_activity_board,
+    current_manager_profile,
     latest_role_activity,
     stable_experiment_id,
+    validate_experiment_evidence,
 )
 
 __all__ = [
@@ -59,9 +64,14 @@ __all__ = [
     "PortfolioRole",
     "RoleActivity",
     "RoleActivityStatus",
+    "RoleActivityView",
+    "RoleAvatarReferenceUpdated",
     "RoleIdentity",
     "TradingStyle",
     "build_comparison_snapshot",
+    "build_role_activity_board",
+    "current_manager_profile",
     "latest_role_activity",
     "stable_experiment_id",
+    "validate_experiment_evidence",
 ]

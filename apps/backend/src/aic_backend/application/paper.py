@@ -59,6 +59,7 @@ from aic_backend.domain.portfolio.models import Money, OrderId, PortfolioId
 class ScriptedPaperDecisionSource:
     source_id: str
     intents: tuple[PaperOrderIntent, ...]
+    version: str = "v1"
 
     async def intents_for(
         self, account_id: str, trading_date: date

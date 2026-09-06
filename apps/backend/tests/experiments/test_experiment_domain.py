@@ -1,9 +1,10 @@
 from dataclasses import replace
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 import pytest
 
+from aic_backend.application.ports.experiments import ShadowExperimentRecord
 from aic_backend.domain.experiments import (
     AssetClass,
     AssetUniverse,
@@ -27,9 +28,12 @@ from aic_backend.domain.experiments import (
     PortfolioRole,
     RoleActivity,
     RoleActivityStatus,
+    RoleAvatarReferenceUpdated,
     RoleIdentity,
     TradingStyle,
     build_comparison_snapshot,
+    build_role_activity_board,
+    current_manager_profile,
     latest_role_activity,
 )
 from aic_backend.domain.paper import MetricSampleStatus, PaperPerformanceSnapshot
@@ -190,6 +194,9 @@ def test_policy_bundle_is_deterministic_complete_and_multi_asset_compatible() ->
     assert value.identity == policy().identity
     assert value.identity.startswith("policy-") and len(value.identity) == 71
     assert value.identity != replace(value, fee_policy_version="fees/v2").identity
+    assert value.identity != replace(
+        value, comparison_policy_version="shadow-comparison/v2"
+    ).identity
 
     future = replace(
         value,
@@ -266,6 +273,17 @@ def test_sample_states_and_multidimensional_leaderboard_do_not_crown_early_winne
     )
     assert qualified.qualified_winner_account_id == qualified.leaderboard[0].account_id
 
+    tied = build_comparison_snapshot(
+        value,
+        session,
+        tuple(performance(member.account_id, "0.01", "10") for member in value.members),
+        {member.account_id: 4 for member in value.members},
+        comparison_policy,
+    )
+    assert tuple(item.account_id for item in tied.leaderboard) == tuple(
+        sorted(member.account_id for member in value.members)
+    )
+
 
 def test_profile_and_session_models_reject_invalid_metadata() -> None:
     with pytest.raises(ValueError, match="must match"):
@@ -307,3 +325,173 @@ def test_fairness_contract_and_activity_aggregation_are_explicit() -> None:
     assert tuple(item.account_id for item in latest) == tuple(
         sorted(item.account_id for item in activities)
     )
+
+
+def test_domain_rejects_invalid_manifest_policy_and_session_boundaries() -> None:
+    value = manifest()
+    with pytest.raises(ValueError, match="must not be empty"):
+        replace(value, display_name=" ")
+    with pytest.raises(ValueError, match="dimensions"):
+        replace(value.policy_bundle.asset_universe, asset_classes=())
+    with pytest.raises(ValueError, match="duplicates"):
+        replace(
+            value.policy_bundle.asset_universe,
+            currencies=(Currency.CNY, Currency.CNY),
+        )
+    with pytest.raises(ValueError, match="positive"):
+        replace(value.policy_bundle, initial_capital=Money(Decimal("0")))
+    with pytest.raises(ValueError, match="currency"):
+        replace(
+            value.policy_bundle,
+            asset_universe=AssetUniverse(
+                (AssetClass.EQUITY,),
+                (MarketVenue.US_NASDAQ,),
+                (Currency.USD,),
+                Currency.USD,
+            ),
+        )
+    with pytest.raises(ValueError, match="horizon"):
+        replace(value.members[0].definition.profile, horizons=())
+
+    contract = value.fairness_contract
+    with pytest.raises(ValueError, match="unique"):
+        replace(contract, member_account_ids=(value.members[0].account_id,) * 2)
+    with pytest.raises(ValueError, match="requires members"):
+        replace(contract, member_account_ids=())
+    with pytest.raises(ValueError, match="equal initial capital"):
+        replace(
+            value,
+            members=(
+                replace(value.members[0], initial_capital=Money(Decimal("1"))),
+                *value.members[1:],
+            ),
+        )
+    with pytest.raises(ValueError, match="manifest policy bundle"):
+        replace(value, fairness_contract=replace(contract, policy_bundle_id="different"))
+    with pytest.raises(ValueError, match="equal initial capital"):
+        replace(
+            value,
+            fairness_contract=replace(contract, initial_capital=Money(Decimal("1"))),
+        )
+    with pytest.raises(ValueError, match="every experiment member"):
+        replace(
+            value,
+            fairness_contract=replace(
+                contract,
+                member_account_ids=(*contract.member_account_ids[:-1], "other-account"),
+            ),
+        )
+
+    valid_result = group_session(value).member_results[0]
+    with pytest.raises(ValueError, match="non-failed"):
+        replace(valid_result, error_code="UNEXPECTED")
+    with pytest.raises(ValueError, match="before"):
+        replace(
+            group_session(value),
+            started_at=NOW,
+            finalized_at=NOW - timedelta(seconds=1),
+        )
+    with pytest.raises(ValueError, match="duplicate account"):
+        replace(
+            group_session(value),
+            member_results=(valid_result, valid_result),
+        )
+
+    with pytest.raises(ValueError, match="positive"):
+        ComparisonPolicy(0, 1)
+    with pytest.raises(ValueError, match="precede"):
+        ComparisonPolicy(2, 1)
+    comparison_policy = ComparisonPolicy(2, 4)
+    assert comparison_policy.sample_status(2) is ComparisonSampleStatus.PROVISIONAL
+
+
+def test_avatar_event_and_activity_board_preserve_identity_and_real_references() -> None:
+    value = manifest()
+    member = value.members[1]
+    event = RoleAvatarReferenceUpdated(
+        "avatar-event-1",
+        value.group_id,
+        member.account_id,
+        member.definition.profile.manager_id,
+        member.definition.profile.avatar_reference,
+        "avatars/atlas-v2.svg",
+        NOW,
+    )
+    current = current_manager_profile(member, (event,))
+    assert current.avatar_reference == "avatars/atlas-v2.svg"
+    assert current.manager_id == member.definition.profile.manager_id
+
+    activity = RoleActivity(
+        "activity-processing",
+        value.group_id,
+        "group-session-current",
+        member.account_id,
+        member.definition.profile.manager_id,
+        NOW,
+        RoleActivityStatus.PAUSED,
+        "DEPENDENCY_PAUSED",
+        "group-session-current",
+        "snapshot-prior",
+    )
+    board = build_role_activity_board(value, (activity,), (event,))
+    atlas = next(item for item in board if item.paper_account_id == member.account_id)
+    assert atlas.current_status is RoleActivityStatus.PAUSED
+    assert atlas.current_task_reference == "group-session-current"
+    assert atlas.latest_session_reference == "group-session-current"
+    assert atlas.latest_output_reference == "snapshot-prior"
+    assert atlas.avatar_reference == "avatars/atlas-v2.svg"
+    assert {
+        item.current_status
+        for item in board
+        if item.paper_account_id != member.account_id
+    } == {RoleActivityStatus.IDLE}
+
+    with pytest.raises(ValueError, match="safe reference"):
+        replace(event, new_avatar_reference="avatars/atlas\nunsafe.svg")
+    with pytest.raises(ValueError, match="must change"):
+        replace(event, new_avatar_reference=event.previous_avatar_reference)
+
+
+def test_experiment_record_rejects_unbound_activity_and_avatar_audit_evidence() -> None:
+    value = manifest()
+    session = group_session(value)
+    member = value.members[1]
+    activity = RoleActivity(
+        "activity-bound",
+        value.group_id,
+        session.group_session_id,
+        member.account_id,
+        member.definition.profile.manager_id,
+        NOW,
+        RoleActivityStatus.READY,
+    )
+    event = RoleAvatarReferenceUpdated(
+        "avatar-event-bound",
+        value.group_id,
+        member.account_id,
+        member.definition.profile.manager_id,
+        member.definition.profile.avatar_reference,
+        "avatars/atlas-v2.svg",
+        NOW,
+    )
+    assert ShadowExperimentRecord(value, (session,), (), (activity,), (event,))
+
+    for invalid, message in (
+        (replace(activity, account_id="unknown"), "activity account"),
+        (replace(activity, group_id="other"), "activity group"),
+        (replace(activity, manager_id="other"), "activity manager"),
+        (replace(activity, group_session_id="other"), "activity session"),
+    ):
+        with pytest.raises(ValueError, match=message):
+            ShadowExperimentRecord(value, (session,), (), (invalid,))
+
+    with pytest.raises(ValueError, match="identities must be unique"):
+        ShadowExperimentRecord(value, (session,), (), (), (event, event))
+    for invalid, message in (
+        (replace(event, account_id="unknown"), "event account"),
+        (replace(event, group_id="other"), "event group"),
+        (replace(event, manager_id="other"), "event manager"),
+        (replace(event, previous_avatar_reference="avatars/other.svg"), "audit chain"),
+    ):
+        with pytest.raises(ValueError, match=message):
+            ShadowExperimentRecord(value, (session,), (), (), (invalid,))

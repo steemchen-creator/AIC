@@ -10,6 +10,8 @@ from aic_backend.domain.experiments import (
     GroupTradingSession,
     PerformanceComparisonSnapshot,
     RoleActivity,
+    RoleAvatarReferenceUpdated,
+    validate_experiment_evidence,
 )
 from aic_backend.domain.paper import (
     ActivatePaperAccount,
@@ -25,12 +27,26 @@ class ShadowExperimentRecord:
     sessions: tuple[GroupTradingSession, ...] = ()
     comparisons: tuple[PerformanceComparisonSnapshot, ...] = ()
     activities: tuple[RoleActivity, ...] = ()
+    profile_events: tuple[RoleAvatarReferenceUpdated, ...] = ()
+
+    def __post_init__(self) -> None:
+        validate_experiment_evidence(
+            self.manifest,
+            self.sessions,
+            self.activities,
+            self.profile_events,
+        )
 
 
 class ShadowExperimentRepository(Protocol):
     async def save(self, record: ShadowExperimentRecord) -> None: ...
 
     async def get(self, group_id: str) -> ShadowExperimentRecord | None: ...
+
+
+class ExperimentDecisionSource(PaperDecisionSource, Protocol):
+    @property
+    def version(self) -> str: ...
 
 
 class ExperimentPaperRuntime(Protocol):

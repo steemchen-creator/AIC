@@ -8,6 +8,11 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-008 架构审计整改：新增可审计的角色头像引用更新、Role Activity Board 当前状态投影、
+  处理顺序独立性与中断后幂等恢复证明，以及 Shadow 关键模块 95% 以上分支覆盖率门禁证据。
+- 可逆迁移 0012 与 `shadow_role_profile_events` 追加式审计表；头像变化不改写不可变 Manifest、
+  Portfolio、Account、NAV、Order、Fill、Decision 或 Track Record。
+
 - SPEC-008 Champion 与至少三个 Shadow Portfolio 的公平实验组，包含独立账户、组合状态、
   连续复利、Decision Source assignment、Group Trading Session 和单成员故障隔离。
 - 不可变 Experiment Manifest、Fairness Contract 与规范化 Policy Bundle Hash，冻结 PIT、日历、
