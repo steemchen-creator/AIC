@@ -8,6 +8,11 @@ This GitHub repository is the Single Source of Truth for AIC. Development takes 
 
 Detailed development and security rules are maintained in [AGENTS.md](AGENTS.md). Project changes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
+SPEC-009 post-merge governance remediation is documented in the
+[premature merge exception and publication status](docs/governance/SPEC009_PREMATURE_MERGE_EXCEPTION.md).
+Its status is `REVIEWED_PENDING_PUBLICATION`; formal repository closeout requires
+human merge of PR #11 into `main` and post-publication verification.
+
 ## Data Foundation architecture
 
 SPEC-004 Phase 11 adds the Point-in-Time/As-Of access layer and explicit no-lookahead
