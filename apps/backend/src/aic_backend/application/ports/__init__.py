@@ -12,6 +12,7 @@ from aic_backend.application.ports.corporate_actions import (
     AdjustmentFactorRepository,
     CorporateActionRepository,
 )
+from aic_backend.application.ports.etf import ETFDataRepository
 from aic_backend.application.ports.event_bus import Event, EventBus
 from aic_backend.application.ports.historical import (
     BackfillAttempt,
@@ -55,6 +56,7 @@ __all__ = [
     "DateInterval",
     "Event",
     "EventBus",
+    "ETFDataRepository",
     "InstrumentCoverageAttempt",
     "InstrumentCoverageRepository",
     "InstrumentMasterNormalizer",

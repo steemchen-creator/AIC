@@ -70,3 +70,10 @@ POSITION_SETTLEMENT -> RISK_SNAPSHOT -> NAV` 审计链。
 
 V1 不实现实盘交易、Broker 接入、撮合队列、部分成交、融券、融资、杠杆、外部出入金、策略
 引擎、AI、大吉大利展示、影子组合、雷达或 UI。
+
+## SPEC-009 混合持仓
+
+Paper Runtime 可以在现有 CNY、long-only 账户中执行 A 股和境内 ETF Intent，并继续只通过
+`OPERATIONAL_REPLAY` PIT 读取交易日、开盘价、收盘盯市价和产品规则。Champion 确定性 E2E
+证明同一账户可同时持有 Equity、境内 ETF 与纳指 QDII ETF，同时使用不可交易指数作为
+Benchmark。该能力不表示支持直接 US execution 或跨币种 NAV。

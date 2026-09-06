@@ -323,3 +323,14 @@ complete deterministic evidence; Infrastructure maps it to normalized PostgreSQL
 
 This is intentionally long-only, unlevered daily replay. It does not create a second
 historical-data path, a Strategy Engine, broker, AI Brain, Shadow Portfolio or UI.
+
+# SPEC-009: ETF 与指数参考边界
+
+SPEC-009 复用现有 Clean Architecture，不创建第二套 Provider Runtime、PIT、Coverage、
+Portfolio 或 Paper 系统。`domain/market_data/etf.py` 保存来源中立的 ETF profile、指数参考、
+跟踪关系、估值与执行规则；`data_foundation/tushare_etf.py` 是 Vendor 字段到 Domain 的唯一
+映射边界；Application 只依赖 ports，SQLAlchemy 只存在于 Infrastructure。
+
+指数使用 `REFERENCE.INDEX` 且不可交易。境内 ETF 是 SSE/SZSE、CNY 可交易资产，底层市场和
+币种只是 exposure metadata。产品级 execution profile 通过 PIT 决定 T0/T1、手数和规则版本；
+Unknown 安全拒绝。详情见 ADR-0006。

@@ -50,3 +50,27 @@ Phase 9 uses separate `instrument.master.read` (`stock_basic`) and
 `instrument.trading_status.read` (`suspend_d`) capabilities. `stock_basic` is limited to
 6000 rows, requires 2000 points and allows 50 calls/minute. `suspend_d` updates
 irregularly and returns suspension/resumption events; empty rows never mean TRADING.
+
+# ETF 与指数 APIs
+
+SPEC-009 在同一 `tushare_pro` Adapter 和 Provider Runtime 上增加独立能力：
+
+- `etf_basic`：ETF Master、QDII 通道和跟踪指数来源字段；
+- `etf_index`：指数参考主数据；
+- `fund_daily`：ETF DailyBar，手转份、千元转元；
+- `fund_adj`：ETF adjustment factor；
+- `etf_share_size`：份额/NAV/close 估值输入，万份转份；
+- `index_daily`：不可交易指数的 DailyBar。
+
+请求参数和返回字段均使用显式 allowlist。普通 CI 使用确定性 fixture，不需要 Token 或网络。
+空结果由 coverage attempt 表达，不能自动推导 ETF/指数不存在或溢价为零。
+
+开发基线已按官方接口页核验：
+
+- [ETF 基础信息 etf_basic](https://tushare.pro/document/2?doc_id=385)
+- [ETF 基准指数 etf_index](https://tushare.pro/document/2?doc_id=386)
+- [ETF 日线 fund_daily](https://tushare.pro/document/2?doc_id=127)
+- [ETF 复权因子 fund_adj](https://tushare.pro/document/2?doc_id=199)
+- [ETF 份额规模 etf_share_size](https://tushare.pro/document/2?doc_id=408)
+- [指数日线 index_daily](https://tushare.pro/document/2?doc_id=95)
+- [上交所 ETF 交易问答](https://etf.sse.com.cn/fund/quertion/)

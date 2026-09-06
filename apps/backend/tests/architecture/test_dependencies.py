@@ -777,6 +777,69 @@ def test_spec_008_shadow_experiments_keep_fairness_and_clean_architecture_bounda
     assert "shadow_role_profile_events" in adapter_source
 
 
+def test_spec_009_etf_index_exposure_keeps_pit_and_clean_architecture_boundaries() -> None:
+    domain_imports = imported_modules(PACKAGE_ROOT / "domain/market_data/etf.py")
+    application_paths = (
+        PACKAGE_ROOT / "application/etf.py",
+        PACKAGE_ROOT / "application/ports/etf.py",
+        PACKAGE_ROOT / "application/execution.py",
+    )
+    application_imports: set[str] = set()
+    for path in application_paths:
+        application_imports.update(imported_modules(path))
+    forbidden = (
+        "aic_backend.bootstrap",
+        "aic_backend.infrastructure",
+        "aic_backend.presentation",
+        "aic_backend.providers",
+        "fastapi",
+        "httpx",
+        "requests",
+        "sqlalchemy",
+    )
+    assert not {module for module in domain_imports if module.startswith(forbidden)}
+    assert not {module for module in application_imports if module.startswith(forbidden)}
+
+    normalizer_imports = imported_modules(PACKAGE_ROOT / "data_foundation/tushare_etf.py")
+    assert not {
+        module
+        for module in normalizer_imports
+        if module.startswith(("aic_backend.infrastructure", "httpx", "sqlalchemy"))
+    }
+    adapter_imports = imported_modules(PACKAGE_ROOT / "infrastructure/etf_persistence.py")
+    assert "aic_backend.application.ports.etf" in adapter_imports
+    assert any(module.startswith("sqlalchemy") for module in adapter_imports)
+
+    provider_source = (PACKAGE_ROOT / "providers/tushare.py").read_text(encoding="utf-8")
+    execution_source = (PACKAGE_ROOT / "application/execution.py").read_text(
+        encoding="utf-8"
+    )
+    application_source = "\n".join(
+        path.read_text(encoding="utf-8") for path in application_paths
+    ).casefold()
+    domain_source = (PACKAGE_ROOT / "domain/market_data/etf.py").read_text(
+        encoding="utf-8"
+    ).casefold()
+    assert "aic_backend.infrastructure" not in provider_source
+    assert "etfpointintimeservice" in application_source
+    assert "NON_TRADABLE_REFERENCE_INSTRUMENT" in execution_source
+    assert "same_day_sellable" in execution_source
+    assert "currency.cny" in domain_source
+    assert not any(
+        term in application_source
+        for term in (
+            "aibrain",
+            "opportunityradar",
+            "kelly",
+            "marginaccount",
+            "dynamicleverage",
+            "memoryretrieval",
+            "governancecenter",
+            "directusequity",
+        )
+    )
+
+
 def test_only_lifecycle_manager_writes_provider_runtime_state() -> None:
     callers = {
         path.name

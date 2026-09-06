@@ -30,6 +30,15 @@ from aic_backend.data_foundation.quality import (
     QualityContext,
     SourceClassification,
 )
+from aic_backend.data_foundation.tushare_etf import (
+    ETFClassificationEvidence,
+    TushareETFAdjustmentFactorNormalizer,
+    TushareETFDailyBarNormalizer,
+    TushareETFMasterNormalizer,
+    TushareETFValuationNormalizer,
+    TushareIndexDailyBarNormalizer,
+    TushareIndexReferenceNormalizer,
+)
 from aic_backend.data_foundation.validation import (
     CanonicalRecordValidator,
     DailyBarValidator,
@@ -53,6 +62,7 @@ __all__ = [
     "DataQualityAssessment",
     "DataQualityFlag",
     "DataValidationService",
+    "ETFClassificationEvidence",
     "FreshnessPolicy",
     "FixtureDailyBarNormalizer",
     "IngestionFailure",
@@ -63,6 +73,12 @@ __all__ = [
     "NormalizationError",
     "NormalizationErrorCode",
     "SourceClassification",
+    "TushareETFAdjustmentFactorNormalizer",
+    "TushareETFDailyBarNormalizer",
+    "TushareETFMasterNormalizer",
+    "TushareETFValuationNormalizer",
+    "TushareIndexDailyBarNormalizer",
+    "TushareIndexReferenceNormalizer",
     "ValidationContext",
     "ValidationIssue",
     "ValidationResult",

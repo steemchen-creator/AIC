@@ -1,4 +1,4 @@
-"""Canonical A-share instrument master and daily trading-status facts."""
+"""Canonical exchange-listed instrument master and daily trading-status facts."""
 
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -33,8 +33,8 @@ class InstrumentMaster:
     def __post_init__(self) -> None:
         if self.instrument.market not in (Market.CN_SSE, Market.CN_SZSE):
             raise ValueError("instrument market must identify SSE or SZSE")
-        if self.instrument.instrument_type is not InstrumentType.EQUITY:
-            raise ValueError("Phase 9 instrument master supports equities only")
+        if self.instrument.instrument_type not in (InstrumentType.EQUITY, InstrumentType.ETF):
+            raise ValueError("instrument master supports exchange-listed equities and ETFs")
         name = self.display_name.strip()
         if not name:
             raise ValueError("display_name must not be empty")
