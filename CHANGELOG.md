@@ -8,6 +8,10 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- FIX-SPEC009-002 governance exception for the premature merge of PR #10,
+  including tree equivalence, exact feature-head CI, fresh main regression,
+  impact assessment, prevention rules, and owner-authorized closeout conditions.
+
 - SPEC-009 境内 ETF 与指数参考基础：来源中立的 ETF Master、QDII/底层暴露元数据、
   ETF-index relationship、指数参考、ETF/Index DailyBar、Adjustment Factor 与估值快照。
 - Tushare ETF/指数显式 Provider capability 与严格 Normalizer，包含手/份、千元/元、万份/份
