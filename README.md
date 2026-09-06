@@ -64,6 +64,7 @@ apps/backend/
 |   |   `-- portfolio/   Deterministic accounting and cost policies
 |   |   `-- execution/   A-share eligibility, T+1 and risk policies
 |   |   `-- paper/       Forward paper account, session and performance models
+|   |   `-- experiments/ Shadow group, fairness and comparison models
 |   |-- data_foundation/ Deterministic real-data identity and construction helpers
 |   |-- providers/       Data-source adapters
 |   |-- infrastructure/  Repository, cache, event, and operational adapters
@@ -84,6 +85,22 @@ V1 使用前一时点已形成的 Intent 在下一交易日开盘执行，复用
 缺失盯市和公司行动均采用确定性或安全暂停处理。详见
 `docs/paper/PAPER_TRADING_RUNTIME.md`、`docs/paper/CHAMPION_PORTFOLIO.md` 和
 `docs/performance/PERFORMANCE_BASELINE.md`。
+
+## Shadow Portfolios 与多资产兼容基础
+
+SPEC-008 在同一 PIT、日历、执行、风控、成本、Benchmark、初始资金和开始日期下运行一个
+Champion 与至少三个 Shadow Portfolio。每个成员拥有独立 Paper Account、现金、持仓、PnL、NAV、
+Intent 和审计记录；单个成员失败不会阻止其他成员。Manifest、Fairness Contract 与 Policy Bundle
+Hash 保证比较环境可复核。
+
+角色头像采用只影响展示资料的追加式审计事件更新，不改写 Experiment Manifest 或任何投资状态。
+Role Activity Board 从真实 Group Session 活动投影当前状态、任务、会话及输出引用，重启后可从
+PostgreSQL 恢复。
+
+比较快照覆盖收益、回撤、Sharpe/Sortino/Calmar、Benchmark、超额收益、换手、成本、敞口、现金和
+持仓数；短样本不得产生正式优胜者。资产模型通过 `Portfolio + Instrument + AssetClass +
+MarketVenue + Currency` 保持兼容，但本阶段不实现海外交易、换汇、AI、策略引擎或 UI。详见
+`docs/experiments/SHADOW_PORTFOLIOS.md` 和 `docs/performance/SHADOW_COMPARISON.md`。
 
 ## Foundation prerequisites
 

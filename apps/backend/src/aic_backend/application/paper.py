@@ -59,6 +59,7 @@ from aic_backend.domain.portfolio.models import Money, OrderId, PortfolioId
 class ScriptedPaperDecisionSource:
     source_id: str
     intents: tuple[PaperOrderIntent, ...]
+    version: str = "v1"
 
     async def intents_for(
         self, account_id: str, trading_date: date
@@ -71,7 +72,7 @@ class ScriptedPaperDecisionSource:
 
 
 class PaperTradingRuntime:
-    """Application service for the official forward-only paper account."""
+    """Application service for independent forward-only paper accounts."""
 
     CHAMPION_NAME = "AIC Champion Paper Portfolio"
     CHAMPION_INITIAL_CAPITAL = Money(Decimal("500000"))
@@ -105,17 +106,46 @@ class PaperTradingRuntime:
         self._checkpoint_hook = checkpoint_hook
 
     async def create_champion(self) -> PaperAccount:
+        return await self.create_account(
+            self.CHAMPION_NAME,
+            self.CHAMPION_INITIAL_CAPITAL,
+            account_reference=self.CHAMPION_NAME,
+        )
+
+    async def create_account(
+        self,
+        display_name: str,
+        initial_capital: Money,
+        *,
+        account_reference: str,
+    ) -> PaperAccount:
         now = self._now()
-        account_id = stable_id("paper-account", self.CHAMPION_NAME, PaperMode.FORWARD_PAPER.value)
+        normalized_name = display_name.strip()
+        normalized_reference = account_reference.strip()
+        if not normalized_name or not normalized_reference:
+            raise ValueError("display_name and account_reference must not be empty")
+        if initial_capital.amount <= 0:
+            raise ValueError("initial_capital must be positive")
+        account_id = stable_id(
+            "paper-account", normalized_reference, PaperMode.FORWARD_PAPER.value
+        )
         existing = await self._repository.get(account_id)
         if existing is not None:
+            if (
+                existing.account.display_name != normalized_name
+                or existing.account.initial_capital != initial_capital
+            ):
+                raise PaperRuntimeError(
+                    PaperErrorCode.STATE_INCONSISTENCY,
+                    "paper account reference identifies different account parameters",
+                )
             return existing.account
         portfolio_id = PortfolioId(stable_id("paper-portfolio", account_id))
         account = PaperAccount(
             account_id,
             portfolio_id,
-            self.CHAMPION_NAME,
-            self.CHAMPION_INITIAL_CAPITAL,
+            normalized_name,
+            initial_capital,
             PaperMode.FORWARD_PAPER,
             CapitalMode.CONTINUOUS_COMPOUNDING,
             PaperAccountStatus.CREATED,

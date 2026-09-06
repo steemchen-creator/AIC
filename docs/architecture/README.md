@@ -10,4 +10,6 @@ High-level system boundaries, component relationships, quality attributes, and a
 - [Forward Paper Trading Runtime](../paper/PAPER_TRADING_RUNTIME.md)
 - [Champion Portfolio](../paper/CHAMPION_PORTFOLIO.md)
 - [Paper Performance Baseline](../performance/PERFORMANCE_BASELINE.md)
+- [Shadow Portfolios 与公平实验](../experiments/SHADOW_PORTFOLIOS.md)
+- [Shadow Performance Comparison](../performance/SHADOW_COMPARISON.md)
 - [Architecture Decision Records](../adr/README.md)
