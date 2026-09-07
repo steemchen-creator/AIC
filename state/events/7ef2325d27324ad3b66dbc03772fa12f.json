@@ -1,0 +1,12 @@
+{
+  "event_id": "7ef2325d27324ad3b66dbc03772fa12f",
+  "event_type": "TASK_DELIVERED",
+  "timestamp": "2026-09-07T15:30:21.518315Z",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "actor": "github-actions[bot]",
+  "input_sha": null,
+  "output_state": "SPEC_READY",
+  "metadata": {
+    "task_id": "27d290dc82da20c14b0bb0a1e0159351ae85e264fe4a5fbc6dc4a34d34fca756"
+  }
+}
