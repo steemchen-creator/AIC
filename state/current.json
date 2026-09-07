@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 9,
+  "revision": 10,
   "current_work_item": "DEV-GOV-VALIDATION-001",
   "work_items": {
     "DEV-GOV-001": {
@@ -118,7 +118,7 @@
       "kind": "DOCUMENTATION",
       "parent_work_item": "DEV-GOV-001",
       "previous_work_item": "DEV-GOV-001",
-      "status": "REVIEW_REQUIRED",
+      "status": "RECOVERABLE_FAILURE",
       "created_at": "2026-09-07T15:17:29.390000Z",
       "artifact_path": "SETUP-DEV-GOV-001-CHAIRMAN.md",
       "artifact_sha256": "dad7939bc14f2c091603c48cac9a0988a3133c096b4df4f3ad5a5265f4e70d79",
@@ -148,8 +148,10 @@
         "reserved_requests": []
       },
       "blocked_reasons": [],
-      "recoverable_failures": [],
-      "recovery_stage": null,
+      "recoverable_failures": [
+        "GITHUB_HTTP_404"
+      ],
+      "recovery_stage": "REVIEW_REQUIRED",
       "unresolved_fix": null,
       "governance_exception": false,
       "chairman_required": false,
@@ -273,6 +275,19 @@
       "output_state": "REVIEW_REQUIRED",
       "metadata": {
         "review_artifact": "REVIEW-DEV-GOV-VALIDATION-001.md"
+      }
+    },
+    {
+      "event_id": "472a70dfc48f4b4fa6104cf28a5e2a43",
+      "event_type": "OPERATION_FAILED",
+      "timestamp": "2026-09-07T15:41:16.477691Z",
+      "work_item_id": "DEV-GOV-VALIDATION-001",
+      "actor": "github-actions[bot]",
+      "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+      "output_state": "RECOVERABLE_FAILURE",
+      "metadata": {
+        "reason": "GITHUB_HTTP_404",
+        "failure_class": "RECOVERABLE_READ"
       }
     }
   ],
