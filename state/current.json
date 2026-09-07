@@ -1,0 +1,142 @@
+{
+  "schema_version": "1.0",
+  "project": "AIC",
+  "revision": 1,
+  "current_work_item": "DEV-GOV-001",
+  "work_items": {
+    "DEV-GOV-001": {
+      "work_item_id": "DEV-GOV-001",
+      "kind": "DEV_GOV",
+      "parent_work_item": null,
+      "previous_work_item": null,
+      "status": "CLOSED",
+      "created_at": "2026-09-07T12:02:37.358134Z",
+      "artifact_path": "docs/specifications/DEV-GOV-001-AIC-Autonomous-Development-Pipeline-V1.0.md",
+      "artifact_sha256": "b2822757547531dcae3fede76d6c3e5eca2a178588715dd176a00aef5b459738",
+      "target_branch": "feature/dev-gov-001-autonomous-development-pipeline",
+      "execution_authorization": "owner-authorized-bootstrap",
+      "pr_number": 12,
+      "head_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+      "base_sha": "1b9e3d50921751a9b016fcf4bb82a9d813a2bdd7",
+      "review_artifact": "REVIEW-DEV-GOV-001.md",
+      "architecture_status": "FINAL_APPROVED",
+      "approved_head_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+      "review_id": null,
+      "ci": {
+        "head_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+        "status": "PASSED",
+        "required_checks": {
+          "Governance baseline": 15368,
+          "Backend tests": 15368,
+          "Desktop build": 15368,
+          "AIC Development Governance Gate": 15368
+        },
+        "checks": [
+          {
+            "name": "orchestrate",
+            "head_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+            "conclusion": "skipped",
+            "run_id": 101636690665,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34088365383/job/101636690665"
+          },
+          {
+            "name": "AIC Development Governance Gate",
+            "head_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+            "conclusion": "success",
+            "run_id": 34080334848,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34080334848/job/101614282375"
+          },
+          {
+            "name": "Governance baseline",
+            "head_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+            "conclusion": "success",
+            "run_id": 34080334848,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34080334848/job/101614282320"
+          },
+          {
+            "name": "Backend tests",
+            "head_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+            "conclusion": "success",
+            "run_id": 34080334848,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34080334848/job/101614282269"
+          },
+          {
+            "name": "Desktop build",
+            "head_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+            "conclusion": "success",
+            "run_id": 34080334848,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34080334848/job/101614282182"
+          }
+        ],
+        "discovery_complete": true,
+        "branch_protection_enabled": false,
+        "workflow_runs": [
+          {
+            "run_id": 34080334848,
+            "head_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+            "status": "completed",
+            "conclusion": "success",
+            "attempt": 1,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34080334848"
+          }
+        ]
+      },
+      "budget": {
+        "architecture_calls_used": 0,
+        "review_loops": 0,
+        "duplicate_calls_avoided": 0,
+        "budget_limit_hits": 0,
+        "reserved_requests": []
+      },
+      "blocked_reasons": [],
+      "recoverable_failures": [],
+      "recovery_stage": null,
+      "unresolved_fix": null,
+      "governance_exception": false,
+      "chairman_required": false,
+      "changed_areas": [],
+      "merge_eligible": false,
+      "merge_commit": "2f0fda00ccf12cb129a76615f3b4232167ede73b",
+      "merge_expected_sha": null,
+      "closeout": {
+        "source": "Chairman import of external Architecture Closeout",
+        "architecture_closeout_reference": "DEV-GOV-001-FINAL-APPROVAL@783a748f508eb76a2558deb334750ba6eb3bd65a;CLOSEOUT-SHA256=94d6382217694c31446c2ce759dba14ec724bffe4ae54e1d08825e8c2e5db473",
+        "main_sha": "cc4b162b9ed97615806b8c4756309c757ea97e84",
+        "merge_commit": "2f0fda00ccf12cb129a76615f3b4232167ede73b",
+        "head_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a"
+      },
+      "next_spec_requested": false,
+      "memory_update_required": false
+    }
+  },
+  "events": [
+    {
+      "event_id": "35fe3e15c17b4fadbe8dd47781591a14",
+      "event_type": "TASK_RESERVED",
+      "timestamp": "2026-09-07T12:02:37.358415Z",
+      "work_item_id": "DEV-GOV-001",
+      "actor": "github-actions[bot]",
+      "input_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+      "output_state": "CLOSED",
+      "metadata": {
+        "reason": "BOOTSTRAP_CLOSEOUT_IMPORTED",
+        "authorized_actor": "steemchen-creator",
+        "architecture_closeout_reference": "DEV-GOV-001-FINAL-APPROVAL@783a748f508eb76a2558deb334750ba6eb3bd65a;CLOSEOUT-SHA256=94d6382217694c31446c2ce759dba14ec724bffe4ae54e1d08825e8c2e5db473"
+      }
+    }
+  ],
+  "tasks": {},
+  "reviews": {},
+  "technical_debt": {},
+  "artifacts": {},
+  "new_specs_by_day": {},
+  "paused": false,
+  "auto_merge_disabled": false,
+  "project_blocked_reasons": [],
+  "deployment_setup": null
+}

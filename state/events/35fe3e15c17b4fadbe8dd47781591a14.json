@@ -1,0 +1,14 @@
+{
+  "event_id": "35fe3e15c17b4fadbe8dd47781591a14",
+  "event_type": "TASK_RESERVED",
+  "timestamp": "2026-09-07T12:02:37.358415Z",
+  "work_item_id": "DEV-GOV-001",
+  "actor": "github-actions[bot]",
+  "input_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+  "output_state": "CLOSED",
+  "metadata": {
+    "reason": "BOOTSTRAP_CLOSEOUT_IMPORTED",
+    "authorized_actor": "steemchen-creator",
+    "architecture_closeout_reference": "DEV-GOV-001-FINAL-APPROVAL@783a748f508eb76a2558deb334750ba6eb3bd65a;CLOSEOUT-SHA256=94d6382217694c31446c2ce759dba14ec724bffe4ae54e1d08825e8c2e5db473"
+  }
+}
