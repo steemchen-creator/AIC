@@ -1,0 +1,19 @@
+{
+  "event_id": "a256bb3eee1145de90791346331c4f04",
+  "event_type": "DEPLOYMENT_SETUP_COMPLETED",
+  "timestamp": "2026-09-07T14:40:23.302653Z",
+  "work_item_id": "DEV-GOV-001",
+  "actor": "steemchen-creator",
+  "input_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+  "output_state": "CLOSED",
+  "metadata": {
+    "policy_version": "DEPLOYMENT-V1",
+    "policy_fingerprint": "6df86a26a6681f13612536912cca2d97d1d8afe20a1138cade66fa3d7d741045",
+    "mode": "DRY_RUN",
+    "bridge_mode": "CHATGPT_WORK_EVENT_BRIDGE",
+    "merge_enabled": "false",
+    "auto_ready": "false",
+    "principals_configured": "true",
+    "setup_completed": "true"
+  }
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 1,
+  "revision": 2,
   "current_work_item": "DEV-GOV-001",
   "work_items": {
     "DEV-GOV-001": {
@@ -128,6 +128,25 @@
         "authorized_actor": "steemchen-creator",
         "architecture_closeout_reference": "DEV-GOV-001-FINAL-APPROVAL@783a748f508eb76a2558deb334750ba6eb3bd65a;CLOSEOUT-SHA256=94d6382217694c31446c2ce759dba14ec724bffe4ae54e1d08825e8c2e5db473"
       }
+    },
+    {
+      "event_id": "a256bb3eee1145de90791346331c4f04",
+      "event_type": "DEPLOYMENT_SETUP_COMPLETED",
+      "timestamp": "2026-09-07T14:40:23.302653Z",
+      "work_item_id": "DEV-GOV-001",
+      "actor": "steemchen-creator",
+      "input_sha": "783a748f508eb76a2558deb334750ba6eb3bd65a",
+      "output_state": "CLOSED",
+      "metadata": {
+        "policy_version": "DEPLOYMENT-V1",
+        "policy_fingerprint": "6df86a26a6681f13612536912cca2d97d1d8afe20a1138cade66fa3d7d741045",
+        "mode": "DRY_RUN",
+        "bridge_mode": "CHATGPT_WORK_EVENT_BRIDGE",
+        "merge_enabled": "false",
+        "auto_ready": "false",
+        "principals_configured": "true",
+        "setup_completed": "true"
+      }
     }
   ],
   "tasks": {},
@@ -138,5 +157,36 @@
   "paused": false,
   "auto_merge_disabled": false,
   "project_blocked_reasons": [],
-  "deployment_setup": null
+  "deployment_setup": {
+    "status": "COMPLETE",
+    "authorized_by": "steemchen-creator",
+    "setup_at": "2026-09-07T14:40:23.302653Z",
+    "policy_fingerprint": "6df86a26a6681f13612536912cca2d97d1d8afe20a1138cade66fa3d7d741045",
+    "effective_policy": {
+      "policy_version": "DEPLOYMENT-V1",
+      "pipeline_enabled": true,
+      "mode": "DRY_RUN",
+      "merge_enabled": false,
+      "auto_ready": false,
+      "bridge_mode": "CHATGPT_WORK_EVENT_BRIDGE",
+      "bridge_authorized": true,
+      "openai_model": null,
+      "standard_work_execution_authorization": "CHAIRMAN-DELEGATION-AIC-STANDARD-WORK-V1",
+      "principals": {
+        "CHAIRMAN": [
+          "steemchen-creator"
+        ],
+        "CHIEF_INVESTMENT_ARCHITECT": [
+          "aic-architect",
+          "openai-architecture-bridge"
+        ],
+        "CTO": [
+          "aic-codex-cto"
+        ],
+        "ORCHESTRATOR": [
+          "github-actions[bot]"
+        ]
+      }
+    }
+  }
 }
