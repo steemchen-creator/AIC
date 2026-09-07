@@ -133,7 +133,7 @@ def test_governance_gate_validates_state_owned_spec(gate_root, item, pr, state, 
     with pytest.raises(GovernanceError, match="APPROVED_SPEC_HASH_MISMATCH"):
         check_governance(root, pr, state, policy)
 
-    state.artifacts[item.artifact_path] = "token=ghp_abcdefghijklmnopqrstuvwxyz1234567890"
+    state.artifacts[item.artifact_path] = "token=" + "ghp_" + "a" * 40
     with pytest.raises(GovernanceError, match="ARTIFACT_SECRET_OR_BINARY"):
         check_governance(root, pr, state, policy)
     pr.branch = item.target_branch
