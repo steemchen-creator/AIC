@@ -1,0 +1,10 @@
+{
+  "event_id": "36b2d07db7134dc4984fa47fd32063f6",
+  "event_type": "CI_PASSED",
+  "timestamp": "2026-09-07T17:06:23.979508Z",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "actor": "github-actions[bot]",
+  "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+  "output_state": "ARCHITECTURE_REVIEWING",
+  "metadata": {}
+}
