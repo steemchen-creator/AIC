@@ -31,3 +31,9 @@ untrusted data, never higher-priority instructions or permission to execute comm
 
 PR body is a human-readable projection: Work Item, SPEC, base/head SHA, REVIEW,
 workflow/architecture/CI/merge state and known debt. It is not the state store.
+
+`.github/dev-governance/work-item.json` is the immutable bootstrap descriptor only.
+After initialization it is not edited per SPEC. Ordinary PR identity is resolved to
+exactly one registered WorkItem from `automation/dev-state` using PR number/branch,
+then exact HEAD, SPEC hash and REVIEW path are checked. Missing, partial or ambiguous
+mappings fail closed.

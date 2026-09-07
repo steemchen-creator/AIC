@@ -12,13 +12,15 @@ from .artifacts import dashboard
 from .github import GitHubClient
 from .models import GovernanceError
 from .observability import metrics
-from .runner import generate_review_context, run
-from .store import LocalFileStateStore
+from .runner import generate_review_context, run, run_bootstrap
+from .store import GitHubStateBranchStore, LocalFileStateStore
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="AIC deterministic development control plane")
-    parser.add_argument("command", choices=["gate", "run", "status", "metrics", "context"])
+    parser.add_argument(
+        "command", choices=["gate", "run", "bootstrap", "status", "metrics", "context"]
+    )
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--state-dir", type=Path, default=Path("tmp/dev-governance/state"))
     parser.add_argument("--pr-number", type=int)
@@ -32,7 +34,8 @@ def main() -> int:
                 raise GovernanceError("CONTEXT_PR_AND_AUTH_REQUIRED")
             with httpx.Client(headers={"Authorization": f"Bearer {token}"}) as client:
                 github = GitHubClient(client, "steemchen-creator/AIC")
-                context = generate_review_context(args.root, github, number)
+                state, _ = GitHubStateBranchStore(github).load()
+                context = generate_review_context(args.root, github, number, state)
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(context.model_dump_json(indent=2), encoding="utf-8")
             print(f"REVIEW_CONTEXT: {args.output}")
@@ -46,6 +49,8 @@ def main() -> int:
                     indent=2,
                 )
             )
+        elif args.command == "bootstrap":
+            print(run_bootstrap(args.root))
         else:
             print(run(args.root, gate_only=args.command == "gate"))
     except (GovernanceError, ValidationError, ValueError, KeyError, OSError) as error:

@@ -6,7 +6,12 @@ from unittest.mock import Mock
 
 import pytest
 
-from aic_dev_governance.ci_gate import BOOTSTRAP_BASE, BOOTSTRAP_BRANCH, check_governance
+from aic_dev_governance.ci_gate import (
+    BOOTSTRAP_BASE,
+    BOOTSTRAP_BRANCH,
+    check_governance,
+    resolve_work_item,
+)
 from aic_dev_governance.coverage_gate import TARGETS, verify_coverage
 from aic_dev_governance.gates import classify_changed_paths
 from aic_dev_governance.models import GovernanceError, ReviewStatus, Stage, State
@@ -71,12 +76,12 @@ def test_governance_gate_descriptor_spec_stale_and_foreign(gate_root, item, pr, 
     descriptor["extra"] = True
     target.write_text(json.dumps(descriptor))
     with pytest.raises(GovernanceError, match="WORK_ITEM_DESCRIPTOR_INVALID"):
-        check_governance(root, pr, state, policy)
+        check_governance(root, pr, State(), policy)
     descriptor.pop("extra")
     descriptor["spec_sha256"] = "a" * 64
     target.write_text(json.dumps(descriptor))
     with pytest.raises(GovernanceError, match="APPROVED_SPEC_HASH_MISMATCH"):
-        check_governance(root, pr, state, policy)
+        check_governance(root, pr, State(), policy)
     descriptor["spec_sha256"] = item.artifact_sha256
     target.write_text(json.dumps(descriptor))
     pr.head_repository = "outsider/fork"
@@ -86,6 +91,56 @@ def test_governance_gate_descriptor_spec_stale_and_foreign(gate_root, item, pr, 
     item.approved_head_sha = "b" * 40
     with pytest.raises(GovernanceError, match="APPROVAL_STALE"):
         check_governance(root, pr, state, policy)
+
+
+def test_future_spec_uses_state_identity_without_mutating_bootstrap_descriptor(
+    gate_root, item, pr, state, policy
+):
+    root, descriptor, target = gate_root
+    descriptor["work_item_id"] = "DEV-GOV-001"
+    target.write_text(json.dumps(descriptor))
+    item.work_item_id = "SPEC-010"
+    item.target_branch = "feature/spec010-implementation"
+    item.status = Stage.REVIEW_REQUIRED
+    item.architecture_status = ReviewStatus.REVIEW_REQUIRED
+    item.approved_head_sha = None
+    pr.branch = item.target_branch
+    pr.draft = True
+    state.current_work_item = item.work_item_id
+    state.work_items = {"DEV-GOV-001": state.work_items["PREVIOUS"], item.work_item_id: item}
+    check_governance(root, pr, state, policy)
+    assert resolve_work_item(pr, state) is item
+    assert classify_changed_paths(["apps/backend/src/risk_report.py", "tests/test_risk.py"]) == []
+
+
+def test_state_identity_mismatch_and_ambiguity_fail_closed(item, pr, state):
+    unrelated = state.work_items.pop(item.work_item_id)
+    with pytest.raises(GovernanceError, match="WORK_ITEM_NOT_RESOLVED"):
+        resolve_work_item(pr, state)
+    state.work_items[item.work_item_id] = unrelated
+    pr.branch = "feature/wrong"
+    with pytest.raises(GovernanceError, match="STATE_PR_IDENTITY_MISMATCH"):
+        resolve_work_item(pr, state)
+
+
+def test_governance_gate_validates_state_owned_spec(gate_root, item, pr, state, policy):
+    root, _, _ = gate_root
+    (root / item.artifact_path).unlink()
+    state.artifacts[item.artifact_path] = "approved spec"
+    check_governance(root, pr, state, policy)
+
+    state.artifacts[item.artifact_path] = "changed spec"
+    with pytest.raises(GovernanceError, match="APPROVED_SPEC_HASH_MISMATCH"):
+        check_governance(root, pr, state, policy)
+
+    state.artifacts[item.artifact_path] = "token=ghp_abcdefghijklmnopqrstuvwxyz1234567890"
+    with pytest.raises(GovernanceError, match="ARTIFACT_SECRET_OR_BINARY"):
+        check_governance(root, pr, state, policy)
+    pr.branch = item.target_branch
+    duplicate = item.model_copy(update={"work_item_id": "SPEC-OTHER", "pr_number": 99})
+    state.work_items[duplicate.work_item_id] = duplicate
+    with pytest.raises(GovernanceError, match="WORK_ITEM_IDENTITY_AMBIGUOUS"):
+        resolve_work_item(pr, state)
 
 
 def test_coverage_targets_missing_branch_or_below(tmp_path):
@@ -203,7 +258,7 @@ def test_actual_diff_classification_not_pr_claim():
             "broker.py",
             "leverage.py",
             "live_trading.py",
-            "risk.py",
+            "configs/risk-hard-caps.yml",
             "domain/portfolio/policies.py",
         ]
     ) == [
@@ -214,6 +269,17 @@ def test_actual_diff_classification_not_pr_claim():
         "production_trading",
         "secret_permission_model",
     ]
+    assert (
+        classify_changed_paths(
+            [
+                "apps/backend/src/risk.py",
+                "apps/backend/src/risk_report.py",
+                "apps/backend/tests/test_risk.py",
+                "docs/architecture/risk-model.md",
+            ]
+        )
+        == []
+    )
 
 
 def test_remote_artifact_allowlist_and_limits():
@@ -309,8 +375,11 @@ def test_context_generation_matches_exact_remote_blobs(gate_root, item, pr):
     assert manifest.head_sha == pr.head_sha
     assert manifest.deleted_files == ["old.py"] and "old.py" in manifest.changed_files
     assert not any(entry.path == "old.py" for entry in manifest.context_entries)
-    github.file.side_effect = None
-    github.file.return_value = "modified after commit"
+    github.file.side_effect = lambda path, ref: (
+        "modified after commit"
+        if path == item.review_artifact
+        else (root / path).read_text(encoding="utf-8")
+    )
     with pytest.raises(GovernanceError, match="LOCAL_REMOTE_CONTEXT_MISMATCH"):
         generate_review_context(root, github, 12)
 
@@ -338,6 +407,9 @@ def test_cli_context_auth_and_external_output(gate_root, monkeypatch, item, pr, 
     assert module.main() == 1
     monkeypatch.setenv("GH_TOKEN", "placeholder-test-token")
     monkeypatch.setenv("AIC_PR_NUMBER", "12")
+    store = Mock()
+    store.load.return_value = (State(), None)
+    monkeypatch.setattr(module, "GitHubStateBranchStore", lambda *args: store)
     monkeypatch.setattr(module, "generate_review_context", lambda *args: manifest)
     assert module.main() == 0
     assert json.loads((tmp_path / "out.json").read_text())["head_sha"] == pr.head_sha

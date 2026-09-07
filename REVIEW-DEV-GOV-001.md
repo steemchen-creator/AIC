@@ -1,13 +1,17 @@
 # REVIEW-DEV-GOV-001 — Architecture Review Package
 
-Version: 1.0 / implementation submission, 2026-09-07
+Version: 1.1 / FIX-DEV-GOV-001-001 re-review submission, 2026-09-07
 
 Author role: CTO / Chief Engineering Officer (Codex)
 
-Authority status: execution authorized; Architecture Review pending. This document
+Authority status: prior HEAD Architecture Review = CHANGES_REQUIRED; the authorized
+FIX-DEV-GOV-001-001 corrections are implemented and re-review is pending. This document
 does **not** grant Final Approval, Chairman approval, merge permission or activation.
 
 Specification: [DEV-GOV-001 V1.0](docs/specifications/DEV-GOV-001-AIC-Autonomous-Development-Pipeline-V1.0.md)
+
+Correction authority: [FIX-DEV-GOV-001-001](docs/dev-governance/FIX-DEV-GOV-001-001-Bootstrap-Identity-Recovery-Corrections.md),
+review target `78415e7af9609e1f40019436d4870d9bf7b4467d`.
 
 ## 1. Executive Summary
 
@@ -18,6 +22,9 @@ code, interfaces, database migrations or desktop behavior are changed.
 
 Delivery is a bootstrap Draft PR. All activation switches are OFF. Live model/Work
 connections and administrative branch protection are not silently configured.
+The correction removes the bootstrap identity deadlock, makes normal PR identity
+state-based, separates recoverable operations from sticky governance failures, and
+narrows risk-path escalation without weakening actual hard-cap protection.
 
 ## 2. Preconditions / SPEC-009 Closeout
 
@@ -50,6 +57,10 @@ Boundary tests reject imports between investment functionality and the governanc
 package. Privileged processing checks out trusted main only; PR code runs with
 read-only credentials in its separate CI job.
 
+Bootstrap now has its own manual protected workflow and CLI path. It never enters
+the normal tick loop and requires every activation flag OFF. The normal workflow no
+longer exposes initialize. This separates initial state creation from autonomous effects.
+
 ## 5. State Store
 
 `LocalFileStateStore`: exclusive writer lock, revision check, one fsynced atomic
@@ -57,13 +68,17 @@ snapshot containing state/events/artifacts. `GitHubStateBranchStore`: independen
 `automation/dev-state`, immutable artifacts/events and parent-bound non-force ref
 update. Conflicting writers fail before external delivery. No blind mutation retry.
 Initial state creation uses an independent root commit, not a product HEAD change.
+The bootstrap store must be empty; any existing revision/work item rejects a second
+attempt. Current delivery does not initialize the state branch.
 
 ## 6. State Machine
 
-The transition table covers PLANNED through CLOSED plus waiting, blocked, failed and
+The transition table covers PLANNED through CLOSED plus waiting, recoverable, blocked and
 Chairman-decision states. Guards enforce role, ordering, exact input SHA and evidence.
 CI reruns revoke cached eligibility. HEAD changes clear approval and CI, requiring a
-new review. Invalid transitions fail rather than silently advancing.
+new review. RECOVERABLE_FAILURE retains the safe prior stage for CI, authenticated
+engineering and read-only reconciliation failures. New HEAD, fresh CI/reconciliation,
+or engineer retry resumes with zero Chairman events. Unknown side effects remain sticky.
 See [state machine](docs/dev-governance/STATE_MACHINE.md).
 
 ## 7. Workflow Events
@@ -81,6 +96,11 @@ and required memory are validated before a review request. Architecture output i
 typed JSON plus immutable Markdown; FIX responses become scoped, durable artifacts.
 Task reservation and subsequent delivery records are separate immutable artifacts.
 See [artifact protocol](docs/dev-governance/ARTIFACT_PROTOCOL.md).
+
+The `.github/dev-governance/work-item.json` descriptor is bootstrap-only and never
+changes per future SPEC. Ordinary work resolves exactly one PR number/branch candidate
+from durable state, then checks exact HEAD, SPEC hash and REVIEW path. No match,
+partial mismatch or multiple candidates fails closed.
 
 ## 9. Project Memory Integration
 
@@ -102,6 +122,8 @@ The read-only CI job verifies local selected content against immutable GitHub HE
 blobs and uploads `review-context-<exact HEAD>`. The manifest is external evidence,
 not a self-referential evidence-only commit. CI status inside this pre-completion
 manifest can be UNKNOWN; final check/run results are attested separately.
+After bootstrap, the context command loads the state branch and uses its resolved
+WorkItem/artifacts; it no longer depends on a per-PR descriptor edit.
 
 ## 11. ChatGPT Bridge
 
@@ -150,6 +172,9 @@ The read-only `AIC Development Governance Gate` validates identity/artifact/stat
 it does not confuse a passing implementation check with Architecture Approval and
 does not create a circular dependency on its own final result.
 
+When the state branch exists, PR identity comes solely from exactly one registered
+WorkItem. The static descriptor is read only for this initial DEV-GOV bootstrap PR.
+
 ## 16. Merge Eligibility
 
 The deterministic evaluator checks final approval, exact SHA/CI, discovered required
@@ -170,6 +195,10 @@ Auto Merge setting or PR Auto Merge request is enabled by this task.
 Master Requirement, investment/risk permissions, live broker/leverage, core
 architecture and governance/security changes require Chairman intervention.
 Classification examines real changed paths, not just author-supplied labels.
+Positive tests retain escalation for governance/security configuration, broker,
+leverage, live trading, portfolio policy and explicit risk hard-cap/limit surfaces.
+Negative tests prove ordinary risk implementation, test and documentation filenames
+do not automatically claim a hard-cap relaxation.
 Pause, disable-auto-merge and recovery are separately authenticated. A protected
 delegation can authorize a standard future work item; no such delegation is present
 in this delivery, and model-generated text cannot supply it.
@@ -213,14 +242,22 @@ markers supplement the durable outbox; a copied marker is not authorization.
 GETs use bounded backoff (three attempts by default, hard upper bound five); writes
 are not blindly retried. An uncertain reserved model request requires reconciliation
 and authorized recovery, preserving at-most-once dispatch preference over availability.
-The runner has a bounded eight-tick invocation, not an infinite agent conversation.
+Known bridge-unavailable delivery is explicitly recorded before retry; retry task
+artifacts append rather than overwrite. The runner has a bounded eight-tick invocation,
+not an infinite agent conversation.
 
 ## 24. Failure Modes
 
 Covered failures include GitHub unavailable/403, stale SHA/CI, missing artifacts,
 malformed/refused API results, branch drift, tree mismatch, store conflict, crash,
-permission denial, budget exhaustion and unexpected PR closure. They block/pause,
-wait or escalate with recorded reasons. Failures while requesting a successor do
+permission denial, budget exhaustion and unexpected PR closure.
+
+Recoverable: CI test/lint/type/build failure, known engineering failure, known
+pre-delivery bridge unavailability, transient bounded GitHub read failure and stale CI
+superseded by a new exact-head run. These never grant eligibility and need no Chairman.
+Sticky: premature merge/exception, authority/security violation, Chairman Gate,
+budget/review-loop exhaustion, and unknown mutation/paid-call outcome. These block or
+escalate. Failures while requesting a successor do
 not reopen an already CLOSED predecessor. Emergency OFF prevents further effects.
 
 ## 25. Governance Exception
@@ -260,6 +297,7 @@ Dashboard/CLI reads do not invoke models.
 Runtime non-blocking review items append structured debt records with origin,
 severity, blocking status, target phase and status. Static deployment debt is in
 `docs/project/TECHNICAL_DEBT.md`: main protection and external bridge setup.
+The existing GitHub Actions Node 20 declaration warning is recorded as low maintenance debt.
 These are implementation-reported activation limitations; their classification
 does not pre-empt the Architect's decision on this PR.
 
@@ -270,6 +308,9 @@ repository evidence. Approval, SHA, CI, budgets, events, task/result artifacts a
 debt remain available. Stored API results can be ingested after a crash without a
 second paid call. Unknown reservations are not automatically redelivered. See
 [disaster recovery](docs/dev-governance/DISASTER_RECOVERY.md).
+Transient GitHub read failure is also tested across two reconciliations: the first
+persists RECOVERABLE_FAILURE; the later authenticated read/CI succeeds and restores
+the safe stage with no Chairman event.
 
 ## 31. Premature Merge Regression
 
@@ -277,6 +318,11 @@ Regression recreates candidate approval followed by an externally merged PR.
 Expected outcome: BLOCKED, governance_exception=true, PR_MERGED_EARLY, paused
 pipeline, no cleanup and no NEXT_SPEC. Tests also exercise approval invalidation
 after HEAD drift and rejection of old-SHA review results.
+
+The correction E2E adds HEAD A CI FAILED → no merge → engineer pushes HEAD B → old
+approval/CI invalidated → HEAD B CI PASSED → new Architecture Review → FINAL_APPROVED
+→ eligible. It asserts zero Chairman events. The existing premature-merge test remains
+sticky and cannot use this operational recovery path.
 
 ## 32. Test Evidence
 
@@ -286,11 +332,11 @@ Local Python: 3.12.14, isolated `.venv`, editable `.[test]` installation.
 python -m pytest apps/backend/tests/dev_governance apps/backend/tests/architecture \
   --cov=aic_dev_governance --cov-report=json:tmp/dev-gov-coverage.json \
   --cov-fail-under=0 -q --tb=short
-229 passed
+246 passed; dedicated governance package coverage 95.88% statement+branch combined.
 
 python -m pytest --ignore-glob='*postgresql*' \
   --ignore=apps/backend/tests/persistence/test_migrations.py -q --tb=short
-775 passed (explicit non-database subset, NOT a full-suite claim)
+792 passed (explicit non-database subset, NOT a full-suite claim)
 ```
 
 The first local full-suite attempt could not supply PostgreSQL/AIC_DATABASE_URL
@@ -301,7 +347,9 @@ No existing test was weakened or deleted. Full PostgreSQL validation remains man
 in the final-HEAD GitHub backend job, not replaced by the local subset.
 
 E2E tests cover happy path, FIX/re-review at a new SHA, premature merge, repeated
-review budget exhaustion, lost chat context/restart and concurrent dispatch.
+review budget exhaustion, lost chat context/restart, concurrent dispatch, bootstrap
+while disabled, one-shot rejection, state-based PR identity, CI correction without
+Chairman and transient GitHub recovery.
 
 ## 33. Coverage
 
@@ -312,12 +360,14 @@ Local dedicated-suite statement-plus-branch targets are enforced by executable
 |---|---:|---:|
 | State machine | 100% | 95% |
 | Merge gate, SHA lock and CI gate (`gates.py`) | 100% | 100% |
+| Read-only state identity / SHA-CI gate (`ci_gate.py`) | 100% | 100% |
 | AI budget | 100% | 95% |
 | State store | 100% | 95% |
-| GitHub adapter | 92.8889% | 90% |
+| GitHub adapter | 92.9825% | 90% |
 
-The complete governance package is approximately 96% including orchestration and
-entry points. Whole-repository coverage, including PostgreSQL paths, comes from
+The corrected critical percentages and complete package coverage are produced by
+the final local run and independently enforced in exact-head CI. Whole-repository
+coverage, including PostgreSQL paths, comes from
 the final CI `coverage-<HEAD>` artifact. A failed/local subset run is not presented
 as a full-repository coverage result.
 
@@ -350,6 +400,12 @@ build, and adds AIC Development Governance Gate plus exact-HEAD context/coverage
 artifacts. The separate protected orchestrator is disabled until reviewed setup.
 Its privileged job never checks out untrusted PR code.
 
+A second protected manual workflow, `AIC Development Governance Bootstrap`, can run
+post-merge while the normal pipeline remains disabled. It installs trusted main,
+authenticates the actor against protected environment variable
+`AIC_BOOTSTRAP_CHAIRMAN`, verifies the exact Architecture-reviewed head, merged/tree/
+main-containment/CI/branch-deletion evidence, and creates only the initial state.
+
 This committed review precedes the commit SHA/CI run it describes. Final run ID,
 attempt, head SHA, all four job conclusions and artifact identities are published
 in the PR/final external attestation after CI completion. Pending CI is not approval.
@@ -359,8 +415,10 @@ in the PR/final external attestation after CI completion. Pending CI is not appr
 The initial PR receives a narrowly scoped read-only bootstrap check, bound to this
 work item, branch, clean-main base and Draft state. It cannot approve or merge itself.
 The independent state branch does not yet exist. One-time post-merge initialization
-requires Chairman identity, actual merged/tree/main/CI evidence, deleted feature
-branch and an external Architecture Closeout reference.
+uses a protected environment actor independent of pre-existing policy principals.
+It requires exact reviewed HEAD, actual merged/tree/current-main containment/CI,
+deleted feature branch and external Architecture Closeout reference. It neither
+requires nor enables `pipeline_enabled`; a second attempt is rejected.
 
 ## 39. Chairman Setup Required
 
@@ -370,6 +428,10 @@ Administrator must configure protection/no bypass/required checks. Chairman must
 select identities, protected environment/token, escalation channel and optional
 Work/API consumer. Paid model selection and execution delegation require explicit
 decisions. These settings were not changed during implementation.
+
+Bootstrap setup specifically requires protected environment
+`aic-development-governance-bootstrap`, required reviewers and the reviewed
+`AIC_BOOTSTRAP_CHAIRMAN` GitHub login. This is post-merge setup, not active now.
 
 ## 40. Known Limitations
 
@@ -382,6 +444,8 @@ decisions. These settings were not changed during implementation.
   no legacy status is guessed successful.
 - Core governance changes escalate rather than granting the bot power to change its rules.
 - Branch protection and bridge authorization remain deployment prerequisites.
+- GitHub currently forces Node 24 for actions declaring deprecated Node 20; all jobs
+  pass, but action version upgrades remain a reviewed maintenance task.
 
 ## 41. Final HEAD Requirement
 
@@ -389,14 +453,18 @@ Final delivery must verify local HEAD == origin feature HEAD == PR headRefOid, a
 open Draft PR targeting main, successful CI for that exact full SHA, clean workspace
 and no Auto Merge request. Any code/doc follow-up changes HEAD and require fresh CI
 and review. No evidence-only commit will be added merely to record its own SHA.
-The final PR body/response supplies the full immutable SHA and CI links.
+The final PR body/response and post-commit attestation supply the full immutable new
+SHA, all check-run identities and artifact hashes. Embedding a commit's own SHA inside
+that same commit is impossible; external attestation avoids an endless evidence-only loop.
 
 ## 42. Final Recommendation
 
-Submit the completed implementation and exact-HEAD evidence for Chief Investment
-Architect Architecture Review. Review authority separation, state/CAS recovery,
-SHA/CI gates, remote cleanup race and activation checklist in particular.
-Do not treat this engineering recommendation as Final Approval.
+**B. APPROVED CANDIDATE WITH NON-BLOCKING DEBT**
+
+Submit the corrected implementation and exact-HEAD evidence for Chief Investment
+Architect re-review. Remaining debt is post-merge administrative bridge/protection
+setup, action-runtime maintenance and the documented remote cleanup race. This is a
+Codex engineering candidate recommendation, not Architecture Final Approval.
 
 Required stop: keep DEV-GOV-001 Draft/unmerged, Auto Merge OFF, SPEC-010 NOT STARTED;
 wait for Chief Investment Architect review and subsequent Chairman manual action.

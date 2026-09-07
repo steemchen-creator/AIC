@@ -28,10 +28,13 @@ PROCESS DEVIATION OCCURRED / FORMAL CLOSEOUT COMPLETE`.
 The historical [exception record](../governance/SPEC009_PREMATURE_MERGE_EXCEPTION.md)
 retains its pre-publication snapshot; this memory does not rewrite that evidence.
 
-DEV-GOV-001 is the currently authorized engineering task. Its bootstrap requires owner
-manual merge after Architecture Review. SPEC-010 is NOT STARTED. No future SPEC is
-authorized by merely mentioning its number in examples or by completing a model call.
-Live development state, once activated, belongs in `automation/dev-state/state/current.json`.
+DEV-GOV-001 is the currently authorized engineering task. Architecture Review returned
+`CHANGES_REQUIRED`; FIX-DEV-GOV-001-001 is implemented on the same Draft PR for re-review.
+Its protected, one-shot bootstrap requires owner manual merge and verified closeout before
+creating state; it is separate from the disabled normal runtime. SPEC-010 is NOT STARTED.
+No future SPEC is authorized by merely mentioning its number in examples or by completing
+a model call. Live development state, once explicitly initialized and activated, belongs
+in `automation/dev-state/state/current.json`.
 
 ## Recovery reading order
 

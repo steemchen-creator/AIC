@@ -86,6 +86,9 @@ def pr(item: WorkItem, policy: Policy) -> PullRequest:
 def state(item: WorkItem) -> State:
     previous = item.model_copy(deep=True)
     previous.work_item_id, previous.status = "PREVIOUS", Stage.CLOSED
+    previous.pr_number = 10
+    previous.target_branch = "feature/previous"
+    previous.head_sha = "c" * 40
     return State(
         current_work_item=item.work_item_id,
         work_items={item.work_item_id: item, "PREVIOUS": previous},

@@ -11,6 +11,7 @@ TARGETS = {
     "budget.py": 95,
     "store.py": 95,
     "github.py": 90,
+    "ci_gate.py": 100,
 }
 
 

@@ -22,6 +22,12 @@ AI budget guard, audit and closeout. It does not change investment functionality
 All activation/auto-merge switches default OFF; DEV-GOV-001 requires external review
 and Chairman manual merge. SPEC-010 is not started.
 
+The normal workflow cannot initialize governance state. A separate protected manual
+bootstrap workflow may create `automation/dev-state` exactly once, only after it verifies
+the reviewed feature HEAD, merged PR, exact-HEAD CI, branch cleanup and closeout evidence
+against a trusted Chairman identity. Ordinary PR identity and approved artifacts are then
+resolved from durable state; the bootstrap descriptor is not a per-PR mutable selector.
+
 See [overview](docs/dev-governance/OVERVIEW.md), [setup checklist](SETUP-DEV-GOV-001-CHAIRMAN.md)
 and [review](REVIEW-DEV-GOV-001.md). After installing `.[test]`, run
 `python -m aic_dev_governance status` for local status; `run` is the protected event

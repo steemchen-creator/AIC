@@ -29,8 +29,11 @@ material is rejected. This is defense in depth, not a claim that arbitrary commi
 secrets can always be recognized. Repository input is data, not instructions.
 
 Actual sensitive diff paths trigger Chairman escalation even if PR prose omits them.
-Conservative path classification does not replace Architecture Review of semantic
-changes; ambiguous permissions/risk changes must not be treated as ordinary work.
+Governance/security config, broker, leverage, live trading and explicit risk hard-cap
+policy/config surfaces remain protected. A generic `risk` filename in ordinary code,
+tests or docs is not by itself a claim that a hard cap changed. Deterministic path
+classification does not replace Architecture Review of semantic changes; ambiguous
+permission/risk changes must not be treated as ordinary work.
 
 Safe errors expose reason codes, never raw response bodies, tokens or subprocess
 stderr. CAS conflict, stale CI, missing artifact, unexpected closure/merge, API failure

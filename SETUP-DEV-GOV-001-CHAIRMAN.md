@@ -10,6 +10,8 @@ No setup or investment authorization is inferred from implementation completion.
 - [ ] Choose MANUAL or DRY_RUN first. Auto Merge remains NO unless separately authorized.
 - [ ] Assign distinct engineering, architecture and Chairman identities.
 - [ ] Approve the protected main-only governance environment and least-privilege bot token.
+- [ ] Create protected environment `aic-development-governance-bootstrap`, require reviewers,
+      and set its `AIC_BOOTSTRAP_CHAIRMAN` variable to the authorized GitHub login.
 - [ ] Choose a Chairman escalation recipient/channel.
 
 ## Optional external bridge
@@ -22,11 +24,16 @@ No setup or investment authorization is inferred from implementation completion.
 
 ## One-time state initialization
 
-The maintainer prepares the protected workflow initialize payload with the manually
-merged DEV-GOV PR number and your external Architecture Closeout reference. Confirm
-that run after branch cleanup. The code checks actual merge/tree/main/CI, imports the
+The maintainer runs `AIC Development Governance Bootstrap` manually with JSON payload:
+`pr_number`, the exact Architecture-reviewed `reviewed_head_sha`, and non-empty
+`architecture_closeout_reference`. Confirm the protected-environment approval only
+after manual merge and branch cleanup. The code requires all activation switches OFF,
+checks actual merge/tree/current-main containment/exact CI, imports the
 closed bootstrap and creates only automation/dev-state. No code writing is required
 from the Chairman, and initialization does not start SPEC-010.
+
+The normal orchestrator has no initialize command and still exits while disabled.
+A second bootstrap attempt fails closed because the state branch already exists.
 
 ## Emergency
 

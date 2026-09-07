@@ -189,6 +189,10 @@ class GitHubClient:
     def tree(self, commit: str) -> str:
         return str(self.request("GET", f"/git/commits/{commit}")["tree"]["sha"])
 
+    def contains_commit(self, ancestor: str, descendant: str) -> bool:
+        comparison = self.request("GET", f"/compare/{ancestor}...{descendant}")
+        return comparison.get("status") in {"ahead", "identical"}
+
     def file(self, path: str, ref: str) -> str:
         raw = self.request("GET", f"/contents/{quote(path, safe='/')}?ref={quote(ref, safe='')}")
         if raw.get("encoding") != "base64" or raw.get("type") != "file":

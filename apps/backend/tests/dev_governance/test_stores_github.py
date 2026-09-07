@@ -379,6 +379,14 @@ def test_branch_ref_file_tree_and_deletion():
         client(lambda r: httpx.Response(403)).ref("main")
 
 
+@pytest.mark.parametrize(
+    ("status", "expected"), [("ahead", True), ("identical", True), ("diverged", False)]
+)
+def test_commit_containment(status, expected):
+    api = client(lambda r: httpx.Response(200, json={"status": status}))
+    assert api.contains_commit("a" * 40, "b" * 40) is expected
+
+
 @pytest.mark.parametrize("pr_number", [12, None])
 def test_task_publication_and_duplicate_transport(pr_number):
     posted = []

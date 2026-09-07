@@ -30,6 +30,12 @@ from .observability import log_operation
 from .state_machine import apply_event, authenticate
 from .store import StateStore
 
+RECOVERABLE_ENGINEERING_FAILURES = {
+    "CODEX_TASK_FAILED",
+    "ENGINEERING_TASK_FAILED",
+    "IMPLEMENTATION_FAILED",
+}
+
 
 class Repository(Protocol):
     def pull_request(self, number: int) -> PullRequest: ...
@@ -263,7 +269,10 @@ class Orchestrator:
                 payload, ensure_ascii=False
             )
         state.tasks[key] = task
-        state.artifacts[f"tasks/{key}.json"] = task.model_dump_json(indent=2)
+        task_path = f"tasks/{key}.json"
+        if task_path in state.artifacts:
+            task_path = f"tasks/{key}/retry-{state.revision + 1}.json"
+        state.artifacts[task_path] = task.model_dump_json(indent=2)
         self._audit(
             state, self.event(work_item, EventType.TASK_RESERVED, item.head_sha, task_id=key)
         )
@@ -281,7 +290,10 @@ class Orchestrator:
                 validate_artifact_content(serialized)
                 state.artifacts[f"results/{key}.json"] = serialized
         except GovernanceError as error:
-            waiting = error.reason == "WAITING_FOR_ARCHITECTURE_REVIEW_BRIDGE"
+            waiting = error.reason in {
+                "WAITING_FOR_ARCHITECTURE_REVIEW_BRIDGE",
+                "ENGINEERING_BRIDGE_UNAVAILABLE",
+            }
             task.status = "WAITING" if waiting else "FAILED"
             if waiting and key in item.budget.reserved_requests:
                 # The adapter refused BEFORE an external call. Release only this known-unused
@@ -293,7 +305,15 @@ class Orchestrator:
                 if kind == "NEXT_SPEC":
                     day = self.now().astimezone(UTC).date().isoformat()
                     state.new_specs_by_day[day] -= 1
-            failure = EventType.BRIDGE_UNAVAILABLE if waiting else EventType.TASK_FAILED
+            failure = (
+                EventType.ENGINEERING_BRIDGE_UNAVAILABLE
+                if waiting and kind == "ENGINEERING"
+                else EventType.ENGINEERING_FAILED
+                if kind == "ENGINEERING" and error.reason in RECOVERABLE_ENGINEERING_FAILURES
+                else EventType.BRIDGE_UNAVAILABLE
+                if waiting
+                else EventType.TASK_FAILED
+            )
             state = apply_event(
                 state,
                 self.event(work_item, failure, item.head_sha, reason=error.reason),
@@ -321,6 +341,7 @@ class Orchestrator:
         item = state.work_items[work_item]
         if item.pr_number is None:
             raise GovernanceError("PR_MISSING")
+        side_effect_attempted = False
         try:
             pr = self.repository.pull_request(item.pr_number)
             if pr.state == "MERGED":
@@ -334,7 +355,9 @@ class Orchestrator:
                     self.event(work_item, EventType.PR_HEAD_CHANGED, pr.head_sha), pr=pr
                 )
                 if not pr.draft:
+                    side_effect_attempted = True
                     self.repository.mark_draft(pr.number, pr.head_sha)
+                    side_effect_attempted = False
                     pr = self.repository.pull_request(pr.number)
                 item = state.work_items[work_item]
             if not pr.draft and item.architecture_status != "FINAL_APPROVED":
@@ -356,9 +379,14 @@ class Orchestrator:
             )
             return self.handle(self.event(work_item, kind, pr.head_sha), ci=ci)
         except GovernanceError as error:
+            failure_class = "UNKNOWN_SIDE_EFFECT" if side_effect_attempted else "RECOVERABLE_READ"
             return self.handle(
                 self.event(
-                    work_item, EventType.OPERATION_FAILED, item.head_sha, reason=error.reason
+                    work_item,
+                    EventType.OPERATION_FAILED,
+                    item.head_sha,
+                    reason=error.reason,
+                    failure_class=failure_class,
                 )
             )
 

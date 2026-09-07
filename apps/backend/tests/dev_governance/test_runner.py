@@ -14,7 +14,14 @@ from aic_dev_governance.models import (
     Stage,
     State,
 )
-from aic_dev_governance.runner import dispatch_command, initialize_state, run, spec_hash, tick
+from aic_dev_governance.runner import (
+    dispatch_command,
+    initialize_state,
+    run,
+    run_bootstrap,
+    spec_hash,
+    tick,
+)
 
 
 @pytest.fixture
@@ -148,39 +155,158 @@ def test_authenticated_event_operations_and_forbidden_commands(service, tmp_path
 
 def test_initialize_after_manual_closeout_only(service, pr, item, state, tmp_path):
     orchestrator, github = service
-    payload = {"pr_number": 12, "architecture_closeout_reference": "External Chief signed review"}
+    payload = {
+        "pr_number": 12,
+        "reviewed_head_sha": pr.head_sha,
+        "architecture_closeout_reference": "External Chief signed review",
+    }
     with pytest.raises(GovernanceError, match="STATE_ALREADY_INITIALIZED"):
         initialize_state(orchestrator, github, "chairman", payload)
     orchestrator.store.load.return_value = (State(), None)
     with pytest.raises(GovernanceError, match="EXTERNAL_ARCHITECTURE_CLOSEOUT_REFERENCE_REQUIRED"):
         initialize_state(orchestrator, github, "chairman", {"pr_number": 12})
+    invalid_head = payload | {"reviewed_head_sha": "NOT-A-SHA"}
+    with pytest.raises(GovernanceError, match="BOOTSTRAP_REVIEWED_HEAD_REQUIRED"):
+        initialize_state(orchestrator, github, "chairman", invalid_head)
     with pytest.raises(GovernanceError, match="BOOTSTRAP_CLOSEOUT_NOT_COMPLETE"):
         initialize_state(orchestrator, github, "chairman", payload)
     pr.state, pr.merge_commit = "MERGED", "c" * 40
     pr.branch = "feature/dev-gov-001-autonomous-development-pipeline"
     github.ref.side_effect = lambda branch: "c" * 40 if branch == "main" else None
+    wrong_reviewed_head = payload | {"reviewed_head_sha": "b" * 40}
+    with pytest.raises(GovernanceError, match="BOOTSTRAP_CLOSEOUT_NOT_COMPLETE"):
+        initialize_state(orchestrator, github, "chairman", wrong_reviewed_head)
     github.tree.side_effect = ["tree1", "tree2"]
     with pytest.raises(GovernanceError, match="MERGE_TREE_REVIEW_REQUIRED"):
         initialize_state(orchestrator, github, "chairman", payload)
     github.tree.side_effect = None
     github.tree.return_value = "tree"
+    github.contains_commit.return_value = False
     github.ref.side_effect = lambda branch: "b" * 40 if branch == "main" else None
     with pytest.raises(GovernanceError, match="BOOTSTRAP_MAIN_MISMATCH"):
         initialize_state(orchestrator, github, "chairman", payload)
     github.ref.side_effect = lambda branch: "c" * 40 if branch == "main" else None
+    github.contains_commit.return_value = True
     item.ci.status = "PENDING"
     with pytest.raises(GovernanceError, match="BOOTSTRAP_CI_NOT_PASSED"):
         initialize_state(orchestrator, github, "chairman", payload)
     item.ci.status = "PASSED"
+    bootstrap_spec = "# SPEC"
     github.file.side_effect = lambda path, ref: (
-        json.dumps({"spec_path": item.artifact_path, "review_path": item.review_artifact})
+        json.dumps(
+            {
+                "work_item_id": "DEV-GOV-001",
+                "spec_path": item.artifact_path,
+                "review_path": item.review_artifact,
+                "spec_sha256": hashlib.sha256(bootstrap_spec.encode()).hexdigest(),
+            }
+        )
         if path.endswith("work-item.json")
-        else "# SPEC"
+        else bootstrap_spec
     )
-    imported = dispatch_command(orchestrator, github, tmp_path, "chairman", "initialize", payload)
+    with pytest.raises(GovernanceError, match="BOOTSTRAP_ENTRYPOINT_REQUIRED"):
+        dispatch_command(orchestrator, github, tmp_path, "chairman", "initialize", payload)
+    imported = initialize_state(orchestrator, github, "chairman", payload)
     assert imported.work_items["DEV-GOV-001"].status == Stage.CLOSED
     assert not imported.work_items["DEV-GOV-001"].next_spec_requested
     orchestrator.store.save.assert_called_once()
+    assert all(call.args[1] == pr.merge_commit for call in github.file.call_args_list)
+
+
+def test_bootstrap_only_path_runs_while_pipeline_disabled_and_is_one_shot(
+    tmp_path, monkeypatch, policy, pr, item
+):
+    import aic_dev_governance.runner as module
+    from aic_dev_governance.store import LocalFileStateStore
+
+    policy.pipeline_enabled = False
+    policy.merge_enabled = False
+    policy.auto_ready = False
+    policy.bridge_authorized = False
+    policy.principals = {}
+    config = tmp_path / "configs/dev-governance.json"
+    config.parent.mkdir()
+    config.write_text(policy.model_dump_json())
+    event = tmp_path / "event.json"
+    event.write_text(
+        json.dumps(
+            {
+                "inputs": {
+                    "payload": json.dumps(
+                        {
+                            "pr_number": pr.number,
+                            "reviewed_head_sha": pr.head_sha,
+                            "architecture_closeout_reference": "ARCH-CLOSEOUT-DEV-GOV-001",
+                        }
+                    )
+                }
+            }
+        )
+    )
+    store = LocalFileStateStore(tmp_path / "state-branch")
+    github = Mock()
+    pr.state = "MERGED"
+    pr.branch = "feature/dev-gov-001-autonomous-development-pipeline"
+    pr.merge_commit = "c" * 40
+    github.pull_request.return_value = pr
+    github.ref.side_effect = lambda branch: "d" * 40 if branch == "main" else None
+    github.tree.return_value = "same-tree"
+    github.contains_commit.return_value = True
+    github.ci.return_value = item.ci
+    bootstrap_spec = "# Approved bootstrap SPEC\n"
+    github.file.side_effect = lambda path, ref: (
+        json.dumps(
+            {
+                "work_item_id": "DEV-GOV-001",
+                "spec_path": item.artifact_path,
+                "review_path": item.review_artifact,
+                "spec_sha256": hashlib.sha256(bootstrap_spec.encode()).hexdigest(),
+            }
+        )
+        if path.endswith("work-item.json")
+        else bootstrap_spec
+    )
+    monkeypatch.setattr(module, "GitHubClient", lambda *args, **kwargs: github)
+    monkeypatch.setattr(module, "GitHubStateBranchStore", lambda *args: store)
+    monkeypatch.setenv("GH_TOKEN", "placeholder-test-token")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event))
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
+    monkeypatch.setenv("GITHUB_ACTOR", "chairman")
+    monkeypatch.setenv("AIC_BOOTSTRAP_CHAIRMAN", "chairman")
+
+    assert "Stage: CLOSED" in run_bootstrap(tmp_path)
+    created, revision = store.load()
+    assert revision is not None
+    assert created.work_items["DEV-GOV-001"].status == Stage.CLOSED
+    assert not created.work_items["DEV-GOV-001"].next_spec_requested
+    assert not created.tasks and len(created.events) == 1
+    github.merge.assert_not_called()
+    github.publish_task.assert_not_called()
+    with pytest.raises(GovernanceError, match="STATE_ALREADY_INITIALIZED"):
+        run_bootstrap(tmp_path)
+
+
+def test_bootstrap_only_path_rejects_untrusted_actor_and_activation(tmp_path, monkeypatch, policy):
+    config = tmp_path / "configs/dev-governance.json"
+    config.parent.mkdir()
+    policy.pipeline_enabled = False
+    policy.merge_enabled = False
+    policy.auto_ready = False
+    policy.bridge_authorized = False
+    config.write_text(policy.model_dump_json())
+    event = tmp_path / "event.json"
+    event.write_text(json.dumps({"inputs": {"payload": "{}"}}))
+    monkeypatch.setenv("GH_TOKEN", "placeholder")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event))
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
+    monkeypatch.setenv("GITHUB_ACTOR", "intruder")
+    monkeypatch.setenv("AIC_BOOTSTRAP_CHAIRMAN", "chairman")
+    with pytest.raises(GovernanceError, match="BOOTSTRAP_CHAIRMAN_NOT_AUTHORIZED"):
+        run_bootstrap(tmp_path)
+    policy.pipeline_enabled = True
+    config.write_text(policy.model_dump_json())
+    with pytest.raises(GovernanceError, match="BOOTSTRAP_REQUIRES_ALL_ACTIVATION_OFF"):
+        run_bootstrap(tmp_path)
 
 
 def test_tick_empty_blocked_bootstrap_and_nontriggering_stages(service, state, item):

@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -19,7 +20,7 @@ from .artifacts import (
     validate_artifact_content,
 )
 from .bridges import GitHubEventTriggerAdapter, OpenAIApiTriggerAdapter, select_architecture_bridge
-from .ci_gate import BOOTSTRAP_BRANCH, check_governance
+from .ci_gate import BOOTSTRAP_BRANCH, check_governance, resolve_work_item
 from .github import GitHubClient
 from .models import (
     ArchitectureResult,
@@ -292,7 +293,7 @@ def dispatch_command(
     state, _ = orchestrator.store.load()
     work_item = payload.get("work_item_id") or state.current_work_item
     if command == "initialize":
-        return initialize_state(orchestrator, github, actor, payload)
+        raise GovernanceError("BOOTSTRAP_ENTRYPOINT_REQUIRED")
     if command == "register":
         item = WorkItem.model_validate(payload["work_item"])
         reader = GitHubArtifactReader(github, {item.artifact_path}, payload["approved_ref"])
@@ -325,6 +326,8 @@ def dispatch_command(
             EventType.ARCH_REVIEW_STARTED,
             EventType.FIX_PUBLISHED,
             EventType.FIX_IMPLEMENTED,
+            EventType.ENGINEERING_FAILED,
+            EventType.ENGINEERING_RETRY,
             EventType.PAUSE_PIPELINE,
             EventType.RESUME_PIPELINE,
             EventType.DISABLE_AUTO_MERGE,
@@ -382,24 +385,37 @@ def initialize_state(
     reference = payload.get("architecture_closeout_reference", "")
     if not isinstance(reference, str) or not reference.strip():
         raise GovernanceError("EXTERNAL_ARCHITECTURE_CLOSEOUT_REFERENCE_REQUIRED")
+    reviewed_head = payload.get("reviewed_head_sha", "")
+    if not isinstance(reviewed_head, str) or not re.fullmatch(r"[0-9a-f]{40}", reviewed_head):
+        raise GovernanceError("BOOTSTRAP_REVIEWED_HEAD_REQUIRED")
     pr = github.pull_request(int(payload["pr_number"]))
     if (
         pr.state != "MERGED"
         or pr.branch != BOOTSTRAP_BRANCH
+        or pr.head_sha != reviewed_head
         or not pr.merge_commit
         or github.ref(BOOTSTRAP_BRANCH) is not None
     ):
         raise GovernanceError("BOOTSTRAP_CLOSEOUT_NOT_COMPLETE")
     if github.tree(pr.head_sha) != github.tree(pr.merge_commit):
         raise GovernanceError("MERGE_TREE_REVIEW_REQUIRED")
+    merge_commit = pr.merge_commit
     main = github.ref("main")
-    if main != pr.merge_commit:
+    if not main or not github.contains_commit(merge_commit, main):
         raise GovernanceError("BOOTSTRAP_MAIN_MISMATCH")
     ci = github.ci(pr, orchestrator.policy)
     if ci.status != "PASSED" or ci.head_sha != pr.head_sha:
         raise GovernanceError("BOOTSTRAP_CI_NOT_PASSED")
-    descriptor = json.loads(github.file(".github/dev-governance/work-item.json", main))
-    spec = github.file(descriptor["spec_path"], main)
+    descriptor = json.loads(github.file(".github/dev-governance/work-item.json", merge_commit))
+    if (
+        set(descriptor) != {"work_item_id", "spec_path", "review_path", "spec_sha256"}
+        or descriptor["work_item_id"] != "DEV-GOV-001"
+    ):
+        raise GovernanceError("BOOTSTRAP_DESCRIPTOR_INVALID")
+    spec = github.file(descriptor["spec_path"], merge_commit)
+    github.file(descriptor["review_path"], merge_commit)
+    if hashlib.sha256(spec.encode()).hexdigest() != descriptor["spec_sha256"]:
+        raise GovernanceError("APPROVED_SPEC_HASH_MISMATCH")
     item = WorkItem(
         work_item_id="DEV-GOV-001",
         kind="DEV_GOV",
@@ -441,6 +457,47 @@ def initialize_state(
     orchestrator.store.save(state, None)
     # No NEXT_SPEC event; bootstrap activation does not itself authorize SPEC-010.
     return state
+
+
+def run_bootstrap(root: Path) -> str:
+    """Protected, one-shot bootstrap path; it never runs the autonomous tick loop."""
+    policy = Policy.model_validate_json((root / "configs/dev-governance.json").read_text("utf-8"))
+    if any(
+        (
+            policy.pipeline_enabled,
+            policy.merge_enabled,
+            policy.auto_ready,
+            policy.bridge_authorized,
+        )
+    ):
+        raise GovernanceError("BOOTSTRAP_REQUIRES_ALL_ACTIVATION_OFF")
+    token = os.environ.get("GH_TOKEN", "")
+    event_path = os.environ.get("GITHUB_EVENT_PATH", "")
+    actor = os.environ.get("GITHUB_ACTOR", "")
+    trusted_actor = os.environ.get("AIC_BOOTSTRAP_CHAIRMAN", "")
+    if not token:
+        raise GovernanceError("GITHUB_AUTHORIZATION_MISSING")
+    if os.environ.get("GITHUB_EVENT_NAME") != "workflow_dispatch" or not event_path:
+        raise GovernanceError("BOOTSTRAP_MANUAL_WORKFLOW_REQUIRED")
+    if not actor or actor != trusted_actor:
+        raise GovernanceError("BOOTSTRAP_CHAIRMAN_NOT_AUTHORIZED")
+    raw = json.loads(Path(event_path).read_text("utf-8"))
+    payload = json.loads(raw.get("inputs", {}).get("payload") or "{}")
+    bootstrap_policy = policy.model_copy(deep=True)
+    bootstrap_policy.principals[Role.CHAIRMAN] = [actor]
+    bootstrap_policy.principals[Role.BOT] = ["github-actions[bot]"]
+    with httpx.Client(
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+    ) as client:
+        github = GitHubClient(client, policy.repository, attempts=policy.read_attempts)
+        store = GitHubStateBranchStore(github)
+        orchestrator = Orchestrator(store, github, bootstrap_policy, "github-actions[bot]")
+        state = initialize_state(orchestrator, github, actor, payload)
+    return dashboard(state)
 
 
 def run(root: Path, *, gate_only: bool = False) -> str:
@@ -495,35 +552,43 @@ def spec_hash(path: Path) -> str:
     return hashlib.sha256(path.read_text("utf-8").encode()).hexdigest()
 
 
-def generate_review_context(root: Path, github: GitHubClient, number: int) -> ReviewContext:
+def generate_review_context(
+    root: Path, github: GitHubClient, number: int, state: State | None = None
+) -> ReviewContext:
     """Generate external exact-HEAD evidence after commit, never commit its own identity."""
     pr = github.pull_request(number)
-    descriptor = json.loads((root / ".github/dev-governance/work-item.json").read_text("utf-8"))
+    state = state or State()
     changes = github.pages(f"/pulls/{number}/files")
     changed = [entry["filename"] for entry in changes]
     deleted = [entry["filename"] for entry in changes if entry["status"] == "removed"]
     adrs = [path for path in changed if path.startswith("docs/adr/") and path not in deleted]
+    if state.work_items:
+        item = resolve_work_item(pr, state).model_copy(deep=True)
+    else:
+        descriptor = json.loads((root / ".github/dev-governance/work-item.json").read_text("utf-8"))
+        item = WorkItem(
+            work_item_id=descriptor["work_item_id"],
+            kind="DEV_GOV",
+            status=Stage.REVIEW_REQUIRED,
+            created_at=datetime.now(UTC),
+            artifact_path=descriptor["spec_path"],
+            artifact_sha256=descriptor["spec_sha256"],
+            target_branch=pr.branch,
+            execution_authorization="approved-bootstrap-descriptor",
+            pr_number=pr.number,
+            head_sha=pr.head_sha,
+            base_sha=pr.base_sha,
+            review_artifact=descriptor["review_path"],
+        )
+    item.base_sha = pr.base_sha
+    item.head_sha = pr.head_sha
     selected = {
         *MEMORY_PATHS,
         *(set(changed) - set(deleted)),
-        descriptor["spec_path"],
-        descriptor["review_path"],
+        item.artifact_path,
+        item.review_artifact,
     }
-    reader = ArtifactReader(root, selected)
-    item = WorkItem(
-        work_item_id=descriptor["work_item_id"],
-        kind="DEV_GOV",
-        status=Stage.REVIEW_REQUIRED,
-        created_at=datetime.now(UTC),
-        artifact_path=descriptor["spec_path"],
-        artifact_sha256=descriptor["spec_sha256"],
-        target_branch=pr.branch,
-        execution_authorization="approved-work-item-descriptor",
-        pr_number=pr.number,
-        head_sha=pr.head_sha,
-        base_sha=pr.base_sha,
-        review_artifact=descriptor["review_path"],
-    )
+    reader = GitHubArtifactReader(github, selected, pr.head_sha, state_artifacts=state.artifacts)
     manifest = build_context(
         reader,
         item,
@@ -534,9 +599,13 @@ def generate_review_context(root: Path, github: GitHubClient, number: int) -> Re
         deleted_files=deleted,
     )
     manifest.known_debt = ["ADMIN_SETUP_REQUIRED", "ARCHITECTURE_BRIDGE_AUTHORIZATION_REQUIRED"]
-    # Validate every selected local file against that immutable remote commit, not just a label.
+    # When a selected artifact exists in this exact checkout, verify it against its durable source.
     for entry in manifest.context_entries:
-        remote = github.file(entry.path, pr.head_sha)
-        if hashlib.sha256(remote.replace("\r\n", "\n").encode()).hexdigest() != entry.sha256:
+        local = root / entry.path
+        if (
+            local.is_file()
+            and hashlib.sha256(local.read_text("utf-8").replace("\r\n", "\n").encode()).hexdigest()
+            != entry.sha256
+        ):
             raise GovernanceError("LOCAL_REMOTE_CONTEXT_MISMATCH")
     return manifest

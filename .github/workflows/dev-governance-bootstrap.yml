@@ -1,0 +1,38 @@
+name: AIC Development Governance Bootstrap
+
+on:
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: Reviewed bootstrap JSON with PR, exact approved HEAD and Closeout reference
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: read
+  actions: read
+
+concurrency:
+  group: aic-development-state
+  cancel-in-progress: false
+
+jobs:
+  initialize-only:
+    environment: aic-development-governance-bootstrap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted main only
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install .
+      - name: Create the one-shot state branch without autonomous effects
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AIC_BOOTSTRAP_CHAIRMAN: ${{ vars.AIC_BOOTSTRAP_CHAIRMAN }}
+        run: python -m aic_dev_governance bootstrap >> "$GITHUB_STEP_SUMMARY"

@@ -16,13 +16,18 @@ ref updates reject concurrent siblings. No implementation HEAD changes.
 
 RESERVED external tasks mean delivery may be unknown. Inspect provider/GitHub evidence;
 do not replay a potentially paid model call. WAITING means the bridge refused before
-calling and may resume after explicit bridge authorization. FAILED requires recovery.
+calling and may resume after explicit bridge authorization. Known CI/engineering/read
+failures use RECOVERABLE_FAILURE and retain a safe resume stage; authenticated retry,
+new HEAD or later reconciliation needs no Chairman. Unknown side-effect outcomes remain
+sticky and require explicit recovery authority.
 
 Premature merge is a governance incident: block pipeline, retain the actual merged
 facts and escalate. Do not automatically revert/re-merge, label it ordinary closeout
 or generate the next SPEC. A separate governance exception task is required.
 
-Bootstrap initialization is a one-time Chairman import after DEV-GOV-001 has been
+Bootstrap initialization is a one-time Chairman import through the separate protected
+manual bootstrap workflow while all activation flags remain OFF, after DEV-GOV-001 has been
 manually merged, externally closed out, its branch deleted and exact CI verified.
-It verifies merged PR/tree/main/CI and records the external closeout reference, never
+It verifies the reviewed head, merged PR/tree, merge containment in current main,
+branch deletion, exact CI and records the external closeout reference, never
 creates the bootstrap approval itself and never requests SPEC-010.

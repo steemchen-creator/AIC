@@ -29,3 +29,8 @@ without effects when disabled. CI uses `gate`, which never writes state or merge
 
 Bootstrap DEV-GOV-001 is excluded from automatic Ready/Merge and next-SPEC progression.
 Its Draft PR, exact HEAD CI, external review and Chairman manual merge remain mandatory.
+
+After manual merge/Closeout, a distinct protected `workflow_dispatch` bootstrap job
+may create only `automation/dev-state` while the normal pipeline stays disabled. Its
+Chairman identity comes from protected environment configuration. Later implementation
+PRs are resolved from that durable state; the bootstrap descriptor never changes per SPEC.

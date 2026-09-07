@@ -186,7 +186,7 @@ def test_ci_updates_and_stale_failure(state, item, policy):
         apply_event(state, event(EventType.CI_FAILED), policy, ci=failed)
         .work_items[item.work_item_id]
         .status
-        == Stage.BLOCKED
+        == Stage.RECOVERABLE_FAILURE
     )
     assert (
         apply_event(state, event(EventType.CI_PASSED), policy, ci=item.ci)
@@ -198,6 +198,57 @@ def test_ci_updates_and_stale_failure(state, item, policy):
     for ci in (None, CI(head_sha="b" * 40)):
         with pytest.raises(GovernanceError, match="CI_STALE_OR_WORK_ITEM_BLOCKED"):
             apply_event(state, event(EventType.CI_STARTED), policy, ci=ci)
+
+
+def test_engineering_failure_and_retry_need_no_chairman(state, item, policy):
+    item.status = Stage.IMPLEMENTING
+    state = apply_event(
+        state,
+        event(EventType.ENGINEERING_FAILED, metadata={"reason": "TEST_FAILURE"}),
+        policy,
+    )
+    failed = state.work_items[item.work_item_id]
+    assert failed.status == Stage.RECOVERABLE_FAILURE
+    assert failed.recovery_stage == Stage.IMPLEMENTING
+    assert failed.recoverable_failures == ["TEST_FAILURE"]
+    state = apply_event(state, event(EventType.ENGINEERING_RETRY), policy)
+    assert state.work_items[item.work_item_id].status == Stage.IMPLEMENTING
+    assert not state.work_items[item.work_item_id].recoverable_failures
+
+
+def test_recoverable_failure_preserves_origin_and_normalizes_merge_stage(state, item, policy):
+    item.status = Stage.MERGE_ELIGIBLE
+    first = apply_event(
+        state,
+        event(
+            EventType.OPERATION_FAILED,
+            metadata={"reason": "GET_FAILED", "failure_class": "RECOVERABLE_READ"},
+        ),
+        policy,
+    )
+    current = first.work_items[item.work_item_id]
+    assert current.status == Stage.RECOVERABLE_FAILURE
+    assert current.recovery_stage == Stage.FINAL_APPROVED
+    second = apply_event(
+        first,
+        event(
+            EventType.OPERATION_FAILED,
+            sha="b" * 40,
+            metadata={"reason": "GET_FAILED_AGAIN", "failure_class": "RECOVERABLE_READ"},
+        ),
+        policy,
+    )
+    current = second.work_items[item.work_item_id]
+    assert current.recovery_stage == Stage.FINAL_APPROVED
+    assert current.recoverable_failures == ["GET_FAILED", "GET_FAILED_AGAIN"]
+
+
+def test_engineering_bridge_unavailable_only_from_dispatchable_stage(state, item, policy):
+    with pytest.raises(GovernanceError, match="ILLEGAL_TRANSITION"):
+        apply_event(state, event(EventType.ENGINEERING_BRIDGE_UNAVAILABLE), policy)
+    item.status = Stage.SPEC_READY
+    updated = apply_event(state, event(EventType.ENGINEERING_BRIDGE_UNAVAILABLE), policy)
+    assert updated.work_items[item.work_item_id].recovery_stage == Stage.SPEC_READY
 
 
 def test_spec_authorization_previous_and_chairman_gate(state, item, policy):

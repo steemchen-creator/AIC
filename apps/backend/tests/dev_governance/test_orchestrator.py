@@ -213,6 +213,64 @@ def test_e2e_old_sha_cannot_approve_fix_head(runtime):
     assert not repo.merges
 
 
+def test_e2e_ci_failure_new_head_review_and_eligibility_without_chairman(runtime):
+    runtime, repo = runtime
+    repo.checks.status = "FAILED"
+    state = runtime.reconcile("SPEC-TEST")
+    assert state.work_items["SPEC-TEST"].status == Stage.RECOVERABLE_FAILURE
+    assert not state.work_items["SPEC-TEST"].merge_eligible
+    assert not repo.merges
+
+    repo.pr.head_sha = "b" * 40
+    repo.checks.head_sha = repo.pr.head_sha
+    repo.checks.status = "PASSED"
+    for check in repo.checks.checks:
+        check.head_sha = repo.pr.head_sha
+        check.conclusion = "success"
+    state = runtime.reconcile("SPEC-TEST")
+    current = state.work_items["SPEC-TEST"]
+    assert current.status == Stage.REVIEW_REQUIRED
+    assert current.approved_head_sha is None
+    assert current.ci.status == "PASSED" and current.ci.head_sha == repo.pr.head_sha
+
+    started = runtime.event("SPEC-TEST", EventType.ARCH_REVIEW_STARTED, repo.pr.head_sha)
+    started.actor = "architect"
+    runtime.handle(started)
+    review = ArchitectureResult(
+        work_item="SPEC-TEST",
+        review_id="ARCH-HEAD-B",
+        result="FINAL_APPROVED",
+        reviewed_head_sha=repo.pr.head_sha,
+        blocking_items=[],
+        non_blocking_items=[],
+        reviewed_at=runtime.now(),
+        reviewer_role="CHIEF_INVESTMENT_ARCHITECT",
+    )
+    approved = runtime.event("SPEC-TEST", EventType.ARCH_FINAL_APPROVED, repo.pr.head_sha)
+    approved.actor = "architect"
+    runtime.handle(approved, review=review)
+    runtime.ready("SPEC-TEST")
+    eligible = runtime.handle(
+        runtime.event("SPEC-TEST", EventType.MERGE_GATE_PASSED, repo.pr.head_sha), pr=repo.pr
+    )
+    assert eligible.work_items["SPEC-TEST"].status == Stage.MERGE_ELIGIBLE
+    assert not any(event.actor == "chairman" for event in eligible.events)
+
+
+def test_transient_github_read_failure_recovers_on_reconciliation_without_chairman(runtime):
+    runtime, repo = runtime
+    repo.read_error = "GITHUB_UNAVAILABLE"
+    failed = runtime.reconcile("SPEC-TEST")
+    assert failed.work_items["SPEC-TEST"].status == Stage.RECOVERABLE_FAILURE
+    repo.read_error = None
+    recovered = runtime.reconcile("SPEC-TEST")
+    current = recovered.work_items["SPEC-TEST"]
+    assert current.status == Stage.FINAL_APPROVED
+    assert not current.recoverable_failures
+    assert current.approved_head_sha == repo.pr.head_sha
+    assert not any(event.actor == "chairman" for event in recovered.events)
+
+
 def test_e2e_premature_merge_blocks_closeout_and_next_spec(runtime):
     runtime, repo = runtime
     save(
@@ -233,7 +291,8 @@ def test_remote_failure_blocks(runtime, reason):
     runtime, repo = runtime
     repo.read_error = reason
     state = runtime.reconcile("SPEC-TEST")
-    assert state.work_items["SPEC-TEST"].blocked_reasons == [reason]
+    assert state.work_items["SPEC-TEST"].recoverable_failures == [reason]
+    assert state.work_items["SPEC-TEST"].status == Stage.RECOVERABLE_FAILURE
 
 
 def test_closed_pr_and_missing_pr(runtime):
@@ -241,7 +300,7 @@ def test_closed_pr_and_missing_pr(runtime):
     repo.pr.state = "CLOSED"
     assert (
         "PR_CLOSED_UNEXPECTEDLY"
-        in runtime.reconcile("SPEC-TEST").work_items["SPEC-TEST"].blocked_reasons
+        in runtime.reconcile("SPEC-TEST").work_items["SPEC-TEST"].recoverable_failures
     )
     save(runtime, lambda item: setattr(item, "pr_number", None))
     with pytest.raises(GovernanceError, match="PR_MISSING"):
@@ -337,9 +396,45 @@ def test_engineering_task_and_failed_task(runtime, tmp_path):
     reader, _ = context(tmp_path, state.work_items["SPEC-TEST"])
     trigger = Trigger(error="CODEX_TASK_FAILED")
     state = runtime.dispatch("SPEC-TEST", "ENGINEERING", engineering=trigger, reader=reader)
-    assert state.work_items["SPEC-TEST"].status == Stage.BLOCKED
+    assert state.work_items["SPEC-TEST"].status == Stage.RECOVERABLE_FAILURE
     assert len(trigger.calls) == 1
     assert list(state.tasks.values())[0].status == "FAILED"
+
+
+def test_ambiguous_engineering_delivery_failure_remains_sticky(runtime, tmp_path):
+    runtime, repo = runtime
+    save(runtime, lambda item: setattr(item, "status", Stage.SPEC_READY))
+    state, _ = runtime.store.load()
+    reader, _ = context(tmp_path, state.work_items["SPEC-TEST"])
+    trigger = Trigger(error="UNKNOWN_DELIVERY_OUTCOME")
+    state = runtime.dispatch("SPEC-TEST", "ENGINEERING", engineering=trigger, reader=reader)
+    assert state.work_items["SPEC-TEST"].status == Stage.BLOCKED
+    assert state.work_items["SPEC-TEST"].blocked_reasons == ["UNKNOWN_DELIVERY_OUTCOME"]
+
+
+def test_engineering_bridge_failure_retries_without_chairman(runtime, tmp_path):
+    runtime, repo = runtime
+    save(runtime, lambda item: setattr(item, "status", Stage.SPEC_READY))
+    state, _ = runtime.store.load()
+    reader, _ = context(tmp_path, state.work_items["SPEC-TEST"])
+    unavailable = Trigger(error="ENGINEERING_BRIDGE_UNAVAILABLE")
+    state = runtime.dispatch("SPEC-TEST", "ENGINEERING", engineering=unavailable, reader=reader)
+    item = state.work_items["SPEC-TEST"]
+    assert item.status == Stage.RECOVERABLE_FAILURE
+    assert item.recovery_stage == Stage.SPEC_READY
+    assert not item.chairman_required and not item.blocked_reasons
+    original_artifacts = {path for path in state.artifacts if path.startswith("tasks/")}
+
+    retry = runtime.event("SPEC-TEST", EventType.ENGINEERING_RETRY)
+    retry.actor = "engineer"
+    runtime.handle(retry)
+    runtime.policy.bridge_authorized = True
+    runtime.policy.bridge_mode = "OPENAI_API_BRIDGE"
+    delivered = runtime.dispatch("SPEC-TEST", "ENGINEERING", engineering=Trigger(), reader=reader)
+    assert delivered.work_items["SPEC-TEST"].status == Stage.SPEC_READY
+    retry_artifacts = {path for path in delivered.artifacts if path.startswith("tasks/")}
+    assert original_artifacts < retry_artifacts
+    assert any("/retry-" in path for path in retry_artifacts)
 
 
 def test_task_preconditions_and_kill_switch(runtime):

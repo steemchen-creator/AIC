@@ -66,6 +66,16 @@ TRANSITIONS: dict[EventType, tuple[set[Stage], Stage, Role]] = {
     EventType.CLOSEOUT_STARTED: ({Stage.MERGED}, Stage.CLOSEOUT, Role.BOT),
     EventType.CLOSEOUT_COMPLETED: ({Stage.CLOSEOUT}, Stage.CLOSED, Role.BOT),
     EventType.NEXT_SPEC_REQUESTED: ({Stage.CLOSED}, Stage.CLOSED, Role.BOT),
+    EventType.ENGINEERING_RETRY: (
+        {Stage.RECOVERABLE_FAILURE},
+        Stage.IMPLEMENTING,
+        Role.ENGINEER,
+    ),
+    EventType.ENGINEERING_FAILED: (
+        {Stage.IMPLEMENTING, Stage.FIXING},
+        Stage.RECOVERABLE_FAILURE,
+        Role.ENGINEER,
+    ),
 }
 CHAIRMAN_EVENTS = {
     EventType.PAUSE_PIPELINE,
@@ -79,13 +89,17 @@ INFORMATION_EVENTS = {
     EventType.MEMORY_UPDATE_REQUIRED,
 }
 FAILURE_EVENTS = {
-    EventType.CI_FAILED,
     EventType.OPERATION_FAILED,
     EventType.TASK_FAILED,
     EventType.MERGE_GATE_BLOCKED,
     EventType.CHAIRMAN_ESCALATION,
     EventType.BUDGET_LIMIT_REACHED,
     EventType.GOVERNANCE_EXCEPTION,
+}
+RECOVERABLE_FAILURE_EVENTS = {
+    EventType.CI_FAILED,
+    EventType.ENGINEERING_FAILED,
+    EventType.ENGINEERING_BRIDGE_UNAVAILABLE,
 }
 RECOVERABLE_HEAD_STAGES = {
     Stage.IMPLEMENTING,
@@ -99,6 +113,7 @@ RECOVERABLE_HEAD_STAGES = {
     Stage.MERGE_ELIGIBLE,
     Stage.MERGING,
     Stage.WAITING_FOR_ARCHITECTURE_REVIEW_BRIDGE,
+    Stage.RECOVERABLE_FAILURE,
 }
 
 
@@ -126,6 +141,10 @@ def apply_event(
     role = TRANSITIONS.get(event.event_type, (set(), Stage.BLOCKED, Role.BOT))[2]
     if event.event_type in CHAIRMAN_EVENTS:
         role = Role.CHAIRMAN
+    if event.event_type == EventType.ENGINEERING_FAILED and event.actor in policy.principals.get(
+        Role.BOT, []
+    ):
+        role = Role.BOT
     if event.event_type == EventType.CODEX_STARTED and item.status == Stage.FIX_READY:
         role = Role.ENGINEER
     authenticate(event, role, policy)
@@ -182,6 +201,35 @@ def apply_event(
             state.auto_merge_disabled = True
         else:
             state.paused = event.event_type == EventType.PAUSE_PIPELINE
+    elif event.event_type in RECOVERABLE_FAILURE_EVENTS or (
+        event.event_type == EventType.OPERATION_FAILED
+        and event.metadata.get("failure_class") == "RECOVERABLE_READ"
+    ):
+        reason = event.metadata.get("reason", event.event_type.value)
+        if event.event_type == EventType.ENGINEERING_FAILED and item.status not in {
+            Stage.SPEC_READY,
+            Stage.IMPLEMENTING,
+            Stage.FIX_READY,
+            Stage.FIXING,
+        }:
+            raise GovernanceError("ILLEGAL_TRANSITION")
+        if event.event_type == EventType.ENGINEERING_BRIDGE_UNAVAILABLE and item.status not in {
+            Stage.SPEC_READY,
+            Stage.FIX_READY,
+        }:
+            raise GovernanceError("ILLEGAL_TRANSITION")
+        if event.event_type == EventType.CI_FAILED:
+            if ci is None or ci.head_sha != item.head_sha:
+                raise GovernanceError("CI_STALE")
+            item.ci = ci
+        if item.status != Stage.RECOVERABLE_FAILURE:
+            recovery: Stage = item.status
+            if recovery in {Stage.MERGE_ELIGIBLE, Stage.MERGING}:
+                recovery = Stage.FINAL_APPROVED
+            item.recovery_stage = recovery
+        item.recoverable_failures = sorted(set(item.recoverable_failures + [reason]))
+        item.merge_eligible = False
+        item.status = Stage.RECOVERABLE_FAILURE
     elif event.event_type in FAILURE_EVENTS:
         reason = event.metadata.get("reason", event.event_type.value)
         item.blocked_reasons = sorted(set(item.blocked_reasons + [reason]))
@@ -193,10 +241,6 @@ def apply_event(
         if event.event_type == EventType.GOVERNANCE_EXCEPTION:
             item.governance_exception = True
             state.paused = True
-        if event.event_type == EventType.CI_FAILED:
-            if ci is None or ci.head_sha != item.head_sha:
-                raise GovernanceError("CI_STALE")
-            item.ci = ci
     elif event.event_type == EventType.PR_MERGED:
         if pr is None or pr.state != "MERGED" or pr.number != item.pr_number:
             raise GovernanceError("MERGE_NOT_VERIFIED")
@@ -229,6 +273,8 @@ def apply_event(
         item.merge_eligible = False
         item.merge_expected_sha = None
         item.ci = CI()
+        item.recoverable_failures = []
+        item.recovery_stage = None
         item.status = Stage.FIXING if item.unresolved_fix else Stage.REVIEW_REQUIRED
     elif event.event_type in {EventType.CI_STARTED, EventType.CI_PASSED}:
         if (
@@ -239,6 +285,10 @@ def apply_event(
         ):
             raise GovernanceError("CI_STALE_OR_WORK_ITEM_BLOCKED")
         item.ci = ci
+        if item.status == Stage.RECOVERABLE_FAILURE:
+            item.status = item.recovery_stage or Stage.REVIEW_REQUIRED
+            item.recovery_stage = None
+            item.recoverable_failures = []
         if ci.status != "PASSED":
             item.merge_eligible = False
             if item.status == Stage.MERGE_ELIGIBLE:
@@ -247,6 +297,18 @@ def apply_event(
         if item.status not in {Stage.REVIEW_REQUIRED, Stage.WAITING_FOR_ARCHITECTURE_REVIEW_BRIDGE}:
             raise GovernanceError("ILLEGAL_TRANSITION")
         item.status = Stage.WAITING_FOR_ARCHITECTURE_REVIEW_BRIDGE
+    elif event.event_type == EventType.ENGINEERING_RETRY:
+        resume_stage = item.recovery_stage
+        if resume_stage not in {
+            Stage.SPEC_READY,
+            Stage.IMPLEMENTING,
+            Stage.FIX_READY,
+            Stage.FIXING,
+        }:
+            raise GovernanceError("ILLEGAL_TRANSITION")
+        item.status = resume_stage
+        item.recovery_stage = None
+        item.recoverable_failures = []
     elif event.event_type in INFORMATION_EVENTS:
         if event.event_type == EventType.MEMORY_UPDATE_REQUIRED:
             item.memory_update_required = True

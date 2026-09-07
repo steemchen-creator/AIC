@@ -22,11 +22,19 @@ def classify_changed_paths(paths: list[str]) -> list[str]:
             ("broker", "broker"),
             ("leverage", "leverage_permission"),
             ("live_trad", "production_trading"),
-            ("risk", "platform_risk_hard_cap"),
             ("portfolio/policies", "platform_risk_hard_cap"),
         ):
             if marker in folded:
                 areas.add(area)
+        risk_policy_surface = "risk" in folded and (
+            folded.startswith("configs/")
+            or "/policies/" in folded
+            or "/policy/" in folded
+            or "/limits/" in folded
+            or any(marker in folded for marker in ("hard_cap", "risk_limit", "exposure_limit"))
+        )
+        if risk_policy_surface:
+            areas.add("platform_risk_hard_cap")
     return sorted(areas)
 
 

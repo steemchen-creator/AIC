@@ -30,6 +30,7 @@ class Stage(StrEnum):
     MERGED = "MERGED"
     CLOSEOUT = "CLOSEOUT"
     CLOSED = "CLOSED"
+    RECOVERABLE_FAILURE = "RECOVERABLE_FAILURE"
     BLOCKED = "BLOCKED"
     CHAIRMAN_DECISION_REQUIRED = "CHAIRMAN_DECISION_REQUIRED"
     FAILED = "FAILED"
@@ -65,6 +66,9 @@ class EventType(StrEnum):
     TASK_RESERVED = "TASK_RESERVED"
     TASK_DELIVERED = "TASK_DELIVERED"
     TASK_FAILED = "TASK_FAILED"
+    ENGINEERING_FAILED = "ENGINEERING_FAILED"
+    ENGINEERING_BRIDGE_UNAVAILABLE = "ENGINEERING_BRIDGE_UNAVAILABLE"
+    ENGINEERING_RETRY = "ENGINEERING_RETRY"
     BRIDGE_UNAVAILABLE = "BRIDGE_UNAVAILABLE"
     OPERATION_FAILED = "OPERATION_FAILED"
     PAUSE_PIPELINE = "PAUSE_PIPELINE"
@@ -206,6 +210,8 @@ class WorkItem(Model):
     ci: CI = Field(default_factory=CI)
     budget: Budget = Field(default_factory=Budget)
     blocked_reasons: list[str] = Field(default_factory=list)
+    recoverable_failures: list[str] = Field(default_factory=list)
+    recovery_stage: Stage | None = None
     unresolved_fix: str | None = None
     governance_exception: bool = False
     chairman_required: bool = False

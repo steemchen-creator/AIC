@@ -14,6 +14,10 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 - Read-only AIC Development Governance Gate, per-module coverage enforcement, project
   memory, proposed ADR-0007 and Chairman setup documentation. Bootstrap/manual-only;
   pipeline/auto-merge/external API activation remain disabled and SPEC-010 is not started.
+- FIX-DEV-GOV-001-001 separates the protected, one-shot state bootstrap from the disabled
+  normal runtime; resolves ordinary PR identity from durable state; treats exact-HEAD CI,
+  engineering bridge and read failures as recoverable while preserving sticky governance
+  incidents; and narrows risk hard-cap classification to explicit policy/configuration paths.
 
 - FIX-SPEC009-002 governance exception for the premature merge of PR #10,
   including tree equivalence, exact feature-head CI, fresh main regression,
