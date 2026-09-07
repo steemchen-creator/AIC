@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 16,
+  "revision": 17,
   "current_work_item": "DEV-GOV-VALIDATION-001",
   "work_items": {
     "DEV-GOV-001": {
@@ -405,6 +405,16 @@
       "timestamp": "2026-09-07T17:06:24.979508Z",
       "work_item_id": "DEV-GOV-VALIDATION-001",
       "actor": "aic-architect",
+      "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+      "output_state": "FINAL_APPROVED",
+      "metadata": {}
+    },
+    {
+      "event_id": "f8ac642b0a36441c9a4828cf16e0c719",
+      "event_type": "CI_PASSED",
+      "timestamp": "2026-09-07T17:13:26.473320Z",
+      "work_item_id": "DEV-GOV-VALIDATION-001",
+      "actor": "github-actions[bot]",
       "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
       "output_state": "FINAL_APPROVED",
       "metadata": {}
