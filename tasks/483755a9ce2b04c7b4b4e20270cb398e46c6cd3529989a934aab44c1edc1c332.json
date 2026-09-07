@@ -1,0 +1,10 @@
+{
+  "task_id": "483755a9ce2b04c7b4b4e20270cb398e46c6cd3529989a934aab44c1edc1c332",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "kind": "ARCHITECTURE_REVIEW",
+  "head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+  "artifact_path": "SETUP-DEV-GOV-001-CHAIRMAN.md",
+  "manifest_path": "requests/483755a9ce2b04c7b4b4e20270cb398e46c6cd3529989a934aab44c1edc1c332/REVIEW_CONTEXT.json",
+  "status": "RESERVED",
+  "delivery_reference": null
+}
