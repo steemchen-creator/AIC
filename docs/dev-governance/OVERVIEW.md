@@ -35,6 +35,13 @@ without effects when disabled. CI uses `gate`, which never writes state or merge
 Bootstrap DEV-GOV-001 is excluded from automatic Ready/Merge and next-SPEC progression.
 Its Draft PR, exact HEAD CI, external review and Chairman manual merge remain mandatory.
 
+CI PASS is scoped to the effective required-check set and, for required checks emitted by
+the trusted GitHub Actions app, their corresponding workflow runs. Every required check
+must retain the trusted app binding and exact PR HEAD; every corresponding workflow must
+retain the exact HEAD and a completed/success result. Checks and workflows outside the
+effective required set remain observable evidence but do not change required-CI status.
+Missing, stale, pending or failed required evidence continues to fail closed.
+
 After manual merge/Closeout, a distinct protected `workflow_dispatch` bootstrap job
 may create only `automation/dev-state` while the normal pipeline stays disabled. Its
 Chairman identity comes from protected environment configuration. Later implementation

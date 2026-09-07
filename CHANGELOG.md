@@ -182,6 +182,9 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Changed
 
+- Corrected DEV-GOV Bootstrap CI evaluation so non-required trusted workflows cannot block
+  required CI, while preserving required-check discovery, trusted-app identity, exact-SHA
+  binding and completed/success workflow enforcement.
 - Expanded `AGENTS.md` into the AIC AI Development Handbook.
 - Documented the governed repository structure in `README.md`.
 - Migrated the Python backend to the `apps/backend/src/aic_backend` package and

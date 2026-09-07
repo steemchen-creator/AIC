@@ -124,7 +124,14 @@ class GitHubClient:
         workflows: dict[int, WorkflowRun] = {}
         for check in raw:
             run_id = check["id"]
-            if check["app"]["id"] == policy.trusted_check_app_id:
+            app_id = check["app"]["id"]
+            expected_app = required.get(check["name"])
+            relevant_action = (
+                check["name"] in required
+                and app_id == (expected_app or policy.trusted_check_app_id)
+                and app_id == policy.trusted_check_app_id
+            )
+            if relevant_action:
                 match = re.search(r"/actions/runs/(\d+)(?:/|$)", check["html_url"])
                 if not match:
                     raise GovernanceError("CI_WORKFLOW_ID_MISSING")
@@ -146,7 +153,7 @@ class GitHubClient:
                     head_sha=check["head_sha"],
                     conclusion=check["conclusion"] or "pending",
                     run_id=run_id,
-                    app_id=check["app"]["id"],
+                    app_id=app_id,
                     url=check["html_url"],
                 )
             )
@@ -165,7 +172,10 @@ class GitHubClient:
             and run.conclusion == "success"
             for run in workflows.values()
         )
-        failed = any(c.conclusion not in {"success", "pending"} for c in relevant)
+        failed = any(c.conclusion not in {"success", "pending"} for c in relevant) or any(
+            run.status == "completed" and run.conclusion not in {"success", None}
+            for run in workflows.values()
+        )
         return CI(
             head_sha=pr.head_sha,
             status="PASSED" if passed else "FAILED" if failed else "PENDING",
