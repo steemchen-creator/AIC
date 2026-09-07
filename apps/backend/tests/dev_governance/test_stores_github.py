@@ -342,6 +342,170 @@ def test_ci_required_check_discovery_including_extra_rules(pr, policy, protected
     assert ci.required_checks["extra"] == 42 and ci.discovery_complete
 
 
+@pytest.mark.parametrize(
+    ("unrelated_status", "unrelated_conclusion"),
+    [("completed", "skipped"), ("in_progress", None), ("completed", "failure")],
+)
+def test_ci_ignores_non_required_trusted_workflow_state(
+    pr, policy, unrelated_status, unrelated_conclusion
+):
+    requested_runs = []
+
+    def handle(request):
+        path = request.url.path
+        if path.endswith("/rules/branches/main"):
+            return httpx.Response(200, json=[])
+        if path.endswith("/branches/main"):
+            return httpx.Response(200, json={"protected": True})
+        if path.endswith("/required_status_checks"):
+            return httpx.Response(200, json={"contexts": [], "checks": []})
+        if "/actions/runs/" in path:
+            run_id = int(path.rsplit("/", 1)[-1])
+            requested_runs.append(run_id)
+            return httpx.Response(
+                200,
+                json={
+                    "id": run_id,
+                    "head_sha": pr.head_sha,
+                    "status": "completed" if run_id == 555 else unrelated_status,
+                    "conclusion": "success" if run_id == 555 else unrelated_conclusion,
+                    "run_attempt": 1,
+                    "html_url": f"https://github.com/example/actions/runs/{run_id}",
+                },
+            )
+        return httpx.Response(
+            200,
+            json={
+                "check_runs": [
+                    {
+                        "name": name,
+                        "head_sha": pr.head_sha,
+                        "conclusion": "success",
+                        "id": index + 1,
+                        "app": {"id": policy.trusted_check_app_id},
+                        "html_url": "https://github.com/example/actions/runs/555/job/1",
+                    }
+                    for index, name in enumerate(policy.required_checks)
+                ]
+                + [
+                    {
+                        "name": "AIC Development Orchestrator / orchestrate",
+                        "head_sha": pr.head_sha,
+                        "conclusion": unrelated_conclusion,
+                        "id": 999,
+                        "app": {"id": policy.trusted_check_app_id},
+                        "html_url": "https://github.com/example/actions/runs/666/job/1",
+                    }
+                ]
+            },
+        )
+
+    ci = client(handle).ci(pr, policy)
+    assert ci.status == "PASSED"
+    assert requested_runs == [555]
+    assert [run.run_id for run in ci.workflow_runs] == [555]
+    assert any(
+        check.name == "AIC Development Orchestrator / orchestrate"
+        and check.conclusion == (unrelated_conclusion or "pending")
+        for check in ci.checks
+    )
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected"),
+    [
+        ("check_failed", "FAILED"),
+        ("workflow_failed", "FAILED"),
+        ("check_stale", "PENDING"),
+        ("workflow_stale", "PENDING"),
+        ("check_missing", "PENDING"),
+        ("workflow_pending", "PENDING"),
+    ],
+)
+def test_required_check_and_workflow_failures_remain_fail_closed(pr, policy, failure, expected):
+    def handle(request):
+        path = request.url.path
+        if path.endswith("/rules/branches/main"):
+            return httpx.Response(200, json=[])
+        if path.endswith("/branches/main"):
+            return httpx.Response(200, json={"protected": True})
+        if path.endswith("/required_status_checks"):
+            return httpx.Response(200, json={"contexts": [], "checks": []})
+        if "/actions/runs/" in path:
+            return httpx.Response(
+                200,
+                json={
+                    "id": 555,
+                    "head_sha": "b" * 40 if failure == "workflow_stale" else pr.head_sha,
+                    "status": "in_progress" if failure == "workflow_pending" else "completed",
+                    "conclusion": None
+                    if failure == "workflow_pending"
+                    else "failure"
+                    if failure == "workflow_failed"
+                    else "success",
+                    "run_attempt": 1,
+                    "html_url": "https://github.com/example/actions/runs/555",
+                },
+            )
+        names = list(policy.required_checks)
+        if failure == "check_missing":
+            names.pop()
+        return httpx.Response(
+            200,
+            json={
+                "check_runs": [
+                    {
+                        "name": name,
+                        "head_sha": "b" * 40
+                        if failure == "check_stale" and index == 0
+                        else pr.head_sha,
+                        "conclusion": "failure"
+                        if failure == "check_failed" and index == 0
+                        else "success",
+                        "id": index + 1,
+                        "app": {"id": policy.trusted_check_app_id},
+                        "html_url": "https://github.com/example/actions/runs/555/job/1",
+                    }
+                    for index, name in enumerate(names)
+                ]
+            },
+        )
+
+    assert client(handle).ci(pr, policy).status == expected
+
+
+def test_missing_required_workflow_run_fails_closed(pr, policy):
+    def handle(request):
+        path = request.url.path
+        if path.endswith("/rules/branches/main"):
+            return httpx.Response(200, json=[])
+        if path.endswith("/branches/main"):
+            return httpx.Response(200, json={"protected": True})
+        if path.endswith("/required_status_checks"):
+            return httpx.Response(200, json={"contexts": [], "checks": []})
+        if "/actions/runs/" in path:
+            return httpx.Response(404)
+        return httpx.Response(
+            200,
+            json={
+                "check_runs": [
+                    {
+                        "name": name,
+                        "head_sha": pr.head_sha,
+                        "conclusion": "success",
+                        "id": index + 1,
+                        "app": {"id": policy.trusted_check_app_id},
+                        "html_url": "https://github.com/example/actions/runs/555/job/1",
+                    }
+                    for index, name in enumerate(policy.required_checks)
+                ]
+            },
+        )
+
+    with pytest.raises(GovernanceError, match="GITHUB_HTTP_404"):
+        client(handle).ci(pr, policy)
+
+
 def test_merge_expected_sha_and_ready_head_drift(pr):
     requests = []
 
