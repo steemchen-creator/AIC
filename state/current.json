@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 2,
-  "current_work_item": "DEV-GOV-001",
+  "revision": 3,
+  "current_work_item": "DEV-GOV-VALIDATION-001",
   "work_items": {
     "DEV-GOV-001": {
       "work_item_id": "DEV-GOV-001",
@@ -112,6 +112,54 @@
       },
       "next_spec_requested": false,
       "memory_update_required": false
+    },
+    "DEV-GOV-VALIDATION-001": {
+      "work_item_id": "DEV-GOV-VALIDATION-001",
+      "kind": "DOCUMENTATION",
+      "parent_work_item": "DEV-GOV-001",
+      "previous_work_item": "DEV-GOV-001",
+      "status": "PLANNED",
+      "created_at": "2026-09-07T15:17:29.390000Z",
+      "artifact_path": "SETUP-DEV-GOV-001-CHAIRMAN.md",
+      "artifact_sha256": "dad7939bc14f2c091603c48cac9a0988a3133c096b4df4f3ad5a5265f4e70d79",
+      "target_branch": "feature/dev-gov-validation-001",
+      "execution_authorization": "CHAIRMAN-DELEGATION-AIC-STANDARD-WORK-V1",
+      "pr_number": null,
+      "head_sha": null,
+      "base_sha": null,
+      "review_artifact": null,
+      "architecture_status": "NOT_REVIEWED",
+      "approved_head_sha": null,
+      "review_id": null,
+      "ci": {
+        "head_sha": null,
+        "status": "UNKNOWN",
+        "required_checks": {},
+        "checks": [],
+        "discovery_complete": false,
+        "branch_protection_enabled": false,
+        "workflow_runs": []
+      },
+      "budget": {
+        "architecture_calls_used": 0,
+        "review_loops": 0,
+        "duplicate_calls_avoided": 0,
+        "budget_limit_hits": 0,
+        "reserved_requests": []
+      },
+      "blocked_reasons": [],
+      "recoverable_failures": [],
+      "recovery_stage": null,
+      "unresolved_fix": null,
+      "governance_exception": false,
+      "chairman_required": false,
+      "changed_areas": [],
+      "merge_eligible": false,
+      "merge_commit": null,
+      "merge_expected_sha": null,
+      "closeout": {},
+      "next_spec_requested": false,
+      "memory_update_required": false
     }
   },
   "events": [
@@ -146,6 +194,19 @@
         "auto_ready": "false",
         "principals_configured": "true",
         "setup_completed": "true"
+      }
+    },
+    {
+      "event_id": "e1d006feda814aa8b3ce3aed6fe2b8c4",
+      "event_type": "TASK_RESERVED",
+      "timestamp": "2026-09-07T15:30:13.724633Z",
+      "work_item_id": "DEV-GOV-VALIDATION-001",
+      "actor": "github-actions[bot]",
+      "input_sha": null,
+      "output_state": "PLANNED",
+      "metadata": {
+        "reason": "EXECUTION_AUTHORIZATION",
+        "authorized_actor": "aic-architect"
       }
     }
   ],

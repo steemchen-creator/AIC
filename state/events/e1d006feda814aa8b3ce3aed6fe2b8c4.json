@@ -1,0 +1,13 @@
+{
+  "event_id": "e1d006feda814aa8b3ce3aed6fe2b8c4",
+  "event_type": "TASK_RESERVED",
+  "timestamp": "2026-09-07T15:30:13.724633Z",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "actor": "github-actions[bot]",
+  "input_sha": null,
+  "output_state": "PLANNED",
+  "metadata": {
+    "reason": "EXECUTION_AUTHORIZATION",
+    "authorized_actor": "aic-architect"
+  }
+}
