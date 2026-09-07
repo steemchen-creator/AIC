@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 4,
+  "revision": 5,
   "current_work_item": "DEV-GOV-VALIDATION-001",
   "work_items": {
     "DEV-GOV-001": {
@@ -218,12 +218,37 @@
       "input_sha": null,
       "output_state": "SPEC_READY",
       "metadata": {}
+    },
+    {
+      "event_id": "bb6eafb025574945bff24b0f75e27325",
+      "event_type": "TASK_RESERVED",
+      "timestamp": "2026-09-07T15:30:19.292653Z",
+      "work_item_id": "DEV-GOV-VALIDATION-001",
+      "actor": "github-actions[bot]",
+      "input_sha": null,
+      "output_state": "SPEC_READY",
+      "metadata": {
+        "task_id": "27d290dc82da20c14b0bb0a1e0159351ae85e264fe4a5fbc6dc4a34d34fca756"
+      }
     }
   ],
-  "tasks": {},
+  "tasks": {
+    "27d290dc82da20c14b0bb0a1e0159351ae85e264fe4a5fbc6dc4a34d34fca756": {
+      "task_id": "27d290dc82da20c14b0bb0a1e0159351ae85e264fe4a5fbc6dc4a34d34fca756",
+      "work_item_id": "DEV-GOV-VALIDATION-001",
+      "kind": "ENGINEERING",
+      "head_sha": null,
+      "artifact_path": "SETUP-DEV-GOV-001-CHAIRMAN.md",
+      "manifest_path": null,
+      "status": "RESERVED",
+      "delivery_reference": null
+    }
+  },
   "reviews": {},
   "technical_debt": {},
-  "artifacts": {},
+  "artifacts": {
+    "tasks/27d290dc82da20c14b0bb0a1e0159351ae85e264fe4a5fbc6dc4a34d34fca756.json": "{\n  \"task_id\": \"27d290dc82da20c14b0bb0a1e0159351ae85e264fe4a5fbc6dc4a34d34fca756\",\n  \"work_item_id\": \"DEV-GOV-VALIDATION-001\",\n  \"kind\": \"ENGINEERING\",\n  \"head_sha\": null,\n  \"artifact_path\": \"SETUP-DEV-GOV-001-CHAIRMAN.md\",\n  \"manifest_path\": null,\n  \"status\": \"RESERVED\",\n  \"delivery_reference\": null\n}"
+  },
   "new_specs_by_day": {},
   "paused": false,
   "auto_merge_disabled": false,
