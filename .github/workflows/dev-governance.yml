@@ -52,4 +52,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AIC_GOVERNANCE_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AIC_PIPELINE_ENABLED: ${{ vars.AIC_PIPELINE_ENABLED }}
         run: python -m aic_dev_governance run >> "$GITHUB_STEP_SUMMARY"

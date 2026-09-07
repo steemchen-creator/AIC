@@ -9,6 +9,26 @@ PLANNED → SPEC_READY → IMPLEMENTING → IMPLEMENTATION_COMPLETE → REVIEW_R
 ARCHITECTURE_REVIEWING → FINAL_APPROVED → MERGE_ELIGIBLE → MERGING → MERGED →
 CLOSEOUT → CLOSED.
 
+## Post-bootstrap deployment transition
+
+`DEV-GOV-001=CLOSED` is followed by a separate one-time administrative transition:
+
+```text
+bootstrap CLOSED + normal pipeline OFF
+→ protected Chairman deployment setup
+→ DEPLOYMENT_SETUP_COMPLETED
+→ fingerprinted MANUAL/DRY_RUN policy available
+→ external activation switch ON
+→ Architect registers approved ordinary work item
+→ PLANNED → SPEC_READY
+```
+
+Deployment setup is not a WorkItem approval state and grants no Architecture Approval.
+It requires the closed bootstrap, exact configured Chairman identity, complete separated
+principals and non-secret validated policy. State append rules make the record immutable;
+a duplicate setup fails closed. Activation itself does not edit state or policy—it only
+materializes the recorded policy after fingerprint verification.
+
 Review failure: ARCHITECTURE_REVIEWING → CHANGES_REQUIRED → FIX_READY → FIXING →
 REVIEW_REQUIRED. Candidate/debt-only review results are not Final Approval.
 
@@ -43,3 +63,7 @@ output state and bounded structured metadata. Stale timestamps are rejected. Eve
 IDs are permanently idempotent; matching type/work/SHA within the configured window
 is deduplicated in the same output stage. Legitimate later lifecycle rounds are not
 silently treated as earlier deliveries. State writes require expected revision.
+
+Registration records execution authorization first and publication separately. The
+authenticated Architect may use the reviewed standard-work delegation; this does not
+impersonate Chairman or Architecture Approval of the SPEC's investment substance.

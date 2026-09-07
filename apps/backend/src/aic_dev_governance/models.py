@@ -76,6 +76,7 @@ class EventType(StrEnum):
     DISABLE_AUTO_MERGE = "DISABLE_AUTO_MERGE"
     MEMORY_UPDATE_REQUIRED = "MEMORY_UPDATE_REQUIRED"
     RECOVERY_AUTHORIZED = "RECOVERY_AUTHORIZED"
+    DEPLOYMENT_SETUP_COMPLETED = "DEPLOYMENT_SETUP_COMPLETED"
 
 
 class Role(StrEnum):
@@ -224,6 +225,31 @@ class WorkItem(Model):
     memory_update_required: bool = False
 
 
+class DeploymentPolicyConfig(Model):
+    """Non-secret effective values supplied only by the protected setup environment."""
+
+    policy_version: Identifier
+    pipeline_enabled: Literal[True] = True
+    mode: Literal["MANUAL", "DRY_RUN"]
+    merge_enabled: bool = False
+    auto_ready: Literal[False] = False
+    bridge_mode: Literal["MANUAL_BRIDGE", "CHATGPT_WORK_EVENT_BRIDGE", "OPENAI_API_BRIDGE"] = (
+        "MANUAL_BRIDGE"
+    )
+    bridge_authorized: bool = False
+    openai_model: str | None = None
+    standard_work_execution_authorization: str = Field(min_length=1, max_length=500)
+    principals: dict[Role, list[str]]
+
+
+class DeploymentSetup(Model):
+    status: Literal["COMPLETE"] = "COMPLETE"
+    authorized_by: str = Field(min_length=1, max_length=200)
+    setup_at: AwareDatetime
+    policy_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    effective_policy: DeploymentPolicyConfig
+
+
 class Event(Model):
     event_id: Identifier
     event_type: EventType
@@ -268,6 +294,7 @@ class State(Model):
     paused: bool = False
     auto_merge_disabled: bool = False
     project_blocked_reasons: list[str] = Field(default_factory=list)
+    deployment_setup: DeploymentSetup | None = None
 
 
 class Policy(Model):

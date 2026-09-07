@@ -1,0 +1,34 @@
+name: AIC Development Governance Setup
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aic-development-state
+  cancel-in-progress: false
+
+jobs:
+  setup-only:
+    if: github.ref == 'refs/heads/main' && vars.AIC_PIPELINE_ENABLED != 'true'
+    environment: aic-development-governance-setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted main only
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install .
+      - name: Record one-time non-secret effective deployment policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AIC_SETUP_CHAIRMAN: ${{ vars.AIC_SETUP_CHAIRMAN }}
+          AIC_DEPLOYMENT_POLICY: ${{ vars.AIC_DEPLOYMENT_POLICY }}
+          AIC_PIPELINE_ENABLED: ${{ vars.AIC_PIPELINE_ENABLED }}
+        run: python -m aic_dev_governance setup >> "$GITHUB_STEP_SUMMARY"

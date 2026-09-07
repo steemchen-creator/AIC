@@ -12,14 +12,14 @@ from .artifacts import dashboard
 from .github import GitHubClient
 from .models import GovernanceError
 from .observability import metrics
-from .runner import generate_review_context, run, run_bootstrap
+from .runner import generate_review_context, run, run_bootstrap, run_setup
 from .store import GitHubStateBranchStore, LocalFileStateStore
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="AIC deterministic development control plane")
     parser.add_argument(
-        "command", choices=["gate", "run", "bootstrap", "status", "metrics", "context"]
+        "command", choices=["gate", "run", "bootstrap", "setup", "status", "metrics", "context"]
     )
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--state-dir", type=Path, default=Path("tmp/dev-governance/state"))
@@ -51,6 +51,8 @@ def main() -> int:
             )
         elif args.command == "bootstrap":
             print(run_bootstrap(args.root))
+        elif args.command == "setup":
+            print(run_setup(args.root))
         else:
             print(run(args.root, gate_only=args.command == "gate"))
     except (GovernanceError, ValidationError, ValueError, KeyError, OSError) as error:

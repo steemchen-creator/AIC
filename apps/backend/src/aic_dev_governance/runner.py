@@ -4,9 +4,11 @@ import hashlib
 import json
 import os
 import re
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import httpx
 
@@ -21,9 +23,17 @@ from .artifacts import (
 )
 from .bridges import GitHubEventTriggerAdapter, OpenAIApiTriggerAdapter, select_architecture_bridge
 from .ci_gate import BOOTSTRAP_BRANCH, check_governance, resolve_work_item
+from .deployment import (
+    materialize_effective_policy,
+    policy_fingerprint,
+    validate_deployment_policy,
+)
 from .github import GitHubClient
 from .models import (
     ArchitectureResult,
+    DeploymentPolicyConfig,
+    DeploymentSetup,
+    Event,
     EventType,
     GovernanceError,
     Policy,
@@ -37,7 +47,7 @@ from .models import (
 from .observability import MEMORY_TRIGGERS
 from .orchestrator import Orchestrator
 from .state_machine import authenticate
-from .store import GitHubStateBranchStore
+from .store import GitHubStateBranchStore, StateStore
 from .workspace import GitWorkspace
 
 
@@ -296,8 +306,14 @@ def dispatch_command(
         raise GovernanceError("BOOTSTRAP_ENTRYPOINT_REQUIRED")
     if command == "register":
         item = WorkItem.model_validate(payload["work_item"])
+        authorization = orchestrator.event(item.work_item_id, EventType.TASK_RESERVED)
+        authorization.actor = actor
+        authenticate(authorization, Role.ARCHITECT, orchestrator.policy)
         reader = GitHubArtifactReader(github, {item.artifact_path}, payload["approved_ref"])
-        return orchestrator.register(item, reader, actor)
+        orchestrator.register(item, reader, actor)
+        published = orchestrator.event(item.work_item_id, EventType.SPEC_PUBLISHED)
+        published.actor = actor
+        return orchestrator.handle(published)
     if not work_item or work_item not in state.work_items:
         raise GovernanceError("WORK_ITEM_UNKNOWN")
     if command == "review":
@@ -500,9 +516,120 @@ def run_bootstrap(root: Path) -> str:
     return dashboard(state)
 
 
+def complete_deployment_setup(
+    store: StateStore,
+    static_policy: Policy,
+    actor: str,
+    config: DeploymentPolicyConfig,
+    *,
+    now: Callable[[], datetime] = lambda: datetime.now(UTC),
+) -> State:
+    """Record the protected setup once; this function cannot activate or dispatch work."""
+    state, revision = store.load()
+    materialize_effective_policy(static_policy, state, activated=False)
+    if state.deployment_setup is not None:
+        raise GovernanceError("DEPLOYMENT_SETUP_ALREADY_COMPLETE")
+    bootstrap = state.work_items.get("DEV-GOV-001")
+    if (
+        bootstrap is None
+        or state.current_work_item != bootstrap.work_item_id
+        or bootstrap.status != Stage.CLOSED
+        or bootstrap.architecture_status != ReviewStatus.FINAL_APPROVED
+        or bootstrap.ci.status != "PASSED"
+        or not bootstrap.merge_commit
+        or not bootstrap.closeout
+        or bootstrap.next_spec_requested
+    ):
+        raise GovernanceError("BOOTSTRAP_CLOSEOUT_STATE_REQUIRED")
+    validate_deployment_policy(config, actor)
+    serialized = config.model_dump_json()
+    validate_artifact_content(serialized)
+    fingerprint = policy_fingerprint(config)
+    timestamp = now()
+    state.deployment_setup = DeploymentSetup(
+        authorized_by=actor,
+        setup_at=timestamp,
+        policy_fingerprint=fingerprint,
+        effective_policy=config,
+    )
+    state.events.append(
+        Event(
+            event_id=uuid4().hex,
+            event_type=EventType.DEPLOYMENT_SETUP_COMPLETED,
+            timestamp=timestamp,
+            work_item_id=bootstrap.work_item_id,
+            actor=actor,
+            input_sha=bootstrap.head_sha,
+            output_state=bootstrap.status,
+            metadata={
+                "policy_version": config.policy_version,
+                "policy_fingerprint": fingerprint,
+                "mode": config.mode,
+                "bridge_mode": config.bridge_mode,
+                "merge_enabled": str(config.merge_enabled).lower(),
+                "auto_ready": str(config.auto_ready).lower(),
+                "principals_configured": "true",
+                "setup_completed": "true",
+            },
+        )
+    )
+    state.revision += 1
+    store.save(state, revision)
+    return state
+
+
+def run_setup(root: Path) -> str:
+    """Protected setup path; it records policy but never activates the normal runner."""
+    static_policy = Policy.model_validate_json(
+        (root / "configs/dev-governance.json").read_text("utf-8")
+    )
+    token = os.environ.get("GH_TOKEN", "")
+    event_path = os.environ.get("GITHUB_EVENT_PATH", "")
+    actor = os.environ.get("GITHUB_ACTOR", "")
+    trusted_actor = os.environ.get("AIC_SETUP_CHAIRMAN", "")
+    raw_policy = os.environ.get("AIC_DEPLOYMENT_POLICY", "")
+    if not token:
+        raise GovernanceError("GITHUB_AUTHORIZATION_MISSING")
+    if os.environ.get("GITHUB_EVENT_NAME") != "workflow_dispatch" or not event_path:
+        raise GovernanceError("DEPLOYMENT_SETUP_MANUAL_WORKFLOW_REQUIRED")
+    if os.environ.get("AIC_PIPELINE_ENABLED") == "true":
+        raise GovernanceError("DEPLOYMENT_SETUP_REQUIRES_PIPELINE_OFF")
+    try:
+        event = json.loads(Path(event_path).read_text("utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise GovernanceError("DEPLOYMENT_SETUP_EVENT_INVALID") from error
+    if not isinstance(event, dict):
+        raise GovernanceError("DEPLOYMENT_SETUP_EVENT_INVALID")
+    if not actor or actor != trusted_actor:
+        raise GovernanceError("DEPLOYMENT_SETUP_CHAIRMAN_NOT_AUTHORIZED")
+    if not raw_policy:
+        raise GovernanceError("DEPLOYMENT_POLICY_REQUIRED")
+    validate_artifact_content(raw_policy)
+    config = DeploymentPolicyConfig.model_validate_json(raw_policy)
+    with httpx.Client(
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+    ) as client:
+        github = GitHubClient(
+            client, static_policy.repository, attempts=static_policy.read_attempts
+        )
+        store = GitHubStateBranchStore(github)
+        state = complete_deployment_setup(store, static_policy, actor, config)
+    setup = state.deployment_setup
+    if setup is None:  # Defensive narrowing after validated transition.
+        raise GovernanceError("DEPLOYMENT_SETUP_INCOMPLETE")
+    return dashboard(state) + f"\nDeployment policy: {setup.policy_fingerprint}"
+
+
 def run(root: Path, *, gate_only: bool = False) -> str:
-    policy = Policy.model_validate_json((root / "configs/dev-governance.json").read_text("utf-8"))
-    if not gate_only and not policy.pipeline_enabled:
+    static_policy = Policy.model_validate_json(
+        (root / "configs/dev-governance.json").read_text("utf-8")
+    )
+    activated = os.environ.get("AIC_PIPELINE_ENABLED") == "true"
+    if not gate_only and not activated:
         return "PIPELINE_DISABLED: read/audit remain available; no external effects."
     token = os.environ.get("GH_TOKEN", "")
     if not token:
@@ -514,7 +641,9 @@ def run(root: Path, *, gate_only: bool = False) -> str:
             "X-GitHub-Api-Version": "2022-11-28",
         }
     ) as client:
-        github = GitHubClient(client, policy.repository, attempts=policy.read_attempts)
+        github = GitHubClient(
+            client, static_policy.repository, attempts=static_policy.read_attempts
+        )
         store = GitHubStateBranchStore(github)
         event_path = os.environ.get("GITHUB_EVENT_PATH")
         if not event_path:
@@ -528,8 +657,10 @@ def run(root: Path, *, gate_only: bool = False) -> str:
             expected = os.environ.get("AIC_EXPECTED_HEAD")
             if expected != pr.head_sha:
                 raise GovernanceError("CI_CHECKOUT_HEAD_STALE")
-            check_governance(root, pr, store.load()[0], policy)
+            check_governance(root, pr, store.load()[0], static_policy)
             return "AIC Development Governance Gate: PASSED"
+        state, _ = store.load()
+        policy = materialize_effective_policy(static_policy, state, activated=True)
         actor = os.environ.get("GITHUB_ACTOR", "")
         orchestrator = Orchestrator(store, github, policy, "github-actions[bot]")
         inputs = raw.get("inputs", {})

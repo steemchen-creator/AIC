@@ -63,7 +63,13 @@ def test_local_atomic_write_failure_preserves_prior_state(tmp_path, state, monke
 
 
 def test_append_checks_and_corrupt_state(tmp_path, state):
-    from aic_dev_governance.models import ArchitectureResult
+    from aic_dev_governance.deployment import policy_fingerprint
+    from aic_dev_governance.models import (
+        ArchitectureResult,
+        DeploymentPolicyConfig,
+        DeploymentSetup,
+        Role,
+    )
 
     initial = audited(state)
     with pytest.raises(GovernanceError, match="STATE_REVISION_NOT_ADVANCED"):
@@ -94,6 +100,27 @@ def test_append_checks_and_corrupt_state(tmp_path, state):
     newer = audited(initial, "two")
     newer.artifacts = {}
     with pytest.raises(GovernanceError, match="ARTIFACT_REWRITE_PROHIBITED"):
+        validate_append(initial, newer)
+    deployment = DeploymentPolicyConfig(
+        policy_version="DEPLOYMENT-V1",
+        mode="MANUAL",
+        standard_work_execution_authorization="standard-work",
+        principals={
+            Role.CHAIRMAN: ["chairman"],
+            Role.ARCHITECT: ["architect"],
+            Role.ENGINEER: ["engineer"],
+            Role.BOT: ["github-actions[bot]"],
+        },
+    )
+    initial.deployment_setup = DeploymentSetup(
+        authorized_by="chairman",
+        setup_at=datetime(2026, 9, 7, tzinfo=UTC),
+        policy_fingerprint=policy_fingerprint(deployment),
+        effective_policy=deployment,
+    )
+    newer = audited(initial, "three")
+    newer.deployment_setup = None
+    with pytest.raises(GovernanceError, match="DEPLOYMENT_SETUP_REWRITE_PROHIBITED"):
         validate_append(initial, newer)
 
 

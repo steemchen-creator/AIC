@@ -98,7 +98,8 @@ def test_future_spec_uses_state_identity_without_mutating_bootstrap_descriptor(
 ):
     root, descriptor, target = gate_root
     descriptor["work_item_id"] = "DEV-GOV-001"
-    target.write_text(json.dumps(descriptor))
+    original_descriptor = json.dumps(descriptor)
+    target.write_text(original_descriptor)
     item.work_item_id = "SPEC-010"
     item.target_branch = "feature/spec010-implementation"
     item.status = Stage.REVIEW_REQUIRED
@@ -109,6 +110,7 @@ def test_future_spec_uses_state_identity_without_mutating_bootstrap_descriptor(
     state.current_work_item = item.work_item_id
     state.work_items = {"DEV-GOV-001": state.work_items["PREVIOUS"], item.work_item_id: item}
     check_governance(root, pr, state, policy)
+    assert target.read_text() == original_descriptor
     assert resolve_work_item(pr, state) is item
     assert classify_changed_paths(["apps/backend/src/risk_report.py", "tests/test_risk.py"]) == []
 
@@ -280,6 +282,9 @@ def test_actual_diff_classification_not_pr_claim():
         )
         == []
     )
+    assert classify_changed_paths(
+        [".github/workflows/dev-governance-setup.yml", "configs/dev-governance.json"]
+    ) == ["secret_permission_model"]
 
 
 def test_remote_artifact_allowlist_and_limits():
@@ -347,10 +352,14 @@ def test_cli_status_metrics_error_and_run(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr("sys.argv", ["aic_dev_governance", "run"])
     monkeypatch.setattr(module, "run", lambda *args, **kwargs: "DISABLED")
     assert module.main() == 0 and "DISABLED" in capsys.readouterr().out
+    monkeypatch.setattr("sys.argv", ["aic_dev_governance", "setup"])
+    monkeypatch.setattr(module, "run_setup", lambda *args, **kwargs: "SETUP_COMPLETE")
+    assert module.main() == 0 and "SETUP_COMPLETE" in capsys.readouterr().out
 
     def fail(*args, **kwargs):
         raise GovernanceError("SAFE_REASON")
 
+    monkeypatch.setattr("sys.argv", ["aic_dev_governance", "run"])
     monkeypatch.setattr(module, "run", fail)
     assert module.main() == 1 and "SAFE_REASON" in capsys.readouterr().out
 

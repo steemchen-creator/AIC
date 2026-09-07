@@ -8,9 +8,13 @@ import pytest
 
 from aic_dev_governance.models import (
     ArchitectureResult,
+    DeploymentPolicyConfig,
+    DeploymentSetup,
     Event,
     EventType,
     GovernanceError,
+    Policy,
+    Role,
     Stage,
     State,
 )
@@ -64,7 +68,7 @@ def test_command_register_review_attach_and_memory(service, item, tmp_path):
         orchestrator,
         github,
         tmp_path,
-        "chairman",
+        "architect",
         "register",
         {"work_item": item.model_dump(mode="json"), "approved_ref": "a" * 40},
     )
@@ -376,7 +380,27 @@ def test_run_protected_dispatch_then_bounded_tick(service, tmp_path, monkeypatch
     orchestrator, github = service
     config = tmp_path / "configs/dev-governance.json"
     config.parent.mkdir()
-    config.write_text(policy.model_dump_json())
+    static_policy = Policy(principals={Role.BOT: ["github-actions[bot]"]})
+    config.write_text(static_policy.model_dump_json())
+    deployment = DeploymentPolicyConfig(
+        policy_version="DEPLOYMENT-V1",
+        mode="MANUAL",
+        standard_work_execution_authorization="standard-work",
+        principals={
+            Role.CHAIRMAN: ["chairman"],
+            Role.ARCHITECT: ["architect"],
+            Role.ENGINEER: ["engineer"],
+            Role.BOT: ["github-actions[bot]"],
+        },
+    )
+    from aic_dev_governance.deployment import policy_fingerprint
+
+    orchestrator.store.load.return_value[0].deployment_setup = DeploymentSetup(
+        authorized_by="chairman",
+        setup_at=datetime(2026, 9, 7, tzinfo=UTC),
+        policy_fingerprint=policy_fingerprint(deployment),
+        effective_policy=deployment,
+    )
     event = tmp_path / "event.json"
     event.write_text(
         json.dumps(
@@ -391,6 +415,7 @@ def test_run_protected_dispatch_then_bounded_tick(service, tmp_path, monkeypatch
     monkeypatch.setenv("GH_TOKEN", "placeholder-test-token")
     monkeypatch.setenv("GITHUB_EVENT_PATH", str(event))
     monkeypatch.setenv("GITHUB_ACTOR", "chairman")
+    monkeypatch.setenv("AIC_PIPELINE_ENABLED", "true")
     monkeypatch.setattr(module, "GitHubClient", lambda *args, **kwargs: github)
     monkeypatch.setattr(module, "GitHubStateBranchStore", lambda *args: orchestrator.store)
     monkeypatch.setattr(module, "Orchestrator", lambda *args: orchestrator)

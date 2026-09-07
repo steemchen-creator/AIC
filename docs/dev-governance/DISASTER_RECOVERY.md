@@ -31,3 +31,15 @@ manually merged, externally closed out, its branch deleted and exact CI verified
 It verifies the reviewed head, merged PR/tree, merge containment in current main,
 branch deletion, exact CI and records the external closeout reference, never
 creates the bootstrap approval itself and never requests SPEC-010.
+
+Deployment setup is a second one-time transition after bootstrap and before activation.
+Recovery must read the complete stored `DeploymentSetup`, recompute the canonical policy
+fingerprint, revalidate actor/role separation and policy mode, and compare it with the
+immutable setup event and protected workflow evidence. A missing/mismatched fingerprint,
+changed record, duplicate setup, or privileged value committed in mutable static config
+stops recovery. Never reconstruct identities from PR prose or manually edit state.
+
+To contain an incident, keep repository variable `AIC_PIPELINE_ENABLED=false`; this leaves
+the audited policy intact but prevents external effects. Restore the external switch only
+after state/fingerprint/protection/bridge checks succeed. Setup itself cannot be rerun to
+rotate policy; policy rotation needs a separately reviewed governance design/change.

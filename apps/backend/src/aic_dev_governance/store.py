@@ -29,6 +29,11 @@ def validate_append(previous: State, current: State) -> None:
     for key, artifact_content in previous.artifacts.items():
         if current.artifacts.get(key) != artifact_content:
             raise GovernanceError("ARTIFACT_REWRITE_PROHIBITED")
+    if (
+        previous.deployment_setup is not None
+        and current.deployment_setup != previous.deployment_setup
+    ):
+        raise GovernanceError("DEPLOYMENT_SETUP_REWRITE_PROHIBITED")
 
 
 class LocalFileStateStore:

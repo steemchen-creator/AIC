@@ -1,17 +1,19 @@
 # REVIEW-DEV-GOV-001 — Architecture Review Package
 
-Version: 1.1 / FIX-DEV-GOV-001-001 re-review submission, 2026-09-07
+Version: 1.2 / FIX-DEV-GOV-001-002 re-review submission, 2026-09-07
 
 Author role: CTO / Chief Engineering Officer (Codex)
 
-Authority status: prior HEAD Architecture Review = CHANGES_REQUIRED; the authorized
-FIX-DEV-GOV-001-001 corrections are implemented and re-review is pending. This document
+Authority status: second-round Architecture Review = CHANGES_REQUIRED; the authorized
+FIX-DEV-GOV-001-002 corrections are implemented and re-review is pending. This document
 does **not** grant Final Approval, Chairman approval, merge permission or activation.
 
 Specification: [DEV-GOV-001 V1.0](docs/specifications/DEV-GOV-001-AIC-Autonomous-Development-Pipeline-V1.0.md)
 
-Correction authority: [FIX-DEV-GOV-001-001](docs/dev-governance/FIX-DEV-GOV-001-001-Bootstrap-Identity-Recovery-Corrections.md),
-review target `78415e7af9609e1f40019436d4870d9bf7b4467d`.
+Correction authority: [FIX-DEV-GOV-001-002](docs/dev-governance/FIX-DEV-GOV-001-002-Post-Bootstrap-Activation-and-First-Work-Item-Transition.md),
+review target `a38316682e0edb95f2ebe38052d090e0fbf57a3b`. The review explicitly
+accepts the three original FIX-001 blocking corrections and identifies the separate
+post-bootstrap activation deadlock addressed here.
 
 ## 1. Executive Summary
 
@@ -22,9 +24,10 @@ code, interfaces, database migrations or desktop behavior are changed.
 
 Delivery is a bootstrap Draft PR. All activation switches are OFF. Live model/Work
 connections and administrative branch protection are not silently configured.
-The correction removes the bootstrap identity deadlock, makes normal PR identity
-state-based, separates recoverable operations from sticky governance failures, and
-narrows risk-path escalation without weakening actual hard-cap protection.
+FIX-001 removed the bootstrap identity deadlock, made normal PR identity state-based,
+separated recoverable operations from sticky governance failures, and narrowed risk-path
+escalation. FIX-002 now removes the post-bootstrap activation deadlock with a protected,
+one-time, fingerprinted Deployment Setup and proves the synthetic first-work-item path.
 
 ## 2. Preconditions / SPEC-009 Closeout
 
@@ -61,6 +64,13 @@ Bootstrap now has its own manual protected workflow and CLI path. It never enter
 the normal tick loop and requires every activation flag OFF. The normal workflow no
 longer exposes initialize. This separates initial state creation from autonomous effects.
 
+The selected FIX-002 design is Option B: privileged non-secret deployment values live in
+a protected Environment, outside mutable product PRs. A separate manual setup workflow
+validates them, records the complete effective MANUAL/DRY_RUN policy plus version,
+Chairman, timestamp and SHA-256 fingerprint, and expires after one state transition. The
+normal runner remains externally OFF until an administrator enables its repository kill
+switch; at runtime it reconstructs policy from state and verifies the fingerprint.
+
 ## 5. State Store
 
 `LocalFileStateStore`: exclusive writer lock, revision check, one fsynced atomic
@@ -70,6 +80,10 @@ update. Conflicting writers fail before external delivery. No blind mutation ret
 Initial state creation uses an independent root commit, not a product HEAD change.
 The bootstrap store must be empty; any existing revision/work item rejects a second
 attempt. Current delivery does not initialize the state branch.
+
+`DeploymentSetup` is an immutable aggregate member. `validate_append` prevents replacement
+or removal once written. The setup event independently records version/fingerprint,
+principal presence, mode, bridge, merge, Ready, actor and time without any token/secret.
 
 ## 6. State Machine
 
@@ -81,6 +95,11 @@ engineering and read-only reconciliation failures. New HEAD, fresh CI/reconcilia
 or engineer retry resumes with zero Chairman events. Unknown side effects remain sticky.
 See [state machine](docs/dev-governance/STATE_MACHINE.md).
 
+After bootstrap CLOSED, protected setup is an administrative transition rather than an
+Architecture Approval. Once the external kill switch is later enabled, an authenticated
+Architect with the recorded standard-work delegation can register the first approved
+ordinary item; separate publication moves it from PLANNED to SPEC_READY.
+
 ## 7. Workflow Events
 
 Versioned events record identity, work item, timestamp, input SHA, actor, metadata
@@ -88,6 +107,8 @@ and output state. Supported events include SPEC/FIX publication, engineering,
 architecture review, CI, Ready/merge/closeout, budgets, incidents, memory updates
 and pause/recovery. GitHub workflows serialize reconciliation; critical event
 commands require authenticated role mapping rather than an actor in PR text.
+`DEPLOYMENT_SETUP_COMPLETED` is written only by the protected one-time setup entry point;
+it is not accepted as a normal event command.
 
 ## 8. Artifact Protocol
 
@@ -190,6 +211,10 @@ squash-only expected-SHA mutation and no force bypass. Defaults are MANUAL/OFF.
 DEV-GOV-001 is unconditionally excluded from automatic Ready/Merge. No GitHub
 Auto Merge setting or PR Auto Merge request is enabled by this task.
 
+The deployment setup schema deliberately excludes AUTO and fixes `auto_ready=false`.
+Recording a MANUAL/DRY_RUN policy does not activate it; the repository kill switch is
+still OFF for this PR. Any future AUTO policy needs a new reviewed governance change.
+
 ## 18. Chairman Gate
 
 Master Requirement, investment/risk permissions, live broker/leverage, core
@@ -201,7 +226,10 @@ Negative tests prove ordinary risk implementation, test and documentation filena
 do not automatically claim a hard-cap relaxation.
 Pause, disable-auto-merge and recovery are separately authenticated. A protected
 delegation can authorize a standard future work item; no such delegation is present
-in this delivery, and model-generated text cannot supply it.
+in the inactive repository defaults, and model-generated text cannot supply it. A protected
+post-merge setup may record an explicit Chairman-reviewed standard-work delegation, but
+the setup actor cannot overlap Architect/Engineer/bot and the Architect still authenticates
+ordinary registration independently.
 
 ## 19. Closeout
 
@@ -275,6 +303,12 @@ secrets are environment-only. Artifacts reject secret-like keys, binaries, .env,
 caches, generated output, traversal and unsafe local symlinks. Git operations use
 allowlisted argument vectors, never generated shell commands.
 
+Setup accepts only protected Environment values, validates complete role maps and
+MANUAL/DRY_RUN constraints, and stores non-secret policy only. Fingerprint verification
+makes restart deterministic. Mutable config privileges, fingerprint drift, duplicate setup,
+wrong actor, missing authority, setup while active, AUTO/Ready and recognized secret
+material all fail closed.
+
 ## 27. Prompt Injection Defense
 
 Manifest trust notices explicitly separate repository data from authority. PR bodies,
@@ -291,12 +325,15 @@ records are stored with revisions. Metrics derive merge attempts/failures, budge
 usage and phase durations from events. Available API token usage is persisted;
 unavailable usage/cost/timing remains unknown. Logs exclude secrets and model content.
 Dashboard/CLI reads do not invoke models.
+Deployment audit includes the formal bootstrap evidence already in state plus setup actor,
+timestamp, complete policy/version/fingerprint and a separate completion event.
 
 ## 29. Technical Debt Registry
 
 Runtime non-blocking review items append structured debt records with origin,
 severity, blocking status, target phase and status. Static deployment debt is in
-`docs/project/TECHNICAL_DEBT.md`: main protection and external bridge setup.
+`docs/project/TECHNICAL_DEBT.md`: main protection, protected deployment setup and external
+bridge setup.
 The existing GitHub Actions Node 20 declaration warning is recorded as low maintenance debt.
 These are implementation-reported activation limitations; their classification
 does not pre-empt the Architect's decision on this PR.
@@ -311,6 +348,10 @@ second paid call. Unknown reservations are not automatically redelivered. See
 Transient GitHub read failure is also tested across two reconciliations: the first
 persists RECOVERABLE_FAILURE; the later authenticated read/CI succeeds and restores
 the safe stage with no Chairman event.
+
+Deployment restart re-materializes only the immutable effective policy in state, verifies
+its canonical hash, and uses the repository variable strictly as a kill switch. It never
+falls back to mutable privileged config.
 
 ## 31. Premature Merge Regression
 
@@ -330,13 +371,13 @@ Local Python: 3.12.14, isolated `.venv`, editable `.[test]` installation.
 
 ```text
 python -m pytest apps/backend/tests/dev_governance apps/backend/tests/architecture \
-  --cov=aic_dev_governance --cov-report=json:tmp/dev-gov-coverage.json \
+  --cov=aic_dev_governance --cov-branch --cov-report=json:tmp/dev-gov-fix002-coverage.json \
   --cov-fail-under=0 -q --tb=short
-246 passed; dedicated governance package coverage 95.88% statement+branch combined.
+272 passed; dedicated governance package coverage 96.0164% statement+branch combined.
 
 python -m pytest --ignore-glob='*postgresql*' \
   --ignore=apps/backend/tests/persistence/test_migrations.py -q --tb=short
-792 passed (explicit non-database subset, NOT a full-suite claim)
+818 passed (explicit non-database subset, NOT a full-suite claim)
 ```
 
 The first local full-suite attempt could not supply PostgreSQL/AIC_DATABASE_URL
@@ -349,7 +390,10 @@ in the final-HEAD GitHub backend job, not replaced by the local subset.
 E2E tests cover happy path, FIX/re-review at a new SHA, premature merge, repeated
 review budget exhaustion, lost chat context/restart, concurrent dispatch, bootstrap
 while disabled, one-shot rejection, state-based PR identity, CI correction without
-Chairman and transient GitHub recovery.
+Chairman and transient GitHub recovery. FIX-002 adds protected setup while OFF,
+immutable policy/fingerprint, duplicate/unauthorized/secret/tamper rejection, exact
+operator ordering, descriptor-independent Gate and synthetic first-item engineering
+delivery with zero recovery/governance-bypass events.
 
 ## 33. Coverage
 
@@ -358,6 +402,7 @@ Local dedicated-suite statement-plus-branch targets are enforced by executable
 
 | Module / requirement | Measured baseline | Required |
 |---|---:|---:|
+| Deployment setup/effective policy (`deployment.py`) | 100% | 100% |
 | State machine | 100% | 95% |
 | Merge gate, SHA lock and CI gate (`gates.py`) | 100% | 100% |
 | Read-only state identity / SHA-CI gate (`ci_gate.py`) | 100% | 100% |
@@ -383,7 +428,7 @@ its complete normalized text was checked equal to the supplied V1.0 document.
 
 ## 35. Mypy
 
-`python -m mypy`: passed, 140 source files under strict configuration. The new
+`python -m mypy`: passed, 141 source files under strict configuration. The new
 package is included alongside the original 124 source files; no strictness rule
 was disabled to accept the new implementation.
 
@@ -406,6 +451,14 @@ authenticates the actor against protected environment variable
 `AIC_BOOTSTRAP_CHAIRMAN`, verifies the exact Architecture-reviewed head, merged/tree/
 main-containment/CI/branch-deletion evidence, and creates only the initial state.
 
+A third protected manual workflow, `AIC Development Governance Setup`, is available only
+from trusted main after bootstrap. It shares the serialized state-writer concurrency group,
+requires environment `aic-development-governance-setup`, validates protected Chairman and
+non-secret policy variables, requires the normal repository switch OFF, and writes only
+the one-time deployment record/event. It has no dispatch/approval/Ready/merge path. The
+normal workflow separately receives repository variable `AIC_PIPELINE_ENABLED`; only when
+later true can it materialize the stored fingerprinted policy.
+
 This committed review precedes the commit SHA/CI run it describes. Final run ID,
 attempt, head SHA, all four job conclusions and artifact identities are published
 in the PR/final external attestation after CI completion. Pending CI is not approval.
@@ -420,6 +473,13 @@ It requires exact reviewed HEAD, actual merged/tree/current-main containment/CI,
 deleted feature branch and external Architecture Closeout reference. It neither
 requires nor enables `pipeline_enabled`; a second attempt is rejected.
 
+This initial-state exception does not become an activation exception. Deployment Setup is
+a second one-shot transition whose complete policy is immutable. It can run while the
+normal pipeline is OFF, but only after bootstrap CLOSED; duplicate, changed, unauthorized
+or already-active setup fails closed. Ordinary work then uses state identity and the normal
+Gate. Tests prove a synthetic SPEC-010-like item reaches SPEC_READY and emits one engineering
+task without direct state edits, descriptor edits, check bypass or Chairman recovery.
+
 ## 39. Chairman Setup Required
 
 See [SETUP-DEV-GOV-001-CHAIRMAN.md](SETUP-DEV-GOV-001-CHAIRMAN.md) and
@@ -433,6 +493,12 @@ Bootstrap setup specifically requires protected environment
 `aic-development-governance-bootstrap`, required reviewers and the reviewed
 `AIC_BOOTSTRAP_CHAIRMAN` GitHub login. This is post-merge setup, not active now.
 
+The executable sequence is: human merge; formal Closeout/feature cleanup; protected
+bootstrap environment; bootstrap state; main protection; protected deployment environment;
+one-time setup while OFF; ordinary Gate verification; MANUAL/DRY_RUN activation; first
+approved registration; optional external bridge; and only later separate AUTO review.
+Automated tests assert this ordering and that the setup workflow cannot run the normal loop.
+
 ## 40. Known Limitations
 
 - Live Work/API and bot credentials are not connected; mock integration is not a live run.
@@ -444,6 +510,8 @@ Bootstrap setup specifically requires protected environment
   no legacy status is guessed successful.
 - Core governance changes escalate rather than granting the bot power to change its rules.
 - Branch protection and bridge authorization remain deployment prerequisites.
+- Protected bootstrap/setup environments, real identities, policy and the external switch
+  remain post-merge administrator tasks; none is configured by this PR.
 - GitHub currently forces Node 24 for actions declaring deprecated Node 20; all jobs
   pass, but action version upgrades remain a reviewed maintenance task.
 
@@ -457,13 +525,44 @@ The final PR body/response and post-commit attestation supply the full immutable
 SHA, all check-run identities and artifact hashes. Embedding a commit's own SHA inside
 that same commit is impossible; external attestation avoids an endless evidence-only loop.
 
+### FIX-002 required evidence matrix
+
+1. Post-bootstrap activation: protected Option B setup, immutable state policy, external
+   activation kill switch.
+2. One-time authority: protected Chairman actor plus absent prior `DeploymentSetup`.
+3. No bypass: trusted-main workflow, formal closed bootstrap and main protection ordering;
+   no direct-push/check-disable/state-edit operation.
+4. Branch protection ordering: executable 12-step Chairman guide plus ordering regression.
+5. Effective policy: schema-validated full non-secret record and canonical SHA-256
+   version/fingerprint, verified again on every runtime materialization.
+6. First work item: synthetic SPEC-010-like registration reaches SPEC_READY and emits a
+   delivered engineering task with no recovery or governance exception.
+7. Unauthorized setup: wrong/missing actor, invalid event and active pipeline are rejected.
+8. Later sensitive policy: mutable privileged config and setup rewrite are rejected; setup
+   workflow/config diffs remain Chairman-sensitive.
+9. Exact new HEAD: supplied externally after the implementation commit; no evidence-only
+   commit will move its own attested SHA.
+10. Full PostgreSQL suite: required exact-HEAD `Backend tests` CI job; local result is
+    explicitly only the 816-test non-database subset.
+11. Coverage: local 272-test suite passes all executable targets, including 100% combined
+    statement/branch for `deployment.py`; exact JSON is also a CI artifact.
+12. Ruff: local all-repository check passes; exact-HEAD CI repeats it.
+13. Strict mypy: local strict check passes for 141 source files; exact-HEAD CI repeats it.
+14. WPF Release: no desktop change; required exact-HEAD Windows CI supplies the build.
+15. Exact-head CI: supplied externally with run/check/artifact IDs after all jobs pass.
+16. Pipeline: static config and repository state observed for this PR remain OFF.
+17. Auto Merge: policy default and PR Auto Merge remain OFF.
+18. State branch: `automation/dev-state` remains absent; setup/bootstrap were only tested
+    against isolated stores.
+19. SPEC-010: NOT STARTED; the test identity is explicitly `SYNTHETIC-SPEC-010`.
+
 ## 42. Final Recommendation
 
 **B. APPROVED CANDIDATE WITH NON-BLOCKING DEBT**
 
 Submit the corrected implementation and exact-HEAD evidence for Chief Investment
-Architect re-review. Remaining debt is post-merge administrative bridge/protection
-setup, action-runtime maintenance and the documented remote cleanup race. This is a
+Architect re-review. Remaining debt is post-merge administrative setup/bridge/protection,
+action-runtime maintenance and the documented remote cleanup race. This is a
 Codex engineering candidate recommendation, not Architecture Final Approval.
 
 Required stop: keep DEV-GOV-001 Draft/unmerged, Auto Merge OFF, SPEC-010 NOT STARTED;
