@@ -1,0 +1,10 @@
+{
+  "event_id": "e2f8e96a1e034e5ea0d3ff44b4a0c08d",
+  "event_type": "ARCH_REVIEW_STARTED",
+  "timestamp": "2026-09-07T17:06:19.792180Z",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "actor": "aic-architect",
+  "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+  "output_state": "ARCHITECTURE_REVIEWING",
+  "metadata": {}
+}
