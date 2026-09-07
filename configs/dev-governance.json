@@ -1,0 +1,27 @@
+{
+  "pipeline_enabled": false,
+  "merge_enabled": false,
+  "mode": "MANUAL",
+  "auto_ready": false,
+  "method": "squash",
+  "require_expected_head_sha": true,
+  "bridge_mode": "MANUAL_BRIDGE",
+  "bridge_authorized": false,
+  "repository": "steemchen-creator/AIC",
+  "state_branch": "automation/dev-state",
+  "max_architecture_review_loops_per_work_item": 3,
+  "max_architecture_calls_per_work_item": 5,
+  "max_new_specs_per_day": 2,
+  "duplicate_event_window_minutes": 30,
+  "read_attempts": 3,
+  "openai_model": null,
+  "architecture_bridge_actor": "openai-architecture-bridge",
+  "standard_work_execution_authorization": null,
+  "trusted_check_app_id": 15368,
+  "principals": {
+    "CHAIRMAN": [],
+    "CHIEF_INVESTMENT_ARCHITECT": [],
+    "CTO": [],
+    "ORCHESTRATOR": ["github-actions[bot]"]
+  }
+}

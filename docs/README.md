@@ -5,6 +5,9 @@ This directory is the authoritative home for AIC architecture, planning, enginee
 Documentation must be updated in the same Pull Request as the change it describes.
 
 - [Architecture](architecture/README.md)
+- [Development governance](dev-governance/OVERVIEW.md)
+- [Master project memory](project/AIC_MASTER_PROJECT_MEMORY_V2.md)
+- [Technical debt registry](project/TECHNICAL_DEBT.md)
 - [Forward Paper Trading](paper/PAPER_TRADING_RUNTIME.md)
 - [Performance Baseline](performance/PERFORMANCE_BASELINE.md)
 - [Shadow Portfolio Experiments](experiments/SHADOW_PORTFOLIOS.md)

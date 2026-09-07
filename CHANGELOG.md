@@ -8,6 +8,21 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- DEV-GOV-001 isolated development control plane: versioned state/events, atomic local
+  and GitHub state-branch persistence, exact SHA/CI gates, budgeted artifact/task bridges,
+  deterministic merge/closeout, governance incident handling and restart recovery.
+- Read-only AIC Development Governance Gate, per-module coverage enforcement, project
+  memory, proposed ADR-0007 and Chairman setup documentation. Bootstrap/manual-only;
+  pipeline/auto-merge/external API activation remain disabled and SPEC-010 is not started.
+- FIX-DEV-GOV-001-001 separates the protected, one-shot state bootstrap from the disabled
+  normal runtime; resolves ordinary PR identity from durable state; treats exact-HEAD CI,
+  engineering bridge and read failures as recoverable while preserving sticky governance
+  incidents; and narrows risk hard-cap classification to explicit policy/configuration paths.
+- FIX-DEV-GOV-001-002 adds a protected one-time post-bootstrap Deployment Setup, immutable
+  effective-policy fingerprint/audit, reproducible MANUAL/DRY_RUN activation, and a tested
+  transition from closed bootstrap to first ordinary registered engineering task without a
+  branch-protection or Governance Gate bypass.
+
 - FIX-SPEC009-002 governance exception for the premature merge of PR #10,
   including tree equivalence, exact feature-head CI, fresh main regression,
   impact assessment, prevention rules, and post-publication closeout requirements.

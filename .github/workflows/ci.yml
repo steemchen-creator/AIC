@@ -18,6 +18,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Confirm CI foundation
         run: echo "Checkpoint 0 establishes the CI workflow structure; project checks will be added in later checkpoints."
@@ -42,6 +45,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -59,7 +65,10 @@ jobs:
           AIC_CELERY_BROKER_URL: redis://localhost:6379/1
         run: |
           alembic upgrade head
-          pytest --cov --cov-report=term-missing
+          pytest --cov --cov-report=term-missing --cov-report=json:tmp/coverage.json
+
+      - name: Enforce DEV-GOV-001 critical coverage targets
+        run: python -c "from pathlib import Path; from aic_dev_governance.coverage_gate import verify_coverage; print(verify_coverage(Path('tmp/coverage.json')))"
 
       - name: Lint backend
         run: ruff check apps/backend/src apps/backend/tests
@@ -67,12 +76,56 @@ jobs:
       - name: Type-check backend
         run: mypy
 
+      - name: Upload exact HEAD coverage evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ github.event.pull_request.head.sha || github.sha }}
+          path: tmp/coverage.json
+
+  development-governance:
+    name: AIC Development Governance Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install .
+      - name: Verify exact HEAD artifact and governance state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AIC_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python -m aic_dev_governance gate
+
+      - name: Generate immutable review context evidence
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AIC_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python -m aic_dev_governance context
+
+      - name: Upload review context bound to exact HEAD
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-context-${{ github.event.pull_request.head.sha }}
+          path: tmp/REVIEW_CONTEXT.json
+
   desktop:
     name: Desktop build
     runs-on: windows-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
