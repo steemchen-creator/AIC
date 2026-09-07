@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 10,
+  "revision": 11,
   "current_work_item": "DEV-GOV-VALIDATION-001",
   "work_items": {
     "DEV-GOV-001": {
@@ -118,7 +118,7 @@
       "kind": "DOCUMENTATION",
       "parent_work_item": "DEV-GOV-001",
       "previous_work_item": "DEV-GOV-001",
-      "status": "RECOVERABLE_FAILURE",
+      "status": "REVIEW_REQUIRED",
       "created_at": "2026-09-07T15:17:29.390000Z",
       "artifact_path": "SETUP-DEV-GOV-001-CHAIRMAN.md",
       "artifact_sha256": "dad7939bc14f2c091603c48cac9a0988a3133c096b4df4f3ad5a5265f4e70d79",
@@ -132,13 +132,68 @@
       "approved_head_sha": null,
       "review_id": null,
       "ci": {
-        "head_sha": null,
-        "status": "UNKNOWN",
-        "required_checks": {},
-        "checks": [],
-        "discovery_complete": false,
-        "branch_protection_enabled": false,
-        "workflow_runs": []
+        "head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+        "status": "PASSED",
+        "required_checks": {
+          "Governance baseline": 15368,
+          "Backend tests": 15368,
+          "Desktop build": 15368,
+          "AIC Development Governance Gate": 15368
+        },
+        "checks": [
+          {
+            "name": "Backend tests",
+            "head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+            "conclusion": "success",
+            "run_id": 34139400960,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34139400960/job/101799110934"
+          },
+          {
+            "name": "AIC Development Governance Gate",
+            "head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+            "conclusion": "success",
+            "run_id": 34139400960,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34139400960/job/101799110905"
+          },
+          {
+            "name": "Governance baseline",
+            "head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+            "conclusion": "success",
+            "run_id": 34139400960,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34139400960/job/101799110786"
+          },
+          {
+            "name": "Desktop build",
+            "head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+            "conclusion": "success",
+            "run_id": 34139400960,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34139400960/job/101799110623"
+          },
+          {
+            "name": "orchestrate",
+            "head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+            "conclusion": "success",
+            "run_id": 101797740667,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34139401318/job/101797740667"
+          }
+        ],
+        "discovery_complete": true,
+        "branch_protection_enabled": true,
+        "workflow_runs": [
+          {
+            "run_id": 34139400960,
+            "head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+            "status": "completed",
+            "conclusion": "success",
+            "attempt": 2,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34139400960"
+          }
+        ]
       },
       "budget": {
         "architecture_calls_used": 0,
@@ -148,10 +203,8 @@
         "reserved_requests": []
       },
       "blocked_reasons": [],
-      "recoverable_failures": [
-        "GITHUB_HTTP_404"
-      ],
-      "recovery_stage": "REVIEW_REQUIRED",
+      "recoverable_failures": [],
+      "recovery_stage": null,
       "unresolved_fix": null,
       "governance_exception": false,
       "chairman_required": false,
@@ -289,6 +342,16 @@
         "reason": "GITHUB_HTTP_404",
         "failure_class": "RECOVERABLE_READ"
       }
+    },
+    {
+      "event_id": "4b3a3ca800064c348a1f986ee15845a1",
+      "event_type": "CI_PASSED",
+      "timestamp": "2026-09-07T16:04:15.883321Z",
+      "work_item_id": "DEV-GOV-VALIDATION-001",
+      "actor": "github-actions[bot]",
+      "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+      "output_state": "REVIEW_REQUIRED",
+      "metadata": {}
     }
   ],
   "tasks": {
