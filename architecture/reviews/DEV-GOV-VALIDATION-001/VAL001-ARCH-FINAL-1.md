@@ -1,0 +1,26 @@
+# DEV-GOV-VALIDATION-001: FINAL_APPROVED
+
+Reviewed HEAD: `d379ce1aafb39759b41e2426fa34ca4a4fe1913d`
+
+```json
+{
+  "work_item": "DEV-GOV-VALIDATION-001",
+  "review_id": "VAL001-ARCH-FINAL-1",
+  "result": "FINAL_APPROVED",
+  "reviewed_head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+  "blocking_items": [],
+  "non_blocking_items": [
+    {
+      "debt_id": "DEVGOV-RULESET-COMPAT-001",
+      "origin_spec": "DEV-GOV-VALIDATION-001",
+      "description": "Runtime required-check discovery currently depends on the Classic branch-protection required-status-checks endpoint when main is protected. Ruleset-only repositories can return 404. A Classic compatibility rule is deployed; remove this dependency before AUTO mode or before removing the Classic rule.",
+      "severity": "MEDIUM",
+      "blocking": false,
+      "target_phase": "BEFORE_AUTO_MODE",
+      "status": "OPEN"
+    }
+  ],
+  "reviewed_at": "2026-09-07T17:06:24.979508Z",
+  "reviewer_role": "CHIEF_INVESTMENT_ARCHITECT"
+}
+```

@@ -1,0 +1,10 @@
+{
+  "event_id": "9efe8674cd874671ac6d8dd06f3bb193",
+  "event_type": "ARCH_FINAL_APPROVED",
+  "timestamp": "2026-09-07T17:06:24.979508Z",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "actor": "aic-architect",
+  "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+  "output_state": "FINAL_APPROVED",
+  "metadata": {}
+}
