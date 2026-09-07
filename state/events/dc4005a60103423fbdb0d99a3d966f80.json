@@ -1,0 +1,12 @@
+{
+  "event_id": "dc4005a60103423fbdb0d99a3d966f80",
+  "event_type": "PR_CREATED",
+  "timestamp": "2026-09-07T15:41:11.647425Z",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "actor": "github-actions[bot]",
+  "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+  "output_state": "REVIEW_REQUIRED",
+  "metadata": {
+    "review_artifact": "REVIEW-DEV-GOV-VALIDATION-001.md"
+  }
+}

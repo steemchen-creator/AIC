@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 8,
+  "revision": 9,
   "current_work_item": "DEV-GOV-VALIDATION-001",
   "work_items": {
     "DEV-GOV-001": {
@@ -118,16 +118,16 @@
       "kind": "DOCUMENTATION",
       "parent_work_item": "DEV-GOV-001",
       "previous_work_item": "DEV-GOV-001",
-      "status": "IMPLEMENTATION_COMPLETE",
+      "status": "REVIEW_REQUIRED",
       "created_at": "2026-09-07T15:17:29.390000Z",
       "artifact_path": "SETUP-DEV-GOV-001-CHAIRMAN.md",
       "artifact_sha256": "dad7939bc14f2c091603c48cac9a0988a3133c096b4df4f3ad5a5265f4e70d79",
       "target_branch": "feature/dev-gov-validation-001",
       "execution_authorization": "CHAIRMAN-DELEGATION-AIC-STANDARD-WORK-V1",
-      "pr_number": null,
-      "head_sha": null,
-      "base_sha": null,
-      "review_artifact": null,
+      "pr_number": 15,
+      "head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+      "base_sha": "cc4b162b9ed97615806b8c4756309c757ea97e84",
+      "review_artifact": "REVIEW-DEV-GOV-VALIDATION-001.md",
       "architecture_status": "NOT_REVIEWED",
       "approved_head_sha": null,
       "review_id": null,
@@ -262,6 +262,18 @@
       "input_sha": null,
       "output_state": "IMPLEMENTATION_COMPLETE",
       "metadata": {}
+    },
+    {
+      "event_id": "dc4005a60103423fbdb0d99a3d966f80",
+      "event_type": "PR_CREATED",
+      "timestamp": "2026-09-07T15:41:11.647425Z",
+      "work_item_id": "DEV-GOV-VALIDATION-001",
+      "actor": "github-actions[bot]",
+      "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+      "output_state": "REVIEW_REQUIRED",
+      "metadata": {
+        "review_artifact": "REVIEW-DEV-GOV-VALIDATION-001.md"
+      }
     }
   ],
   "tasks": {
