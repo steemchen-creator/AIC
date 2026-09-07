@@ -1,0 +1,10 @@
+{
+  "event_id": "31ee6bed84b04a76a529eed7d78fda79",
+  "event_type": "SPEC_PUBLISHED",
+  "timestamp": "2026-09-07T15:30:15.264774Z",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "actor": "aic-architect",
+  "input_sha": null,
+  "output_state": "SPEC_READY",
+  "metadata": {}
+}

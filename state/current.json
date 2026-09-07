@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 3,
+  "revision": 4,
   "current_work_item": "DEV-GOV-VALIDATION-001",
   "work_items": {
     "DEV-GOV-001": {
@@ -118,7 +118,7 @@
       "kind": "DOCUMENTATION",
       "parent_work_item": "DEV-GOV-001",
       "previous_work_item": "DEV-GOV-001",
-      "status": "PLANNED",
+      "status": "SPEC_READY",
       "created_at": "2026-09-07T15:17:29.390000Z",
       "artifact_path": "SETUP-DEV-GOV-001-CHAIRMAN.md",
       "artifact_sha256": "dad7939bc14f2c091603c48cac9a0988a3133c096b4df4f3ad5a5265f4e70d79",
@@ -208,6 +208,16 @@
         "reason": "EXECUTION_AUTHORIZATION",
         "authorized_actor": "aic-architect"
       }
+    },
+    {
+      "event_id": "31ee6bed84b04a76a529eed7d78fda79",
+      "event_type": "SPEC_PUBLISHED",
+      "timestamp": "2026-09-07T15:30:15.264774Z",
+      "work_item_id": "DEV-GOV-VALIDATION-001",
+      "actor": "aic-architect",
+      "input_sha": null,
+      "output_state": "SPEC_READY",
+      "metadata": {}
     }
   ],
   "tasks": {},
