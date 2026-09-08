@@ -1,0 +1,18 @@
+{
+  "event_id": "1f046cb3d58a40f8b260b8280f1bc7ce",
+  "event_type": "CLOSEOUT_COMPLETED",
+  "timestamp": "2026-09-08T14:35:11.478542Z",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "actor": "github-actions[bot]",
+  "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+  "output_state": "CLOSED",
+  "metadata": {
+    "merge_commit": "e5907dd3d74bd3228990fccc3ca8a13075e503e0",
+    "tree_sha": "f5fafa394a52cc51bda8fa4c7a21df5743bb7d38",
+    "main_sha": "e5907dd3d74bd3228990fccc3ca8a13075e503e0",
+    "ci_head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+    "local_branch_deleted": "true",
+    "remote_branch_deleted": "true",
+    "workspace_clean": "true"
+  }
+}
