@@ -1,0 +1,10 @@
+{
+  "event_id": "ce79c0ad300e428b8d163e723a5e16f7",
+  "event_type": "CI_PASSED",
+  "timestamp": "2026-09-08T14:19:35.780114Z",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "actor": "github-actions[bot]",
+  "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+  "output_state": "MERGE_ELIGIBLE",
+  "metadata": {}
+}
