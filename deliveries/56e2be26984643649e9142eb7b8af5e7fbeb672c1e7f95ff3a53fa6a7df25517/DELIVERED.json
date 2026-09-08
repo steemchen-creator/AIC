@@ -1,0 +1,10 @@
+{
+  "task_id": "56e2be26984643649e9142eb7b8af5e7fbeb672c1e7f95ff3a53fa6a7df25517",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "kind": "NEXT_SPEC",
+  "head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+  "artifact_path": "SETUP-DEV-GOV-001-CHAIRMAN.md",
+  "manifest_path": "requests/56e2be26984643649e9142eb7b8af5e7fbeb672c1e7f95ff3a53fa6a7df25517/REVIEW_CONTEXT.json",
+  "status": "DELIVERED",
+  "delivery_reference": "https://github.com/steemchen-creator/AIC/pull/15#issuecomment-5586836765"
+}

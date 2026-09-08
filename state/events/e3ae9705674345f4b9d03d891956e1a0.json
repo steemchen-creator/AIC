@@ -1,0 +1,12 @@
+{
+  "event_id": "e3ae9705674345f4b9d03d891956e1a0",
+  "event_type": "TASK_DELIVERED",
+  "timestamp": "2026-09-08T14:35:22.017324Z",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "actor": "github-actions[bot]",
+  "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+  "output_state": "CLOSED",
+  "metadata": {
+    "task_id": "56e2be26984643649e9142eb7b8af5e7fbeb672c1e7f95ff3a53fa6a7df25517"
+  }
+}
