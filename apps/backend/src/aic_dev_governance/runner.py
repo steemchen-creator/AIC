@@ -26,12 +26,15 @@ from .ci_gate import BOOTSTRAP_BRANCH, check_governance, resolve_work_item
 from .deployment import (
     materialize_effective_policy,
     policy_fingerprint,
+    resolve_deployment_policy,
     validate_deployment_policy,
+    validate_policy_rotation,
 )
 from .github import GitHubClient
 from .models import (
     ArchitectureResult,
     DeploymentPolicyConfig,
+    DeploymentPolicyRotation,
     DeploymentSetup,
     Event,
     EventType,
@@ -622,6 +625,132 @@ def run_setup(root: Path) -> str:
     if setup is None:  # Defensive narrowing after validated transition.
         raise GovernanceError("DEPLOYMENT_SETUP_INCOMPLETE")
     return dashboard(state) + f"\nDeployment policy: {setup.policy_fingerprint}"
+
+
+def complete_deployment_policy_rotation(
+    store: StateStore,
+    static_policy: Policy,
+    actor: str,
+    expected_previous_fingerprint: str,
+    config: DeploymentPolicyConfig,
+    reason: str,
+    *,
+    pipeline_enabled: bool,
+    now: Callable[[], datetime] = lambda: datetime.now(UTC),
+) -> State:
+    """Append one principals-only policy link while the external kill switch is OFF."""
+    if pipeline_enabled:
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_REQUIRES_PIPELINE_OFF")
+    state, revision = store.load()
+    materialize_effective_policy(static_policy, state, activated=False)
+    resolved = resolve_deployment_policy(state)
+    if resolved is None:
+        raise GovernanceError("DEPLOYMENT_SETUP_REQUIRED")
+    current, current_fingerprint = resolved
+    bootstrap = state.work_items.get("DEV-GOV-001")
+    if bootstrap is None:
+        raise GovernanceError("DEPLOYMENT_SETUP_REQUIRED")
+    if expected_previous_fingerprint != current_fingerprint:
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_STALE_FINGERPRINT")
+    validate_policy_rotation(current, config, actor)
+    serialized = config.model_dump_json()
+    validate_artifact_content(serialized)
+    validate_artifact_content(reason)
+    timestamp = now()
+    new_fingerprint = policy_fingerprint(config)
+    rotation = DeploymentPolicyRotation(
+        previous_policy_fingerprint=current_fingerprint,
+        new_policy_fingerprint=new_fingerprint,
+        authorized_by=actor,
+        rotated_at=timestamp,
+        reason=reason.strip(),
+        new_effective_policy=config,
+    )
+    state.deployment_policy_rotations.append(rotation)
+    state.events.append(
+        Event(
+            event_id=uuid4().hex,
+            event_type=EventType.DEPLOYMENT_POLICY_ROTATED,
+            timestamp=timestamp,
+            work_item_id="DEV-GOV-001",
+            actor=actor,
+            output_state=bootstrap.status,
+            metadata={
+                "previous_policy_fingerprint": current_fingerprint,
+                "new_policy_fingerprint": new_fingerprint,
+                "policy_version": config.policy_version,
+                "reason": rotation.reason,
+            },
+        )
+    )
+    state.revision += 1
+    store.save(state, revision)
+    return state
+
+
+def run_policy_rotation(root: Path) -> str:
+    """Protected main-only policy recovery; never runs the autonomous tick loop."""
+    static_policy = Policy.model_validate_json(
+        (root / "configs/dev-governance.json").read_text("utf-8")
+    )
+    token = os.environ.get("GH_TOKEN", "")
+    event_path = os.environ.get("GITHUB_EVENT_PATH", "")
+    actor = os.environ.get("GITHUB_ACTOR", "")
+    trusted_actor = os.environ.get("AIC_SETUP_CHAIRMAN", "")
+    raw_policy = os.environ.get("AIC_DEPLOYMENT_POLICY", "")
+    expected_fingerprint = os.environ.get("AIC_PREVIOUS_POLICY_FINGERPRINT", "")
+    reason = os.environ.get("AIC_POLICY_ROTATION_REASON", "")
+    if not token:
+        raise GovernanceError("GITHUB_AUTHORIZATION_MISSING")
+    if os.environ.get("GITHUB_EVENT_NAME") != "workflow_dispatch" or not event_path:
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_MANUAL_WORKFLOW_REQUIRED")
+    if os.environ.get("GITHUB_REF") != "refs/heads/main":
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_TRUSTED_MAIN_REQUIRED")
+    if os.environ.get("AIC_PIPELINE_ENABLED") != "false":
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_REQUIRES_PIPELINE_OFF")
+    try:
+        event = json.loads(Path(event_path).read_text("utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_EVENT_INVALID") from error
+    if not isinstance(event, dict):
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_EVENT_INVALID")
+    if not actor or actor != trusted_actor:
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_CHAIRMAN_NOT_AUTHORIZED")
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_fingerprint):
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_FINGERPRINT_REQUIRED")
+    if not raw_policy:
+        raise GovernanceError("DEPLOYMENT_POLICY_REQUIRED")
+    if not reason.strip():
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_REASON_REQUIRED")
+    validate_artifact_content(raw_policy)
+    validate_artifact_content(reason)
+    config = DeploymentPolicyConfig.model_validate_json(raw_policy)
+    with httpx.Client(
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+    ) as client:
+        github = GitHubClient(
+            client, static_policy.repository, attempts=static_policy.read_attempts
+        )
+        store = GitHubStateBranchStore(github)
+        state = complete_deployment_policy_rotation(
+            store,
+            static_policy,
+            actor,
+            expected_fingerprint,
+            config,
+            reason,
+            pipeline_enabled=False,
+        )
+    rotation = state.deployment_policy_rotations[-1]
+    return (
+        dashboard(state)
+        + f"\nPrevious deployment policy: {rotation.previous_policy_fingerprint}"
+        + f"\nNew deployment policy: {rotation.new_policy_fingerprint}"
+    )
 
 
 def run(root: Path, *, gate_only: bool = False) -> str:

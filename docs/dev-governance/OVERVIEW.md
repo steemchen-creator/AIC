@@ -16,6 +16,12 @@ budgets using CAS before delivery. GitHub comments/issues are consumable task si
 State, immutable events, requests, architecture JSON/Markdown and debt are durable
 on `automation/dev-state`, not on implementation branches.
 
+After one-time setup, privileged identity recovery uses an append-only deployment-policy
+rotation chain. The original setup remains immutable; every link binds the previous and new
+canonical fingerprints to the complete new non-secret policy, current Chairman, UTC timestamp
+and reason. V1 allows principals-only changes and reuses full policy and role-separation
+validation. See [policy rotation](POLICY_ROTATION.md) and ADR-0008.
+
 ## Safe defaults and operation
 
 `configs/dev-governance.json` defaults pipeline/merge/Ready/bridge to OFF.
@@ -26,6 +32,10 @@ version, identities and SHA-256 fingerprint in state while the normal runner rem
 The repository variable is an independent external kill switch: activation reconstructs
 the same policy from state and verifies its fingerprint. The setup schema permits only
 MANUAL or DRY_RUN; AUTO/Auto Merge requires a later separate authorization.
+
+Runtime materialization validates the entire rotation chain and selects its final policy when
+present. Missing or stale links, rewritten history, an active pipeline, unauthorized actor or
+non-principal change fails closed.
 
 Install with `python -m pip install -e ".[test]"`.
 Read local state: `python -m aic_dev_governance status --state-dir tmp/dev-governance/state`.

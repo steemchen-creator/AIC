@@ -34,6 +34,10 @@ def validate_append(previous: State, current: State) -> None:
         and current.deployment_setup != previous.deployment_setup
     ):
         raise GovernanceError("DEPLOYMENT_SETUP_REWRITE_PROHIBITED")
+    if current.deployment_policy_rotations[: len(previous.deployment_policy_rotations)] != (
+        previous.deployment_policy_rotations
+    ):
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_REWRITE_PROHIBITED")
 
 
 class LocalFileStateStore:
@@ -109,6 +113,14 @@ class GitHubStateBranchStore:
                     f"Reviewed HEAD: `{review.reviewed_head_sha}`\n\n"
                     f"```json\n{review.model_dump_json(indent=2)}\n```\n"
                 )
+        for index, rotation in enumerate(
+            state.deployment_policy_rotations[len(previous.deployment_policy_rotations) :],
+            start=len(previous.deployment_policy_rotations) + 1,
+        ):
+            files[
+                "state/deployment-policy-rotations/"
+                f"{index:04d}-{rotation.new_policy_fingerprint}.json"
+            ] = rotation.model_dump_json(indent=2)
         files.update(
             {key: value for key, value in state.artifacts.items() if key not in previous.artifacts}
         )

@@ -1,0 +1,50 @@
+name: AIC Development Governance Policy Rotation
+
+on:
+  workflow_dispatch:
+    inputs:
+      previous_policy_fingerprint:
+        description: Exact current deployment-policy SHA-256 fingerprint
+        required: true
+        type: string
+      reason:
+        description: Auditable reason for the principals-only rotation
+        required: true
+        type: string
+      policy_json:
+        description: Complete proposed non-secret DeploymentPolicyConfig JSON
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aic-development-state
+  cancel-in-progress: false
+
+jobs:
+  rotate-policy-only:
+    if: github.ref == 'refs/heads/main'
+    environment: aic-development-governance-setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted main only
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install .
+      - name: Append principals-only deployment-policy rotation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AIC_SETUP_CHAIRMAN: ${{ vars.AIC_SETUP_CHAIRMAN }}
+          AIC_PIPELINE_ENABLED: ${{ vars.AIC_PIPELINE_ENABLED }}
+          AIC_PREVIOUS_POLICY_FINGERPRINT: ${{ inputs.previous_policy_fingerprint }}
+          AIC_POLICY_ROTATION_REASON: ${{ inputs.reason }}
+          AIC_DEPLOYMENT_POLICY: ${{ inputs.policy_json }}
+        run: python -m aic_dev_governance rotate-policy >> "$GITHUB_STEP_SUMMARY"

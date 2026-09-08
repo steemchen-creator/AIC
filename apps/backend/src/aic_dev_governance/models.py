@@ -77,6 +77,7 @@ class EventType(StrEnum):
     MEMORY_UPDATE_REQUIRED = "MEMORY_UPDATE_REQUIRED"
     RECOVERY_AUTHORIZED = "RECOVERY_AUTHORIZED"
     DEPLOYMENT_SETUP_COMPLETED = "DEPLOYMENT_SETUP_COMPLETED"
+    DEPLOYMENT_POLICY_ROTATED = "DEPLOYMENT_POLICY_ROTATED"
 
 
 class Role(StrEnum):
@@ -250,6 +251,17 @@ class DeploymentSetup(Model):
     effective_policy: DeploymentPolicyConfig
 
 
+class DeploymentPolicyRotation(Model):
+    """One immutable link in the post-setup deployment-policy audit chain."""
+
+    previous_policy_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    new_policy_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    authorized_by: str = Field(min_length=1, max_length=200)
+    rotated_at: AwareDatetime
+    reason: str = Field(min_length=1, max_length=4000)
+    new_effective_policy: DeploymentPolicyConfig
+
+
 class Event(Model):
     event_id: Identifier
     event_type: EventType
@@ -295,6 +307,7 @@ class State(Model):
     auto_merge_disabled: bool = False
     project_blocked_reasons: list[str] = Field(default_factory=list)
     deployment_setup: DeploymentSetup | None = None
+    deployment_policy_rotations: list[DeploymentPolicyRotation] = Field(default_factory=list)
 
 
 class Policy(Model):
