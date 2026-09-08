@@ -355,6 +355,11 @@ def test_cli_status_metrics_error_and_run(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr("sys.argv", ["aic_dev_governance", "setup"])
     monkeypatch.setattr(module, "run_setup", lambda *args, **kwargs: "SETUP_COMPLETE")
     assert module.main() == 0 and "SETUP_COMPLETE" in capsys.readouterr().out
+    monkeypatch.setattr("sys.argv", ["aic_dev_governance", "rotate-policy"])
+    monkeypatch.setattr(
+        module, "run_policy_rotation", lambda *args, **kwargs: "POLICY_ROTATED"
+    )
+    assert module.main() == 0 and "POLICY_ROTATED" in capsys.readouterr().out
 
     def fail(*args, **kwargs):
         raise GovernanceError("SAFE_REASON")

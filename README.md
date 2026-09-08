@@ -33,6 +33,11 @@ and [review](REVIEW-DEV-GOV-001.md). After installing `.[test]`, run
 `python -m aic_dev_governance status` for local status; `run` is the protected event
 entry point and exits without effects while disabled.
 
+Post-setup principal recovery uses a separate protected, main-only, Chairman-authorized
+append-only policy rotation while `AIC_PIPELINE_ENABLED=false`. It preserves the one-time setup,
+permits only role-principal changes in V1, validates every fingerprint link and never invokes
+the autonomous runner. See the [policy rotation runbook](docs/dev-governance/POLICY_ROTATION.md).
+
 ## Data Foundation architecture
 
 SPEC-004 Phase 11 adds the Point-in-Time/As-Of access layer and explicit no-lookahead

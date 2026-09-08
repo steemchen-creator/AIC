@@ -42,6 +42,55 @@ def validate_deployment_policy(config: DeploymentPolicyConfig, actor: str) -> No
         raise GovernanceError("MANUAL_BRIDGE_AUTHORIZATION_INVALID")
 
 
+def _without_principals(config: DeploymentPolicyConfig) -> dict[str, object]:
+    values = config.model_dump(mode="json")
+    values.pop("principals")
+    return values
+
+
+def validate_policy_rotation(
+    current: DeploymentPolicyConfig,
+    proposed: DeploymentPolicyConfig,
+    actor: str,
+) -> None:
+    """Validate Chairman authority and the V1 principals-only change boundary."""
+    if actor not in current.principals[Role.CHAIRMAN] or any(
+        actor in current.principals[role] for role in (Role.ARCHITECT, Role.ENGINEER, Role.BOT)
+    ):
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_CHAIRMAN_NOT_AUTHORIZED")
+    validate_deployment_policy(proposed, actor)
+    if _without_principals(current) != _without_principals(proposed):
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_NON_PRINCIPAL_CHANGE")
+    if current.principals == proposed.principals:
+        raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_NO_CHANGE")
+
+
+def resolve_deployment_policy(
+    state: State,
+) -> tuple[DeploymentPolicyConfig, str] | None:
+    """Validate and resolve the setup plus every append-only rotation link."""
+    setup = state.deployment_setup
+    if setup is None:
+        if state.deployment_policy_rotations:
+            raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_WITHOUT_SETUP")
+        return None
+    fingerprint = policy_fingerprint(setup.effective_policy)
+    if setup.policy_fingerprint != fingerprint:
+        raise GovernanceError("DEPLOYMENT_POLICY_FINGERPRINT_MISMATCH")
+    config = setup.effective_policy
+    validate_deployment_policy(config, setup.authorized_by)
+    for rotation in state.deployment_policy_rotations:
+        if rotation.previous_policy_fingerprint != fingerprint:
+            raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_CHAIN_MISMATCH")
+        proposed_fingerprint = policy_fingerprint(rotation.new_effective_policy)
+        if rotation.new_policy_fingerprint != proposed_fingerprint:
+            raise GovernanceError("DEPLOYMENT_POLICY_ROTATION_FINGERPRINT_MISMATCH")
+        validate_policy_rotation(config, rotation.new_effective_policy, rotation.authorized_by)
+        config = rotation.new_effective_policy
+        fingerprint = proposed_fingerprint
+    return config.model_copy(deep=True), fingerprint
+
+
 def materialize_effective_policy(static: Policy, state: State, *, activated: bool) -> Policy:
     """Rebuild effective policy from immutable state; the repo activation flag is a kill switch."""
     if any(
@@ -61,15 +110,12 @@ def materialize_effective_policy(static: Policy, state: State, *, activated: boo
         )
     ):
         raise GovernanceError("MUTABLE_DEPLOYMENT_POLICY_FORBIDDEN")
-    setup = state.deployment_setup
-    if setup is None:
+    resolved = resolve_deployment_policy(state)
+    if resolved is None:
         if activated:
             raise GovernanceError("DEPLOYMENT_SETUP_REQUIRED")
         return static.model_copy(deep=True)
-    if setup.policy_fingerprint != policy_fingerprint(setup.effective_policy):
-        raise GovernanceError("DEPLOYMENT_POLICY_FINGERPRINT_MISMATCH")
-    config = setup.effective_policy
-    validate_deployment_policy(config, setup.authorized_by)
+    config, _ = resolved
     effective = static.model_copy(deep=True)
     effective.pipeline_enabled = activated and config.pipeline_enabled
     effective.mode = config.mode

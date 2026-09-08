@@ -8,6 +8,13 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- DEV-GOV-RECOVERY-001 protected principals-only deployment-policy rotation, with immutable
+  setup preservation, chained canonical fingerprints, complete non-secret policy snapshots,
+  Chairman authentication, exact external OFF enforcement and append-only state artifacts.
+- Main-only manual recovery workflow, role-separation and stale-chain fail-closed validation,
+  operational runbook, proposed ADR-0008 and regression coverage for authorized and rejected
+  transitions. Investment code, state contents and existing merge/CI gates remain unchanged.
+
 - DEV-GOV-001 isolated development control plane: versioned state/events, atomic local
   and GitHub state-branch persistence, exact SHA/CI gates, budgeted artifact/task bridges,
   deterministic merge/closeout, governance incident handling and restart recovery.

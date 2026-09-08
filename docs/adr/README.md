@@ -9,3 +9,4 @@ This directory contains Architecture Decision Records (ADRs). Start with [ADR-00
 - [ADR-0005: Shadow Portfolio 公平实验与多资产兼容边界](ADR-0005-shadow-portfolio-experiments.md)
 - [ADR-0006: 境内 ETF 与指数参考架构](ADR-0006-etf-index-exposure.md)
 - [ADR-0007: Autonomous development control plane (Proposed)](ADR-0007-autonomous-development-pipeline.md)
+- [ADR-0008: Append-only deployment-policy principal rotation (Proposed)](ADR-0008-deployment-policy-rotation.md)
