@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 23,
+  "revision": 24,
   "current_work_item": "DEV-GOV-VALIDATION-001",
   "work_items": {
     "DEV-GOV-001": {
@@ -231,7 +231,7 @@
         "remote_branch_deleted": "true",
         "workspace_clean": "true"
       },
-      "next_spec_requested": false,
+      "next_spec_requested": true,
       "memory_update_required": false
     }
   },
@@ -502,6 +502,16 @@
         "remote_branch_deleted": "true",
         "workspace_clean": "true"
       }
+    },
+    {
+      "event_id": "f302b3b774b549a391308f85e5deaf2a",
+      "event_type": "NEXT_SPEC_REQUESTED",
+      "timestamp": "2026-09-08T14:35:13.727897Z",
+      "work_item_id": "DEV-GOV-VALIDATION-001",
+      "actor": "github-actions[bot]",
+      "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+      "output_state": "CLOSED",
+      "metadata": {}
     }
   ],
   "tasks": {
