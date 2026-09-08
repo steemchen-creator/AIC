@@ -1,0 +1,12 @@
+{
+  "event_id": "7ddf3f47ecd24caeb8555bc6b5043c0e",
+  "event_type": "TASK_RESERVED",
+  "timestamp": "2026-09-08T19:33:49.474292Z",
+  "work_item_id": "SPEC-010",
+  "actor": "github-actions[bot]",
+  "input_sha": null,
+  "output_state": "SPEC_READY",
+  "metadata": {
+    "task_id": "4727cf247063e12451960520213aea5830de27795d79b39a484d98e0800bbb0f"
+  }
+}
