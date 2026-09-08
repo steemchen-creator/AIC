@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 17,
+  "revision": 18,
   "current_work_item": "DEV-GOV-VALIDATION-001",
   "work_items": {
     "DEV-GOV-001": {
@@ -141,6 +141,14 @@
           "AIC Development Governance Gate": 15368
         },
         "checks": [
+          {
+            "name": "orchestrate",
+            "head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+            "conclusion": "pending",
+            "run_id": 102098817837,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/34237474878/job/102098817837"
+          },
           {
             "name": "Backend tests",
             "head_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
@@ -413,6 +421,16 @@
       "event_id": "f8ac642b0a36441c9a4828cf16e0c719",
       "event_type": "CI_PASSED",
       "timestamp": "2026-09-07T17:13:26.473320Z",
+      "work_item_id": "DEV-GOV-VALIDATION-001",
+      "actor": "github-actions[bot]",
+      "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+      "output_state": "FINAL_APPROVED",
+      "metadata": {}
+    },
+    {
+      "event_id": "7957e19f2ded40fbb61b44e48a0e7adc",
+      "event_type": "CI_PASSED",
+      "timestamp": "2026-09-08T14:19:25.555450Z",
       "work_item_id": "DEV-GOV-VALIDATION-001",
       "actor": "github-actions[bot]",
       "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
