@@ -1,0 +1,10 @@
+{
+  "event_id": "66cc99f68c7a4925924d007d183785fb",
+  "event_type": "CLOSEOUT_STARTED",
+  "timestamp": "2026-09-08T14:35:07.777687Z",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "actor": "github-actions[bot]",
+  "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+  "output_state": "CLOSEOUT",
+  "metadata": {}
+}
