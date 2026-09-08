@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 27,
-  "current_work_item": "DEV-GOV-VALIDATION-001",
+  "revision": 28,
+  "current_work_item": "SPEC-010",
   "work_items": {
     "DEV-GOV-001": {
       "work_item_id": "DEV-GOV-001",
@@ -233,6 +233,54 @@
         "workspace_clean": "true"
       },
       "next_spec_requested": true,
+      "memory_update_required": false
+    },
+    "SPEC-010": {
+      "work_item_id": "SPEC-010",
+      "kind": "SPEC",
+      "parent_work_item": "DEV-GOV-VALIDATION-001",
+      "previous_work_item": "DEV-GOV-VALIDATION-001",
+      "status": "PLANNED",
+      "created_at": "2026-09-08T19:31:07Z",
+      "artifact_path": "SPEC-010-Multi-Horizon-Trade-Plan-and-Swing-Management-Foundation.md",
+      "artifact_sha256": "b786de248003685aa91be001ad7e17101c4312d71d676225c9f2537e687db403",
+      "target_branch": "feature/spec-010-multi-horizon-trade-plan",
+      "execution_authorization": "CHAIRMAN-DELEGATION-AIC-STANDARD-WORK-V1",
+      "pr_number": null,
+      "head_sha": null,
+      "base_sha": null,
+      "review_artifact": null,
+      "architecture_status": "NOT_REVIEWED",
+      "approved_head_sha": null,
+      "review_id": null,
+      "ci": {
+        "head_sha": null,
+        "status": "UNKNOWN",
+        "required_checks": {},
+        "checks": [],
+        "discovery_complete": false,
+        "branch_protection_enabled": false,
+        "workflow_runs": []
+      },
+      "budget": {
+        "architecture_calls_used": 0,
+        "review_loops": 0,
+        "duplicate_calls_avoided": 0,
+        "budget_limit_hits": 0,
+        "reserved_requests": []
+      },
+      "blocked_reasons": [],
+      "recoverable_failures": [],
+      "recovery_stage": null,
+      "unresolved_fix": null,
+      "governance_exception": false,
+      "chairman_required": false,
+      "changed_areas": [],
+      "merge_eligible": false,
+      "merge_commit": null,
+      "merge_expected_sha": null,
+      "closeout": {},
+      "next_spec_requested": false,
       "memory_update_required": false
     }
   },
@@ -551,6 +599,19 @@
         "new_policy_fingerprint": "cd6f53c56de55919a15453928bff30187a1ab481400ac5a07d6e0ffe2445233f",
         "policy_version": "DEPLOYMENT-V1",
         "reason": "DEV-GOV-RECOVERY-001: recover unavailable Architect identity by adding aic-architect-2 while preserving aic-architect for audit continuity."
+      }
+    },
+    {
+      "event_id": "4463f02736b64bdbbe022c27ba793777",
+      "event_type": "TASK_RESERVED",
+      "timestamp": "2026-09-08T19:33:43.122416Z",
+      "work_item_id": "SPEC-010",
+      "actor": "github-actions[bot]",
+      "input_sha": null,
+      "output_state": "PLANNED",
+      "metadata": {
+        "reason": "EXECUTION_AUTHORIZATION",
+        "authorized_actor": "aic-architect-2"
       }
     }
   ],
