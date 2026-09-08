@@ -1,0 +1,34 @@
+{
+  "previous_policy_fingerprint": "6df86a26a6681f13612536912cca2d97d1d8afe20a1138cade66fa3d7d741045",
+  "new_policy_fingerprint": "cd6f53c56de55919a15453928bff30187a1ab481400ac5a07d6e0ffe2445233f",
+  "authorized_by": "steemchen-creator",
+  "rotated_at": "2026-09-08T19:12:24.343078Z",
+  "reason": "DEV-GOV-RECOVERY-001: recover unavailable Architect identity by adding aic-architect-2 while preserving aic-architect for audit continuity.",
+  "new_effective_policy": {
+    "policy_version": "DEPLOYMENT-V1",
+    "pipeline_enabled": true,
+    "mode": "DRY_RUN",
+    "merge_enabled": false,
+    "auto_ready": false,
+    "bridge_mode": "CHATGPT_WORK_EVENT_BRIDGE",
+    "bridge_authorized": true,
+    "openai_model": null,
+    "standard_work_execution_authorization": "CHAIRMAN-DELEGATION-AIC-STANDARD-WORK-V1",
+    "principals": {
+      "CHAIRMAN": [
+        "steemchen-creator"
+      ],
+      "CHIEF_INVESTMENT_ARCHITECT": [
+        "aic-architect",
+        "aic-architect-2",
+        "openai-architecture-bridge"
+      ],
+      "CTO": [
+        "aic-codex-cto"
+      ],
+      "ORCHESTRATOR": [
+        "github-actions[bot]"
+      ]
+    }
+  }
+}

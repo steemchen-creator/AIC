@@ -1,0 +1,15 @@
+{
+  "event_id": "1c8f63a62c1240bdb13f962a3a2b4f5e",
+  "event_type": "DEPLOYMENT_POLICY_ROTATED",
+  "timestamp": "2026-09-08T19:12:24.343078Z",
+  "work_item_id": "DEV-GOV-001",
+  "actor": "steemchen-creator",
+  "input_sha": null,
+  "output_state": "CLOSED",
+  "metadata": {
+    "previous_policy_fingerprint": "6df86a26a6681f13612536912cca2d97d1d8afe20a1138cade66fa3d7d741045",
+    "new_policy_fingerprint": "cd6f53c56de55919a15453928bff30187a1ab481400ac5a07d6e0ffe2445233f",
+    "policy_version": "DEPLOYMENT-V1",
+    "reason": "DEV-GOV-RECOVERY-001: recover unavailable Architect identity by adding aic-architect-2 while preserving aic-architect for audit continuity."
+  }
+}
