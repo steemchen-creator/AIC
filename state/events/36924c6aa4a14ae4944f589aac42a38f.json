@@ -1,0 +1,10 @@
+{
+  "event_id": "36924c6aa4a14ae4944f589aac42a38f",
+  "event_type": "PR_MERGED",
+  "timestamp": "2026-09-08T14:35:03.272994Z",
+  "work_item_id": "DEV-GOV-VALIDATION-001",
+  "actor": "github-actions[bot]",
+  "input_sha": "d379ce1aafb39759b41e2426fa34ca4a4fe1913d",
+  "output_state": "MERGED",
+  "metadata": {}
+}
