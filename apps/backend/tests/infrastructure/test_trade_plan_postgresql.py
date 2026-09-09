@@ -27,6 +27,7 @@ from aic_backend.domain.trade_plan import (
     TradePlanStatus,
     TradingStyle,
 )
+from aic_backend.infrastructure.execution_journal import execution_claims
 from aic_backend.infrastructure.trade_plan_persistence import (
     InMemoryTradePlanRepository,
     PostgreSQLTradePlanRepository,
@@ -60,6 +61,7 @@ async def engine() -> AsyncEngine:
     value = create_async_engine(os.environ["AIC_DATABASE_URL"], pool_pre_ping=True)
     async with value.begin() as connection:
         for table in (
+            execution_claims,
             trade_plan_outcomes,
             trade_plan_execution_evidence,
             trade_plan_directives,

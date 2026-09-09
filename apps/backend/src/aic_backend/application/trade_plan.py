@@ -467,6 +467,8 @@ class TradePlanService:
             raise TradePlanError(
                 TradePlanErrorCode.POSITION_SEMANTICS, "execution account does not own the plan"
             )
+        order_id = OrderId(stable_plan_id("order", directive_id))
+        outcome = await self._execution.reconcile(state, order_id, execution_at)
         prior = next(
             (item for item in record.executions if item.directive_id == directive_id), None
         )
@@ -480,44 +482,62 @@ class TradePlanService:
             raise TradePlanError(
                 TradePlanErrorCode.EXECUTION_TOO_EARLY, "execution precedes eligible open"
             )
-        position = state.account.positions.get(record.plan.instrument.canonical_key)
-        held = Decimal("0") if position is None else position.quantity
-        kind = directive.directive_type
-        if (
-            (kind is DirectiveType.ENTRY and held != 0)
-            or (
-                kind in (DirectiveType.SCALE_IN, DirectiveType.REDUCE, DirectiveType.EXIT)
-                and held <= 0
+        if outcome is None:
+            position = state.account.positions.get(record.plan.instrument.canonical_key)
+            held = Decimal("0") if position is None else position.quantity
+            kind = directive.directive_type
+            if (
+                (kind is DirectiveType.ENTRY and held != 0)
+                or (
+                    kind in (DirectiveType.SCALE_IN, DirectiveType.REDUCE, DirectiveType.EXIT)
+                    and held <= 0
+                )
+                or (
+                    kind is DirectiveType.REDUCE
+                    and directive.quantity is not None
+                    and directive.quantity.value >= held
+                )
+                or (position_quantity is not None and position_quantity.value != held)
+            ):
+                raise TradePlanError(
+                    TradePlanErrorCode.POSITION_SEMANTICS,
+                    "directive conflicts with the authoritative remaining position",
+                )
+            quantity = Quantity(held) if kind is DirectiveType.EXIT else directive.quantity
+            if quantity is None:
+                raise TradePlanError(
+                    TradePlanErrorCode.INVALID_FIELD, "execution quantity is unavailable"
+                )
+            side = (
+                OrderSide.BUY
+                if directive.directive_type in (DirectiveType.ENTRY, DirectiveType.SCALE_IN)
+                else OrderSide.SELL
             )
-            or (
-                kind is DirectiveType.REDUCE
-                and directive.quantity is not None
-                and directive.quantity.value >= held
+            outcome = await self._execution.execute(
+                state,
+                ExecutionOrderIntent(record.plan.instrument, side, quantity, requested_price),
+                order_id,
+                execution_at,
+                price_limit_band,
             )
-            or (position_quantity is not None and position_quantity.value != held)
-        ):
-            raise TradePlanError(
-                TradePlanErrorCode.POSITION_SEMANTICS,
-                "directive conflicts with the authoritative remaining position",
-            )
-        quantity = Quantity(held) if kind is DirectiveType.EXIT else directive.quantity
-        if quantity is None:
-            raise TradePlanError(
-                TradePlanErrorCode.INVALID_FIELD, "execution quantity is unavailable"
-            )
-        side = (
+        expected_side = (
             OrderSide.BUY
             if directive.directive_type in (DirectiveType.ENTRY, DirectiveType.SCALE_IN)
             else OrderSide.SELL
         )
-        order_id = OrderId(stable_plan_id("order", directive_id))
-        outcome = await self._execution.execute(
-            state,
-            ExecutionOrderIntent(record.plan.instrument, side, quantity, requested_price),
-            order_id,
-            execution_at,
-            price_limit_band,
-        )
+        if (
+            outcome.order.order_id != order_id
+            or outcome.order.portfolio_id != record.plan.portfolio_id
+            or outcome.order.instrument != record.plan.instrument
+            or outcome.order.side != expected_side
+            or (directive.quantity is not None and outcome.order.quantity != directive.quantity)
+            or (requested_price is not None and outcome.order.requested_price != requested_price)
+            or outcome.risk_decision.as_of < directive.not_before
+            or outcome.risk_decision.as_of > execution_at
+        ):
+            raise TradePlanError(
+                TradePlanErrorCode.DIRECTIVE_CONFLICT, "execution result does not match directive"
+            )
         evidence = PlanExecutionEvidence(
             stable_plan_id("execution", directive_id),
             record.plan.plan_id,
@@ -526,7 +546,7 @@ class TradePlanService:
             directive.directive_type,
             outcome.order.order_id.value,
             None if outcome.fill is None else outcome.fill.fill_id.value,
-            execution_at,
+            outcome.risk_decision.as_of,
             tuple(item.value for item in outcome.risk_decision.reason_codes),
         )
         updated = replace(record, executions=record.executions + (evidence,))
@@ -538,7 +558,7 @@ class TradePlanService:
             updated = replace(
                 updated,
                 plan=updated.plan.transition(
-                    TradePlanStatus.COMPLETED, execution_at, "EXIT_FILLED"
+                    TradePlanStatus.COMPLETED, outcome.risk_decision.as_of, "EXIT_FILLED"
                 ),
             )
         await self._repository.save(updated)

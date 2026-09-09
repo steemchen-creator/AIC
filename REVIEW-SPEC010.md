@@ -204,3 +204,74 @@ migration 0013/0014 and base/head round-trips, architecture tests, coverage enfo
 strict mypy, Governance Gate and desktop build. Its final run URL and complete counts are recorded
 in the PR description after execution, without creating a later untested documentation HEAD.
 PR #19 remains Draft; Engineering does not self-approve, merge or start SPEC-011.
+
+## 14. Cross-aggregate execution-idempotency remediation (2026-09-10)
+
+The follow-up blocking finding supplied for `5fed0265eea54352848c514300a9e6fd69541e34`
+identified a financial retry gap: authoritative execution could succeed before the Trade Plan
+append failed with `IDENTITY_CONFLICT`. A later SCALE_IN or REDUCE could execute again without
+the missing link. The original five fixes remain in place; this section addresses that one
+additional blocker and is an Engineering record, not independent approval.
+
+### Contract and transaction boundaries
+
+`IdempotentExecutionService` implements the application-owned authoritative execution port around
+the unchanged `AShareExecutionService`. `ExecutionJournal` is an application-owned storage port;
+its production PostgreSQL adapter persists permanent claims keyed by deterministic order ID.
+Migration `20260910_0015` introduces only `execution_order_claims` and its portfolio/time index.
+
+1. A unique order claim commits before calling the existing execution/risk authority. A duplicate
+   caller reconciles a completed receipt or fails closed while the claim is unresolved. Request
+   identity includes account, instrument, side, quantity and requested price.
+2. The existing deterministic authority runs against a detached account/settlement state. Its
+   order, fill, risk decision, cash ledger and settlement results retain their original identities.
+3. Completion verifies claim ownership under a row lock and commits one immutable outcome and
+   recovery snapshot. Only then is the caller's account projection published. A concurrent caller
+   account mutation is rejected instead of overwritten.
+4. Trade Plan independently appends its link. If this transaction conflicts, the next invocation
+   reloads the aggregate and reconciles the durable receipt before position validation. It never
+   calls the financial engine a second time and uses the original execution timestamp.
+5. Replay restores an exact pre-execution account or recognizes an applied outcome. Later account
+   state containing that outcome is preserved. Cross-account requests, changed order intents,
+   unknown account projections and future outcomes fail closed.
+
+This is a durable execution-claim mechanism, not an in-memory deduplication cache or a catch-and-
+retry loop. Rejected orders also retain their identity and risk outcome. A claim interrupted before
+receipt completion remains unresolved permanently: no expiration, takeover or reset is introduced.
+Such uncertainty requires separate operational reconciliation against authoritative evidence,
+never another financial attempt under the same ID. The journal does not change the risk policy,
+create a broker integration or replace the existing account's single-writer ownership contract.
+
+### Regression evidence
+
+- Six PostgreSQL cases cover SCALE_IN, REDUCE and EXIT, each with successful and rejected execution.
+  They use the real A-share execution/risk service, commit a concurrent Trade Plan HOLD after the
+  financial operation returns, and require the link save to fail with `IDENTITY_CONFLICT`.
+- New services and database connections then reconstruct the pre-execution account, restore the
+  durable result, and append exactly one link. A second replay of the already-applied account
+  remains unchanged. Tests compare full cash/position/settlement/counter/outcome snapshots, original
+  order/fill/timestamp identities, normalized link/risk counts and the unchanged completed receipt.
+  The restarted authority raises if called, proving reconciliation performs no financial retry.
+- A PostgreSQL receipt-write failure leaves an unresolved claim that blocks restart execution;
+  the caller account is not published before receipt commit.
+- PostgreSQL claim races have one winner; claim ownership, receipt immutability and corrupt-read
+  rejection are checked. Migration 0014/0015 is round-tripped twice; the existing suite retains
+  the full base/head rebuild.
+- Three application cases exercise receipt serialization, request/account/PIT guards, later-state
+  preservation and same-order concurrent callers, including changed account state during execution.
+
+Local validation passed: full non-database suite `967 passed` with `92.20%` branch-aware coverage,
+Ruff, strict mypy (150 source files), 34 architecture tests and `git diff --check`.
+New journal modules are explicitly included in coverage. PostgreSQL
+17, all migrations, full backend coverage and .NET are verified by the unchanged exact-HEAD CI;
+the final run/counts are attached to the PR description without a subsequent untested HEAD.
+
+### Deployment and rollback
+
+Apply migration 0015 before composing TradePlanService with IdempotentExecutionService and
+PostgreSQLExecutionJournal. In-memory storage is limited to tests/research. Completed receipts
+and unresolved claims are safety-critical audit history and must not be reset to retry a directive.
+Revert code through review; stopping execution, backing up this journal and explicit operational
+authorization are prerequisites for a production downgrade because it removes deduplication
+evidence. No governance code, automation/dev-state or SPEC-011 work is included. Keep PR #19 Draft
+and require independent review of the final exact HEAD; no Ready, self-approval or merge action.

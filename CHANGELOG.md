@@ -25,6 +25,10 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   authoritative position semantics and durable stop/target consumption, serialized PostgreSQL
   appends, pending-execution outcome protection, and immutable draft instrument/portfolio identity
   with regression coverage for all five blockers.
+- SPEC-010 follow-up execution-idempotency repair: durable deterministic-order claims and
+  authoritative outcome/account recovery receipts, reconciliation before Trade Plan position
+  checks, immutable original execution links, reversible migration 0015, and PostgreSQL
+  conflict/restart regression coverage for SCALE_IN, REDUCE, EXIT and rejected executions.
 
 - DEV-GOV-RECOVERY-001 protected principals-only deployment-policy rotation, with immutable
   setup preservation, chained canonical fingerprints, complete non-secret policy snapshots,

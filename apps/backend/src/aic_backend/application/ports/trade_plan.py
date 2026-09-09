@@ -39,6 +39,15 @@ class NextEligibleOpenCalendar(Protocol):
 
 
 class AuthoritativeExecution(Protocol):
+    async def reconcile(
+        self,
+        state: ExecutionState,
+        order_id: OrderId,
+        as_of: datetime,
+    ) -> ExecutionOutcome | None:
+        """Recover a durable result before position checks; unresolved claims fail closed."""
+        ...
+
     async def execute(
         self,
         state: ExecutionState,

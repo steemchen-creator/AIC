@@ -172,6 +172,13 @@ outcomes wait for every executable directive to resolve, and PostgreSQL saves re
 concurrent appends while preserving all recorded evidence. Instrument and portfolio identity
 remain immutable even while a plan is still a draft.
 
+For durable execution, compose the existing `AShareExecutionService` with
+`IdempotentExecutionService` and a `PostgreSQLExecutionJournal`, then inject that adapter into
+`TradePlanService`. Migration 0015 stores permanent order claims and immutable execution receipts.
+Retries reconcile an already executed order before position checks, so a Trade Plan save conflict
+cannot create a second fill or account mutation. Unfinished claims fail closed for operational
+reconciliation; tests may use `InMemoryExecutionJournal`.
+
 ## Foundation prerequisites
 
 - .NET 8 SDK

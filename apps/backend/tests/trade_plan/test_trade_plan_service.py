@@ -88,6 +88,9 @@ class Calendar:
 
 
 class Execution:
+    async def reconcile(self, state: ExecutionState, order_id: OrderId, as_of: datetime):
+        return None
+
     def __init__(self, rejected: bool = False) -> None:
         self.rejected = rejected
         self.calls = 0
@@ -112,8 +115,8 @@ class Execution:
             intent.instrument,
             intent.side,
             intent.quantity,
-            OrderType.MARKET,
-            None,
+            OrderType.LIMIT if intent.requested_price is not None else OrderType.MARKET,
+            intent.requested_price,
             as_of,
         )
         summary = RiskInputSummary(

@@ -111,6 +111,38 @@ with `IDENTITY_CONFLICT`; its caller must reload and explicitly append to the cu
 It cannot silently replace another writer's revisions, directives or execution links. The optional
 directive policy key uses existing JSON fields, needs no new migration, and preserves old payloads.
 
+### Execution reconciliation after a Trade Plan conflict
+
+Durable Trade Plan execution requires `IdempotentExecutionService` around the existing
+`AShareExecutionService`, backed by `PostgreSQLExecutionJournal`. The application-owned
+`AuthoritativeExecution.reconcile` contract runs before position checks: a previous full EXIT
+must remain reconcilable even though the account is now flat. The deterministic order ID remains
+derived solely from the directive ID. The returned outcome must match that directive's account,
+instrument, side, quantity and eligible execution time.
+
+Migration `20260910_0015` adds `execution_order_claims`. Its primary key makes exactly one caller
+the owner of an order. Claim identity, request and pre-execution state are permanent; completion
+stores one immutable authoritative outcome and post-execution recovery snapshot. Reusing an order
+ID for a different request is rejected. The execution engine operates on a detached state through
+the unchanged risk/accounting/settlement path. The live account projection is published only after
+the completed receipt commits. A changed caller account is rejected rather than overwritten.
+
+If the subsequent Trade Plan append conflicts, reload and call `execute_directive` again. The
+durable receipt restores an exact pre-execution account to its recorded post-state or recognizes
+an already-applied outcome; it never reapplies the fill. A later account already containing that
+outcome is preserved. Trade Plan appends exactly one link with the original execution timestamp,
+even when reconciliation occurs on another day. Receipts later than `as_of` are unavailable.
+Rejections follow the same permanent order identity and reconciliation rules.
+
+An unfinished claim after an execution, storage failure or process interruption has an unknown
+result and raises `ExecutionReconciliationError`. It is never expired, deleted, taken over or
+blindly re-executed. Preserve the claim and inspect authoritative execution/accounting evidence
+before a separately reviewed operational recovery; this change adds no claim-reset or arbitrary
+state-edit command. An in-memory journal exists only for deterministic tests/research. This
+contract covers the existing deterministic execution engine; it introduces no external broker
+side effects or new risk authority. Callers retain ownership of their account's single-writer
+execution scope; conflicting account projections fail closed.
+
 ## Deliberate V1 limits
 
 SPEC-010 has no AI Brain, signal generation, natural-language interpretation, Kelly sizing,
