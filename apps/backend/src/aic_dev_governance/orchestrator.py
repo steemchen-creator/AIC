@@ -98,7 +98,55 @@ class Orchestrator:
     ) -> State:
         started = monotonic()
         state, revision = self.store.load()
-        updated = apply_event(state, event, self.policy, pr=pr, ci=ci, review=review)
+        revalidated_paths = None
+        if event.event_type == EventType.SENSITIVE_DIFF_REVALIDATED:
+            authenticate(event, Role.CHAIRMAN, self.policy)
+            item = state.work_items.get(event.work_item_id)
+            if item is None:
+                raise GovernanceError("WORK_ITEM_UNKNOWN")
+            if not item.head_sha or event.input_sha != item.head_sha:
+                raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_STALE_HEAD")
+            if not item.pr_number:
+                raise GovernanceError("PR_IDENTITY_MISMATCH")
+            # Ignore caller-supplied PRs. Read actual GitHub evidence at this invocation.
+            pr = self.repository.pull_request(item.pr_number)
+            if (
+                pr.number != item.pr_number
+                or pr.branch != item.target_branch
+                or pr.head_repository != self.policy.repository
+                or pr.base_branch != "main"
+                or pr.state != "OPEN"
+            ):
+                raise GovernanceError("PR_IDENTITY_MISMATCH")
+            if pr.head_sha != event.input_sha:
+                raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_STALE_HEAD")
+            revalidated_paths = self.repository.changed_paths(pr.number)
+            if classify_changed_paths(revalidated_paths):
+                raise GovernanceError("SENSITIVE_DIFF_STILL_PRESENT")
+            # The files endpoint is mutable. Refuse a head/base/identity change while reading it.
+            if self.repository.pull_request(pr.number) != pr:
+                raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_PR_CHANGED")
+            event = event.model_copy(
+                update={
+                    "metadata": {
+                        "pr_number": str(pr.number),
+                        "base_sha": pr.base_sha,
+                        "changed_paths_sha256": hashlib.sha256(
+                            json.dumps(sorted(revalidated_paths), separators=(",", ":")).encode()
+                        ).hexdigest(),
+                        "changed_path_count": str(len(revalidated_paths)),
+                    }
+                }
+            )
+        updated = apply_event(
+            state,
+            event,
+            self.policy,
+            pr=pr,
+            ci=ci,
+            review=review,
+            revalidated_paths=revalidated_paths,
+        )
         if updated.revision != state.revision:
             self.store.save(updated, revision)
         item = updated.work_items[event.work_item_id]

@@ -351,10 +351,23 @@ def dispatch_command(
             EventType.RESUME_PIPELINE,
             EventType.DISABLE_AUTO_MERGE,
             EventType.RECOVERY_AUTHORIZED,
+            EventType.SENSITIVE_DIFF_REVALIDATED,
         }
         kind = EventType(payload["event_type"])
         if kind not in allowed:
             raise GovernanceError("EVENT_COMMAND_NOT_ALLOWED")
+        if kind == EventType.SENSITIVE_DIFF_REVALIDATED:
+            # Claims about paths, identity or authority are not evidence. The trusted-main
+            # orchestrator fetches the live PR/diff using its owned GitHub repository port.
+            if set(payload) != {"work_item_id", "event_type", "head_sha"}:
+                raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_PAYLOAD_INVALID")
+            head = payload["head_sha"]
+            if not isinstance(head, str) or not re.fullmatch(r"[0-9a-f]{40}", head):
+                raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_HEAD_REQUIRED")
+            event = orchestrator.event(work_item, kind, head)
+            event.actor = actor
+            authenticate(event, Role.CHAIRMAN, orchestrator.policy)
+            return orchestrator.handle(event)
         event = orchestrator.event(
             work_item, kind, state.work_items[work_item].head_sha, **payload.get("metadata", {})
         )
