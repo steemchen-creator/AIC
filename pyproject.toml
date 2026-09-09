@@ -37,6 +37,7 @@ where = ["apps/backend/src"]
 include = ["aic_backend*", "aic_dev_governance*"]
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 asyncio_mode = "auto"
 testpaths = ["apps/backend/tests", "tests"]
 
@@ -73,10 +74,16 @@ source = [
   "aic_backend.application.etf",
   "aic_backend.application.backtest",
   "aic_backend.application.execution",
+  "aic_backend.application.idempotent_execution",
+  "aic_backend.application.ports.execution_journal",
   "aic_backend.application.ports.paper",
   "aic_backend.application.paper",
   "aic_backend.application.ports.experiments",
   "aic_backend.application.experiments",
+  "aic_backend.domain.trade_plan",
+  "aic_backend.application.ports.trade_plan",
+  "aic_backend.application.trade_plan_record",
+  "aic_backend.application.trade_plan",
   "aic_backend.application.use_cases.backfill_daily_bars",
   "aic_backend.application.use_cases.adjusted_daily_bars",
   "aic_backend.application.use_cases.corporate_actions",
@@ -99,6 +106,7 @@ source = [
   "aic_backend.infrastructure.corporate_action_persistence",
   "aic_backend.infrastructure.backtest_persistence",
   "aic_backend.infrastructure.execution_persistence",
+  "aic_backend.infrastructure.execution_journal",
   "aic_backend.infrastructure.etf_persistence",
   "aic_backend.infrastructure.paper_persistence",
   "aic_backend.infrastructure.experiment_persistence",

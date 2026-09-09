@@ -13,6 +13,23 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   and preservation of recoverable CI failure state. Renamed source paths and incomplete
   GitHub diff evidence fail closed; existing Governance Gate and branch protection are unchanged.
 
+- SPEC-010 multi-horizon and trading-style taxonomies, immutable Trade Plan lifecycle, one-active-
+  plan-per-portfolio/instrument invariant and append-only revisions with anti-loss-relabel guards.
+- Idempotent entry, scale-in, hold, reduce and exit directives; deterministic hard/profit/trailing/
+  time/expiry/invalidation evaluation; PIT observation checks and next-eligible-open locks.
+- Existing execution/risk-chain integration with order/fill/rejection links, Champion/Shadow
+  isolation, Equity/domestic ETF/Nasdaq-QDII compatibility and fail-closed Index references.
+- Outcome/adherence evidence, in-memory/PostgreSQL repository parity, reversible migration 0014,
+  deterministic tests, design/migration documentation and recorded V1 limitations.
+- SPEC-010 Architecture Review fixes: PIT-bound directive creation and atomic terminal events,
+  authoritative position semantics and durable stop/target consumption, serialized PostgreSQL
+  appends, pending-execution outcome protection, and immutable draft instrument/portfolio identity
+  with regression coverage for all five blockers.
+- SPEC-010 follow-up execution-idempotency repair: durable deterministic-order claims and
+  authoritative outcome/account recovery receipts, reconciliation before Trade Plan position
+  checks, immutable original execution links, reversible migration 0015, and PostgreSQL
+  conflict/restart regression coverage for SCALE_IN, REDUCE, EXIT and rejected executions.
+
 - DEV-GOV-RECOVERY-001 protected principals-only deployment-policy rotation, with immutable
   setup preservation, chained canonical fingerprints, complete non-secret policy snapshots,
   Chairman authentication, exact external OFF enforcement and append-only state artifacts.

@@ -65,3 +65,30 @@ Migration `20260906_0012` adds append-only `shadow_role_profile_events`. Avatar 
 as old/new reference audit facts while the original Manifest and normalized member row stay immutable.
 The group recovery projection includes these events so the effective role profile and activity board can
 be reconstructed after restart. Downgrade to `20260906_0011` removes only profile-update audit events.
+
+# SPEC-010 Trade Plans
+
+Migration `20260909_0014` adds `trade_plans` as the atomic recovery projection and normalized
+`trade_plan_revisions`, `trade_plan_directives`, `trade_plan_execution_evidence` and
+`trade_plan_outcomes`. Revisions and evidence use stable identities with insert-or-verify conflict
+handling. A partial unique index on `(portfolio_id, instrument_key)` where status is `ACTIVE`
+duplicates the application invariant at the database boundary. Pair-history and directive-time
+indexes provide deterministic ordering. Downgrade to `20260906_0013` removes only SPEC-010 tables
+and therefore requires backup and explicit authorization outside isolated validation.
+
+Trade Plan saves lock the existing plan row before validating append-only history and hold that
+lock through projection/evidence writes. Concurrent stale appends fail with `IDENTITY_CONFLICT`
+and must reload before retrying. Regression tests observe actual PostgreSQL lock waits for
+competing revision, directive and execution appends and verify both normalized and recovery
+records. Automatic directives optionally carry a canonical `trigger_key` in existing JSON;
+old payloads remain readable and appendable without a schema migration or history rewrite.
+
+Migration `20260910_0015` adds the execution-owned `execution_order_claims` journal, keyed by the
+deterministic order ID. An immutable claim contains the request and account's pre-state; its
+single completed receipt contains the authoritative order/fill/rejection outcome and post-state.
+Completion verifies claim ownership under a row lock and refuses changed receipts. Trade Plan
+link writes remain a separate transaction and reconcile from this durable receipt after conflicts.
+No existing table or evidence is rewritten. Repeated 0014/0015 and base/head round-trips are tested.
+Downgrade removes this journal and therefore destroys deduplication history: stop execution and
+back up the journal before an explicitly authorized production downgrade. Never delete an
+unfinished claim or restart execution with an empty journal to retry an old directive.
