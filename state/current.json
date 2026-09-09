@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 49,
+  "revision": 50,
   "current_work_item": "SPEC-010",
   "work_items": {
     "DEV-GOV-001": {
@@ -240,7 +240,7 @@
       "kind": "SPEC",
       "parent_work_item": "DEV-GOV-VALIDATION-001",
       "previous_work_item": "DEV-GOV-VALIDATION-001",
-      "status": "ARCHITECTURE_REVIEWING",
+      "status": "CHANGES_REQUIRED",
       "created_at": "2026-09-08T19:31:07Z",
       "artifact_path": "SPEC-010-Multi-Horizon-Trade-Plan-and-Swing-Management-Foundation.md",
       "artifact_sha256": "b786de248003685aa91be001ad7e17101c4312d71d676225c9f2537e687db403",
@@ -250,9 +250,9 @@
       "head_sha": "ae12e925fb5094e4274c9140a306325cd10a5334",
       "base_sha": "ec09fa568f0513d9a0a9548044921d09edaf213c",
       "review_artifact": "REVIEW-SPEC010.md",
-      "architecture_status": "REVIEW_REQUIRED",
+      "architecture_status": "CHANGES_REQUIRED",
       "approved_head_sha": null,
-      "review_id": null,
+      "review_id": "SPEC010-ARCH-CHG-1",
       "ci": {
         "head_sha": "ae12e925fb5094e4274c9140a306325cd10a5334",
         "status": "PASSED",
@@ -329,7 +329,7 @@
       "blocked_reasons": [],
       "recoverable_failures": [],
       "recovery_stage": null,
-      "unresolved_fix": null,
+      "unresolved_fix": "SPEC010-ARCH-CHG-1",
       "governance_exception": false,
       "chairman_required": false,
       "changed_areas": [],
@@ -900,6 +900,16 @@
       "input_sha": "ae12e925fb5094e4274c9140a306325cd10a5334",
       "output_state": "ARCHITECTURE_REVIEWING",
       "metadata": {}
+    },
+    {
+      "event_id": "aeeca63a52984e12ad05a3b3aba214ec",
+      "event_type": "ARCH_CHANGES_REQUIRED",
+      "timestamp": "2026-09-09T16:16:06Z",
+      "work_item_id": "SPEC-010",
+      "actor": "aic-architect-2",
+      "input_sha": "ae12e925fb5094e4274c9140a306325cd10a5334",
+      "output_state": "CHANGES_REQUIRED",
+      "metadata": {}
     }
   ],
   "tasks": {
@@ -973,6 +983,22 @@
         }
       ],
       "reviewed_at": "2026-09-07T17:06:24.979508Z",
+      "reviewer_role": "CHIEF_INVESTMENT_ARCHITECT"
+    },
+    "SPEC010-ARCH-CHG-1": {
+      "work_item": "SPEC-010",
+      "review_id": "SPEC010-ARCH-CHG-1",
+      "result": "CHANGES_REQUIRED",
+      "reviewed_head_sha": "ae12e925fb5094e4274c9140a306325cd10a5334",
+      "blocking_items": [
+        "BLOCKER-01: Bind every directive-producing path only to a Trade Plan revision visible at as_of; reject future revisions. Thesis invalidation must be atomic and must not leave a persisted directive if terminal transition fails.",
+        "BLOCKER-02: Enforce authoritative position semantics: ENTRY requires zero position, SCALE_IN requires existing position, REDUCE must remain strictly partial, EXIT closes remaining position. Prevent repeated automatic stop/target directives for the same unresolved or consumed trigger.",
+        "BLOCKER-03: Eliminate PostgreSQL aggregate lost updates by row locking or compare-and-swap/version enforcement. Concurrent revision/directive/execution appenders must never silently overwrite recovery_projection.",
+        "BLOCKER-04: Do not finalize immutable outcome/adherence while an EXPIRED or INVALIDATED plan still has unresolved executable EXIT evidence. Pending execution must resolve before final outcome or use equivalent deterministic settlement semantics.",
+        "BLOCKER-05: Freeze instrument identity for the entire lifetime of a plan_id, including DRAFT. Draft horizon/style/thesis/policies may remain editable as authorized."
+      ],
+      "non_blocking_items": [],
+      "reviewed_at": "2026-09-09T16:16:06Z",
       "reviewer_role": "CHIEF_INVESTMENT_ARCHITECT"
     }
   },
