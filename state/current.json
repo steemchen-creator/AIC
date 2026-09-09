@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 35,
+  "revision": 36,
   "current_work_item": "SPEC-010",
   "work_items": {
     "DEV-GOV-001": {
@@ -240,7 +240,7 @@
       "kind": "SPEC",
       "parent_work_item": "DEV-GOV-VALIDATION-001",
       "previous_work_item": "DEV-GOV-VALIDATION-001",
-      "status": "CHAIRMAN_DECISION_REQUIRED",
+      "status": "RECOVERABLE_FAILURE",
       "created_at": "2026-09-08T19:31:07Z",
       "artifact_path": "SPEC-010-Multi-Horizon-Trade-Plan-and-Swing-Management-Foundation.md",
       "artifact_sha256": "b786de248003685aa91be001ad7e17101c4312d71d676225c9f2537e687db403",
@@ -272,8 +272,10 @@
       "blocked_reasons": [
         "SENSITIVE_DIFF:master_project_objective"
       ],
-      "recoverable_failures": [],
-      "recovery_stage": null,
+      "recoverable_failures": [
+        "HEAD_CHANGE_WHILE_BLOCKED_OR_CLOSED"
+      ],
+      "recovery_stage": "CHAIRMAN_DECISION_REQUIRED",
       "unresolved_fix": null,
       "governance_exception": false,
       "chairman_required": true,
@@ -692,6 +694,19 @@
       "output_state": "CHAIRMAN_DECISION_REQUIRED",
       "metadata": {
         "reason": "SENSITIVE_DIFF:master_project_objective"
+      }
+    },
+    {
+      "event_id": "42ff5321e17a4b8eba1b5305be7b55db",
+      "event_type": "OPERATION_FAILED",
+      "timestamp": "2026-09-09T04:12:55.292094Z",
+      "work_item_id": "SPEC-010",
+      "actor": "github-actions[bot]",
+      "input_sha": "7bafdbe589922209fc2bd1505ac177d7f9f61b66",
+      "output_state": "RECOVERABLE_FAILURE",
+      "metadata": {
+        "reason": "HEAD_CHANGE_WHILE_BLOCKED_OR_CLOSED",
+        "failure_class": "RECOVERABLE_READ"
       }
     }
   ],
