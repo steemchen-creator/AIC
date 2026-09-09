@@ -95,6 +95,7 @@ apps/backend/
 |   |   `-- execution/   A-share eligibility, T+1 and risk policies
 |   |   `-- paper/       Forward paper account, session and performance models
 |   |   `-- experiments/ Shadow group, fairness and comparison models
+|   |   `-- trade_plan/  Multi-horizon plan lifecycle and immutable evidence
 |   |-- data_foundation/ Deterministic real-data identity and construction helpers
 |   |-- providers/       Data-source adapters
 |   |-- infrastructure/  Repository, cache, event, and operational adapters
@@ -143,6 +144,20 @@ CNY Portfolio 中持有、估值和审计；产品级 PIT 执行 profile 决定 
 交易，也不包含 USD 账户、FX、美国交易日历或跨币种 NAV。详见
 `docs/etf/ETF_INSTRUMENTS.md`、`docs/etf/NASDAQ_QDII_EXPOSURE.md`、
 `docs/index/INDEX_REFERENCES.md` 和 ADR-0006。
+
+## Multi-Horizon Trade Plans
+
+SPEC-010 introduces an explicit, versioned Trade Plan between investment decisions and the
+existing execution/risk authority. Plans declare a horizon and trading style before activation,
+retain append-only policy and trailing-anchor revisions, and produce idempotent `ENTRY`,
+`SCALE_IN`, `HOLD`, `REDUCE` and `EXIT` directives. Active taxonomy and historical evidence cannot
+be relabeled after a loss.
+
+Daily observations are PIT-gated and executable directives are locked to the next eligible open,
+then sent through the existing A-share/ETF risk, settlement, lot, price-limit and fee chain.
+Equity, domestic ETF and CN-listed Nasdaq-QDII ETF remain CNY instruments; reference Indexes fail
+closed. Champion and every Shadow portfolio keep separate active-plan keys and evidence. See
+`docs/trade-plan/MULTI_HORIZON_TRADE_PLANS.md`.
 
 ## Foundation prerequisites
 

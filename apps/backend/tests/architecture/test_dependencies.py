@@ -935,3 +935,68 @@ def test_only_bootstrap_combines_application_and_concrete_adapters() -> None:
     bootstrap_imports = package_imports("bootstrap")
     assert any(module.startswith("aic_backend.application") for module in bootstrap_imports)
     assert any(module.startswith(concrete_roots) for module in bootstrap_imports)
+
+
+def test_spec_010_trade_plan_preserves_clean_and_authoritative_boundaries() -> None:
+    domain_imports = package_imports("domain/trade_plan")
+    assert not {
+        module
+        for module in domain_imports
+        if module.startswith(
+            (
+                "aic_backend.application",
+                "aic_backend.infrastructure",
+                "aic_backend.providers",
+                "sqlalchemy",
+                "pydantic",
+            )
+        )
+    }
+
+    application_paths = (
+        PACKAGE_ROOT / "application/trade_plan.py",
+        PACKAGE_ROOT / "application/trade_plan_record.py",
+        PACKAGE_ROOT / "application/ports/trade_plan.py",
+    )
+    application_imports: set[str] = set()
+    for path in application_paths:
+        application_imports.update(imported_modules(path))
+    assert "aic_backend.application.execution" in application_imports
+    assert "aic_backend.application.use_cases.point_in_time_market_data" in application_imports
+    assert not {
+        module
+        for module in application_imports
+        if module.startswith(
+            (
+                "aic_backend.infrastructure",
+                "aic_backend.providers",
+                "sqlalchemy",
+                "fastapi",
+            )
+        )
+    }
+
+    adapter_imports = imported_modules(
+        PACKAGE_ROOT / "infrastructure/trade_plan_persistence.py"
+    )
+    assert "aic_backend.application.ports.trade_plan" in adapter_imports
+    assert any(module.startswith("sqlalchemy") for module in adapter_imports)
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            PACKAGE_ROOT / "domain/trade_plan/models.py",
+            PACKAGE_ROOT / "application/trade_plan.py",
+        )
+    ).casefold()
+    assert not any(
+        item in source
+        for item in (
+            "openai",
+            "llm",
+            "kelly",
+            "leverage",
+            "broker api",
+            "usd cash",
+        )
+    )

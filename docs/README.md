@@ -17,6 +17,7 @@ Documentation must be updated in the same Pull Request as the change it describe
 - [Nasdaq QDII Exposure](etf/NASDAQ_QDII_EXPOSURE.md)
 - [Index References](index/INDEX_REFERENCES.md)
 - [ETF Valuation and Availability](data/ETF_VALUATION_AND_AVAILABILITY.md)
+- [Multi-Horizon Trade Plans](trade-plan/MULTI_HORIZON_TRADE_PLANS.md)
 - [API](api/README.md)
 - [Testing](testing/README.md)
 - [Acceptance reports](acceptance/README.md)

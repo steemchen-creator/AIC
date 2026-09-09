@@ -65,3 +65,13 @@ Migration `20260906_0012` adds append-only `shadow_role_profile_events`. Avatar 
 as old/new reference audit facts while the original Manifest and normalized member row stay immutable.
 The group recovery projection includes these events so the effective role profile and activity board can
 be reconstructed after restart. Downgrade to `20260906_0011` removes only profile-update audit events.
+
+# SPEC-010 Trade Plans
+
+Migration `20260909_0014` adds `trade_plans` as the atomic recovery projection and normalized
+`trade_plan_revisions`, `trade_plan_directives`, `trade_plan_execution_evidence` and
+`trade_plan_outcomes`. Revisions and evidence use stable identities with insert-or-verify conflict
+handling. A partial unique index on `(portfolio_id, instrument_key)` where status is `ACTIVE`
+duplicates the application invariant at the database boundary. Pair-history and directive-time
+indexes provide deterministic ordering. Downgrade to `20260906_0013` removes only SPEC-010 tables
+and therefore requires backup and explicit authorization outside isolated validation.
