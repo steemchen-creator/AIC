@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 38,
+  "revision": 39,
   "current_work_item": "SPEC-010",
   "work_items": {
     "DEV-GOV-001": {
@@ -240,7 +240,7 @@
       "kind": "SPEC",
       "parent_work_item": "DEV-GOV-VALIDATION-001",
       "previous_work_item": "DEV-GOV-VALIDATION-001",
-      "status": "REVIEW_REQUIRED",
+      "status": "RECOVERABLE_FAILURE",
       "created_at": "2026-09-08T19:31:07Z",
       "artifact_path": "SPEC-010-Multi-Horizon-Trade-Plan-and-Swing-Management-Foundation.md",
       "artifact_sha256": "b786de248003685aa91be001ad7e17101c4312d71d676225c9f2537e687db403",
@@ -255,7 +255,7 @@
       "review_id": null,
       "ci": {
         "head_sha": "99756090eeb267d79e33dc8789a00b395ec8f713",
-        "status": "PENDING",
+        "status": "FAILED",
         "required_checks": {
           "Governance baseline": 15368,
           "Backend tests": 15368,
@@ -266,7 +266,7 @@
           {
             "name": "AIC Development Governance Gate",
             "head_sha": "99756090eeb267d79e33dc8789a00b395ec8f713",
-            "conclusion": "pending",
+            "conclusion": "failure",
             "run_id": 34310065255,
             "app_id": 15368,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/34310065255/job/102334719580"
@@ -274,7 +274,7 @@
           {
             "name": "Backend tests",
             "head_sha": "99756090eeb267d79e33dc8789a00b395ec8f713",
-            "conclusion": "pending",
+            "conclusion": "success",
             "run_id": 34310065255,
             "app_id": 15368,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/34310065255/job/102334719564"
@@ -282,7 +282,7 @@
           {
             "name": "Desktop build",
             "head_sha": "99756090eeb267d79e33dc8789a00b395ec8f713",
-            "conclusion": "pending",
+            "conclusion": "success",
             "run_id": 34310065255,
             "app_id": 15368,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/34310065255/job/102334719413"
@@ -298,7 +298,7 @@
           {
             "name": "orchestrate",
             "head_sha": "99756090eeb267d79e33dc8789a00b395ec8f713",
-            "conclusion": "pending",
+            "conclusion": "failure",
             "run_id": 102334714357,
             "app_id": 15368,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/34310063466/job/102334714357"
@@ -310,8 +310,8 @@
           {
             "run_id": 34310065255,
             "head_sha": "99756090eeb267d79e33dc8789a00b395ec8f713",
-            "status": "queued",
-            "conclusion": null,
+            "status": "completed",
+            "conclusion": "failure",
             "attempt": 1,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/34310065255"
           }
@@ -327,8 +327,10 @@
       "blocked_reasons": [
         "SENSITIVE_DIFF:master_project_objective"
       ],
-      "recoverable_failures": [],
-      "recovery_stage": null,
+      "recoverable_failures": [
+        "CI_FAILED"
+      ],
+      "recovery_stage": "REVIEW_REQUIRED",
       "unresolved_fix": null,
       "governance_exception": false,
       "chairman_required": true,
@@ -780,6 +782,16 @@
       "actor": "github-actions[bot]",
       "input_sha": "99756090eeb267d79e33dc8789a00b395ec8f713",
       "output_state": "REVIEW_REQUIRED",
+      "metadata": {}
+    },
+    {
+      "event_id": "289a2335079647cca54cb909a7c60f59",
+      "event_type": "CI_FAILED",
+      "timestamp": "2026-09-09T04:15:09.126604Z",
+      "work_item_id": "SPEC-010",
+      "actor": "github-actions[bot]",
+      "input_sha": "99756090eeb267d79e33dc8789a00b395ec8f713",
+      "output_state": "RECOVERABLE_FAILURE",
       "metadata": {}
     }
   ],
