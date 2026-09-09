@@ -1,22 +1,26 @@
+import asyncio
 import os
 import subprocess
 import sys
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 
+from aic_backend.application.ports.persistence import PersistenceError, PersistenceErrorCode
 from aic_backend.application.trade_plan import CreateDraftPlan, PlanAmendment, TradePlanService
+from aic_backend.application.trade_plan_record import TradePlanRecord
 from aic_backend.domain.market_data import InstrumentIdentity, InstrumentType, Market
 from aic_backend.domain.portfolio.models import PortfolioId, Quantity
 from aic_backend.domain.trade_plan import (
     DirectiveType,
     HardStopPolicy,
     InvestmentHorizon,
+    PlanExecutionEvidence,
     TradePlanError,
     TradePlanErrorCode,
     TradePlanId,
@@ -194,3 +198,160 @@ def test_trade_plan_migration_upgrade_downgrade_and_head() -> None:
             check=True,
             env=environment,
         )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["revision", "directive", "execution"])
+async def test_concurrent_append_cannot_overwrite_projection_or_evidence(
+    engine: AsyncEngine, kind: str
+) -> None:
+    repository = PostgreSQLTradePlanRepository(engine)
+    initial = await build(repository, "concurrent")
+    if kind == "execution":
+        initial = replace(
+            initial,
+            directives=initial.directives
+            + tuple(
+                replace(
+                    initial.directives[0],
+                    directive_id=f"execute-{name}",
+                    directive_type=DirectiveType.ENTRY,
+                    quantity=Quantity(Decimal("100")),
+                    not_before=NEXT_OPEN,
+                )
+                for name in ("first", "second")
+            ),
+        )
+        await repository.save(initial)
+
+    def append(record: TradePlanRecord, writer: str) -> TradePlanRecord:
+        if kind == "revision":
+            version = record.plan.version + 1
+            at = NOW + timedelta(minutes=version)
+            revision = replace(
+                record.revisions[-1],
+                version=version,
+                reason=writer,
+                effective_at=at,
+                recorded_at=at,
+            )
+            return replace(
+                record,
+                plan=replace(record.plan, version=version, updated_at=at),
+                revisions=record.revisions + (revision,),
+            )
+        if kind == "directive":
+            directive = replace(record.directives[0], directive_id=f"directive-{writer}")
+            return replace(record, directives=record.directives + (directive,))
+        execution = PlanExecutionEvidence(
+            f"evidence-{writer}",
+            record.plan.plan_id,
+            record.plan.version,
+            f"execute-{writer}",
+            DirectiveType.ENTRY,
+            f"order-{writer}",
+            f"fill-{writer}",
+            NEXT_OPEN,
+        )
+        return replace(record, executions=record.executions + (execution,))
+
+    written = asyncio.Event()
+    release = asyncio.Event()
+
+    class PausingRepository(PostgreSQLTradePlanRepository):
+        async def _save_projection(
+            self, connection: AsyncConnection, record: TradePlanRecord, create: bool
+        ) -> None:
+            await super()._save_projection(connection, record, create)
+            written.set()
+            await release.wait()
+
+    waiter_engine = create_async_engine(
+        os.environ["AIC_DATABASE_URL"],
+        connect_args={"server_settings": {"application_name": "spec010-concurrent-waiter"}},
+    )
+    first_task = asyncio.create_task(PausingRepository(engine).save(append(initial, "first")))
+    second_task = None
+    try:
+        await asyncio.wait_for(written.wait(), timeout=10)
+        second_task = asyncio.create_task(
+            PostgreSQLTradePlanRepository(waiter_engine).save(append(initial, "second"))
+        )
+        # Observe an actual database lock wait, rather than relying on scheduling delays.
+        async with asyncio.timeout(10):
+            async with engine.connect() as observer:
+                while not (
+                    await observer.execute(
+                        text(
+                            "SELECT count(*) FROM pg_stat_activity "
+                            "WHERE application_name = :name AND wait_event_type = 'Lock'"
+                        ),
+                        {"name": "spec010-concurrent-waiter"},
+                    )
+                ).scalar_one():
+                    await observer.rollback()
+                    await asyncio.sleep(0.01)
+        release.set()
+        results = await asyncio.gather(first_task, second_task, return_exceptions=True)
+        assert results[0] is None
+        assert isinstance(results[1], PersistenceError)
+        assert results[1].code is PersistenceErrorCode.IDENTITY_CONFLICT
+        assert await repository.get(initial.plan.plan_id) == append(initial, "first")
+        # The rejected caller can reload and explicitly append; neither writer's evidence vanishes.
+        current = await repository.get(initial.plan.plan_id)
+        final = append(current, "second")
+        await repository.save(final)
+        await repository.save(final)
+        assert await repository.get(initial.plan.plan_id) == final
+        async with engine.connect() as connection:
+            for table, values in (
+                (trade_plan_revisions, final.revisions),
+                (trade_plan_directives, final.directives),
+                (trade_plan_execution_evidence, final.executions),
+            ):
+                count = (
+                    await connection.execute(
+                        select(func.count())
+                        .select_from(table)
+                        .where(table.c.plan_id == final.plan.plan_id.value)
+                    )
+                ).scalar_one()
+                assert count == len(values)
+    finally:
+        release.set()
+        await asyncio.gather(
+            *(task for task in (first_task, second_task) if task is not None),
+            return_exceptions=True,
+        )
+        await waiter_engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_postgresql_rejects_draft_instrument_mutation(engine: AsyncEngine) -> None:
+    repository = PostgreSQLTradePlanRepository(engine)
+    service = TradePlanService(repository, Calendar(), Execution())  # type: ignore[arg-type]
+    created = command("draft-identity")
+    await service.create_draft(created)
+    before = await repository.get(created.plan_id)
+    changed = replace(
+        before,
+        plan=replace(
+            before.plan, instrument=InstrumentIdentity(Market.CN_SSE, "510300", InstrumentType.ETF)
+        ),
+    )
+    with pytest.raises(PersistenceError) as error:
+        await repository.save(changed)
+    assert error.value.code is PersistenceErrorCode.IDENTITY_CONFLICT
+    assert await repository.get(created.plan_id) == before
+
+
+@pytest.mark.asyncio
+async def test_legacy_directive_payload_remains_appendable(engine: AsyncEngine) -> None:
+    repository = PostgreSQLTradePlanRepository(engine)
+    record = await build(repository, "legacy")
+    async with engine.begin() as connection:
+        payload = (await connection.execute(select(trade_plan_directives.c.payload))).scalar_one()
+        payload.pop("trigger_key", None)
+        await connection.execute(update(trade_plan_directives).values(payload=payload))
+    await repository.save(record)
+    assert await repository.get(record.plan.plan_id) == record

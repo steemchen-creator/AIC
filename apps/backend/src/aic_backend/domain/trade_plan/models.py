@@ -89,6 +89,8 @@ class TradePlanErrorCode(StrEnum):
     DIRECTIVE_NOT_EXECUTABLE = "TRADE_PLAN_DIRECTIVE_NOT_EXECUTABLE"
     DIRECTIVE_CONFLICT = "TRADE_PLAN_DIRECTIVE_CONFLICT"
     EXECUTION_REJECTED = "TRADE_PLAN_EXECUTION_REJECTED"
+    POSITION_SEMANTICS = "TRADE_PLAN_POSITION_SEMANTICS"
+    OUTCOME_PENDING = "TRADE_PLAN_OUTCOME_PENDING"
 
 
 class TradePlanError(ValueError):
@@ -399,6 +401,7 @@ class TradePlanDirective:
     not_before: datetime | None
     observation_id: str | None
     created_at: datetime
+    trigger_key: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "directive_id", _text(self.directive_id, "directive_id"))

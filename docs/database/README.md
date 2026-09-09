@@ -75,3 +75,10 @@ handling. A partial unique index on `(portfolio_id, instrument_key)` where statu
 duplicates the application invariant at the database boundary. Pair-history and directive-time
 indexes provide deterministic ordering. Downgrade to `20260906_0013` removes only SPEC-010 tables
 and therefore requires backup and explicit authorization outside isolated validation.
+
+Trade Plan saves lock the existing plan row before validating append-only history and hold that
+lock through projection/evidence writes. Concurrent stale appends fail with `IDENTITY_CONFLICT`
+and must reload before retrying. Regression tests observe actual PostgreSQL lock waits for
+competing revision, directive and execution appends and verify both normalized and recovery
+records. Automatic directives optionally carry a canonical `trigger_key` in existing JSON;
+old payloads remain readable and appendable without a schema migration or history rewrite.

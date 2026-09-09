@@ -40,6 +40,8 @@ from aic_backend.domain.portfolio.models import (
     OrderStatus,
     OrderType,
     PortfolioId,
+    Position,
+    PositionKey,
     Price,
     Quantity,
 )
@@ -155,6 +157,7 @@ class Execution:
                 Money(Decimal("0")),
                 "execution/v1",
             )
+            state.account.apply_fill(fill, (f"cash-{order_id.value}",))
         return ExecutionOutcome(
             order,
             TradingEligibility(True, True, False, False, True),
@@ -509,6 +512,10 @@ async def test_executable_directives_use_the_authoritative_gateway(
         source_reference=kind.value,
     )
     state = ExecutionState.initialize(PortfolioId("champion"), Money(Decimal("100000")), NOW)
+    if kind is not DirectiveType.ENTRY:
+        state.account.positions[EQUITY.canonical_key] = Position(
+            PositionKey(state.account.portfolio_id, EQUITY), Decimal("200"), Decimal("10")
+        )
     evidence = await service.execute_directive(directive.directive_id, state, NEXT_OPEN)
     assert evidence.fill_id is not None
     assert execution.sides == [side]
@@ -731,7 +738,10 @@ async def test_successful_exit_is_linked_completes_once_and_builds_adherence() -
     state = ExecutionState.initialize(PortfolioId("champion"), Money(Decimal("100000")), NOW)
     with pytest.raises(TradePlanError) as error:
         await service.execute_directive(directive.directive_id, state, NEXT_OPEN)
-    assert error.value.code is TradePlanErrorCode.INVALID_FIELD
+    assert error.value.code is TradePlanErrorCode.POSITION_SEMANTICS
+    state.account.positions[EQUITY.canonical_key] = Position(
+        PositionKey(state.account.portfolio_id, EQUITY), Decimal("100"), Decimal("10")
+    )
     evidence = await service.execute_directive(
         directive.directive_id,
         state,
@@ -803,6 +813,394 @@ def test_reference_index_and_direct_us_instrument_fail_closed() -> None:
     assert error.value.code is TradePlanErrorCode.NON_TRADABLE_INDEX
     with pytest.raises(ValueError):
         Market("US.NASDAQ")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", list(DirectiveType))
+async def test_manual_directives_bind_only_to_visible_revision(kind: DirectiveType) -> None:
+    service, repository, _ = await active_service()
+    plan_id = TradePlanId("plan-1")
+    await service.revise(
+        plan_id,
+        PlanAmendment(
+            1,
+            "future policy",
+            "cto",
+            "review",
+            NOW + timedelta(hours=2),
+            hard_stop=HardStopPolicy(Decimal("8")),
+        ),
+    )
+    quantity = (
+        None if kind in (DirectiveType.HOLD, DirectiveType.EXIT) else Quantity(Decimal("100"))
+    )
+    directive = await service.create_directive(
+        plan_id, kind, quantity, NOW + timedelta(hours=1), source_reference="historical"
+    )
+    assert directive.plan_version == 1
+    before = await repository.get(plan_id)
+    with pytest.raises(TradePlanError) as error:
+        await service.create_directive(
+            plan_id, kind, quantity, NOW, source_reference="pre-activation"
+        )
+    assert error.value.code is TradePlanErrorCode.FUTURE_EVIDENCE
+    assert await repository.get(plan_id) == before
+
+
+@pytest.mark.asyncio
+async def test_recorded_at_also_controls_revision_visibility() -> None:
+    service, repository, _ = await active_service()
+    record = await repository.get(TradePlanId("plan-1"))
+    delayed = replace(record.revisions[0], recorded_at=NOW + timedelta(hours=2))
+    # Model a previously stored revision with delayed availability in an independent repository.
+    restored = InMemoryTradePlanRepository()
+    await restored.save(replace(record, revisions=(delayed,)))
+    service = TradePlanService(restored, Calendar(), Execution())
+    with pytest.raises(TradePlanError) as error:
+        await service.evaluate(
+            record.plan.plan_id, observation("early", "10"), NOW + timedelta(hours=1)
+        )
+    assert error.value.code is TradePlanErrorCode.FUTURE_EVIDENCE
+    assert (await restored.get(record.plan.plan_id)).directives == ()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("has_old_policy", [False, True])
+async def test_stale_thesis_invalidation_cannot_leave_partial_evidence(
+    has_old_policy: bool,
+) -> None:
+    service, repository, _ = await active_service(
+        command(invalidation="old-policy" if has_old_policy else None)
+    )
+    plan_id = TradePlanId("plan-1")
+    await service.revise(
+        plan_id,
+        PlanAmendment(
+            1,
+            "later invalidation policy",
+            "cto",
+            "review",
+            NOW + timedelta(hours=2),
+            thesis_invalidation_reference="future-policy",
+        ),
+    )
+    before = await repository.get(plan_id)
+    with pytest.raises(TradePlanError) as error:
+        await service.record_thesis_invalidation(
+            plan_id, event_reference="stale-event", as_of=NOW + timedelta(hours=1)
+        )
+    assert error.value.code is (
+        TradePlanErrorCode.INVALID_TIMESTAMP if has_old_policy else TradePlanErrorCode.INVALID_FIELD
+    )
+    assert await repository.get(plan_id) == before
+
+
+@pytest.mark.asyncio
+async def test_calendar_failure_rolls_back_trailing_and_terminal_preparation() -> None:
+    from unittest.mock import AsyncMock
+
+    service, repository, _ = await active_service(
+        command(
+            expiry_at=NOW + timedelta(minutes=30), trailing_stop=TrailingStopPolicy(Decimal(".1"))
+        )
+    )
+    before = await repository.get(TradePlanId("plan-1"))
+    service._calendar = SimpleNamespace(
+        next_open=AsyncMock(side_effect=RuntimeError("unavailable"))
+    )
+    with pytest.raises(RuntimeError, match="unavailable"):
+        await service.evaluate(
+            before.plan.plan_id, observation("expiry", "10"), NOW + timedelta(hours=1)
+        )
+    assert await repository.get(before.plan.plan_id) == before
+
+
+def positioned_state(quantity: str, *, portfolio: str = "champion") -> ExecutionState:
+    state = ExecutionState.initialize(PortfolioId(portfolio), Money(Decimal("100000")), NOW)
+    if Decimal(quantity):
+        state.account.positions[EQUITY.canonical_key] = Position(
+            PositionKey(state.account.portfolio_id, EQUITY), Decimal(quantity), Decimal("10")
+        )
+    return state
+
+
+class FollowingDayCalendar:
+    async def next_open(self, instrument: InstrumentIdentity, decision_at: datetime) -> datetime:
+        return decision_at.replace(hour=1, minute=30, second=0, microsecond=0) + timedelta(days=1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "kind,held,quantity,valid,remaining",
+    [
+        (DirectiveType.ENTRY, "0", "100", True, "100"),
+        (DirectiveType.ENTRY, "100", "100", False, "100"),
+        (DirectiveType.SCALE_IN, "0", "100", False, "0"),
+        (DirectiveType.SCALE_IN, "100", "100", True, "200"),
+        (DirectiveType.REDUCE, "0", "100", False, "0"),
+        (DirectiveType.REDUCE, "100", "100", False, "100"),
+        (DirectiveType.REDUCE, "100", "200", False, "100"),
+        (DirectiveType.REDUCE, "200", "100", True, "100"),
+        (DirectiveType.EXIT, "0", None, False, "0"),
+        (DirectiveType.EXIT, "250", None, True, "0"),
+    ],
+)
+async def test_position_semantics_against_authoritative_account(
+    kind: DirectiveType, held: str, quantity: str | None, valid: bool, remaining: str
+) -> None:
+    service, repository, execution = await active_service()
+    directive = await service.create_directive(
+        TradePlanId("plan-1"),
+        kind,
+        None if quantity is None else Quantity(Decimal(quantity)),
+        NOW + timedelta(hours=1),
+        source_reference="position-semantics",
+    )
+    state = positioned_state(held)
+    if valid:
+        evidence = await service.execute_directive(directive.directive_id, state, NEXT_OPEN)
+        assert evidence.fill_id is not None and execution.calls == 1
+        assert await service.execute_directive(directive.directive_id, state, NEXT_OPEN) == evidence
+        assert execution.calls == 1
+    else:
+        before = await repository.get(directive.plan_id)
+        with pytest.raises(TradePlanError) as error:
+            await service.execute_directive(directive.directive_id, state, NEXT_OPEN)
+        assert error.value.code is TradePlanErrorCode.POSITION_SEMANTICS
+        assert execution.calls == 0 and await repository.get(directive.plan_id) == before
+    position = state.account.positions.get(EQUITY.canonical_key)
+    assert (Decimal("0") if position is None else position.quantity) == Decimal(remaining)
+
+
+@pytest.mark.asyncio
+async def test_exit_cannot_use_caller_quantity_or_another_account() -> None:
+    service, _, execution = await active_service()
+    directive = await service.create_directive(
+        TradePlanId("plan-1"),
+        DirectiveType.EXIT,
+        None,
+        NOW + timedelta(hours=1),
+        source_reference="exit",
+    )
+    for state, hint in (
+        (positioned_state("200"), Quantity(Decimal("100"))),
+        (positioned_state("200", portfolio="shadow"), None),
+    ):
+        with pytest.raises(TradePlanError) as error:
+            await service.execute_directive(
+                directive.directive_id, state, NEXT_OPEN, position_quantity=hint
+            )
+        assert error.value.code is TradePlanErrorCode.POSITION_SEMANTICS
+    assert execution.calls == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("policy_kind", ["hard", "trailing", "time", "target"])
+@pytest.mark.parametrize("rejected", [False, True])
+async def test_automatic_trigger_is_not_reemitted_pending_or_consumed(
+    policy_kind: str, rejected: bool
+) -> None:
+    reduce = DirectiveType.REDUCE
+    quantity = Quantity(Decimal("100"))
+    values = {
+        "hard": command(hard_stop=HardStopPolicy(Decimal("9"), reduce, quantity)),
+        "trailing": command(trailing_stop=TrailingStopPolicy(Decimal(".1"), reduce, quantity)),
+        "time": command(time_stop=TimeStopPolicy(NOW + timedelta(minutes=30), reduce, quantity)),
+        "target": command(profit_targets=(ProfitTarget(Decimal("12"), reduce, quantity),)),
+    }
+    service, repository, execution = await active_service(values[policy_kind], rejected=rejected)
+    price = "13" if policy_kind == "target" else "8"
+    first = await service.evaluate(
+        TradePlanId("plan-1"), observation("one", price, high="10"), NOW + timedelta(hours=1)
+    )
+    # Restart must reconstruct pending/consumed state from persisted directives/evidence.
+    restored = InMemoryTradePlanRepository()
+    await restored.save(_stored_record(_record_json(await repository.get(first.plan_id))))
+    service = TradePlanService(restored, Calendar(), execution)
+    repeated = await service.evaluate(
+        first.plan_id, observation("two", price, high="11"), NOW + timedelta(hours=2)
+    )
+    assert repeated.directive_id == first.directive_id
+    state = positioned_state("500")
+    await service.execute_directive(first.directive_id, state, NEXT_OPEN)
+    # A later decision (new source/timestamp) cannot create another action for this policy.
+    service._calendar = FollowingDayCalendar()
+    after = await service.evaluate(
+        first.plan_id, observation("three", price, high="12"), NEXT_OPEN + timedelta(hours=1)
+    )
+    record = await restored.get(first.plan_id)
+    assert len([d for d in record.directives if d.directive_type is not DirectiveType.HOLD]) == 1
+    assert after.directive_type is DirectiveType.HOLD or after.directive_id == first.directive_id
+    assert execution.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_targets_are_consumed_independently_and_equal_policy_revision_does_not_rearm() -> (
+    None
+):
+    quantity = Quantity(Decimal("100"))
+    service, repository, _ = await active_service(
+        command(
+            profit_targets=(
+                ProfitTarget(Decimal("12"), DirectiveType.REDUCE, quantity),
+                ProfitTarget(Decimal("14"), DirectiveType.REDUCE, quantity),
+            )
+        )
+    )
+    plan_id = TradePlanId("plan-1")
+    state = positioned_state("500")
+    first = await service.evaluate(
+        plan_id, observation("target-one", "15"), NOW + timedelta(hours=1)
+    )
+    await service.execute_directive(first.directive_id, state, NEXT_OPEN)
+    await service.revise(
+        plan_id,
+        PlanAmendment(
+            1,
+            "equivalent decimals",
+            "cto",
+            "review",
+            NEXT_OPEN + timedelta(minutes=30),
+            profit_targets=(
+                ProfitTarget(Decimal("12.0"), DirectiveType.REDUCE, quantity),
+                ProfitTarget(Decimal("14.0"), DirectiveType.REDUCE, quantity),
+            ),
+        ),
+    )
+    historical = await service.evaluate(
+        plan_id, observation("before-fill", "15"), NOW + timedelta(hours=2)
+    )
+    assert historical == first
+    service._calendar = FollowingDayCalendar()
+    second = await service.evaluate(
+        plan_id, observation("target-two", "15"), NEXT_OPEN + timedelta(hours=1)
+    )
+    assert second.trigger_key != first.trigger_key
+    await service.execute_directive(second.directive_id, state, second.not_before)
+    final = await service.evaluate(
+        plan_id, observation("targets-used", "15"), second.not_before + timedelta(hours=1)
+    )
+    assert final.directive_type is DirectiveType.HOLD
+    assert len((await repository.get(plan_id)).executions) == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("terminal", ["expiry", "invalidation"])
+@pytest.mark.parametrize("rejected", [False, True])
+async def test_outcome_waits_for_terminal_exit_settlement(terminal: str, rejected: bool) -> None:
+    value = (
+        command(expiry_at=NOW + timedelta(minutes=30))
+        if terminal == "expiry"
+        else command(invalidation="explicit-policy")
+    )
+    service, repository, _ = await active_service(value, rejected=rejected)
+    directive = (
+        await service.evaluate(value.plan_id, observation("expiry", "10"), NOW + timedelta(hours=1))
+        if terminal == "expiry"
+        else await service.record_thesis_invalidation(
+            value.plan_id, event_reference="event", as_of=NOW + timedelta(hours=1)
+        )
+    )
+    before = await repository.get(value.plan_id)
+    inputs = OutcomeInputs(Decimal("10"), Decimal("0"), Decimal("0"))
+    with pytest.raises(TradePlanError) as error:
+        await service.build_outcome(value.plan_id, inputs)
+    assert error.value.code is TradePlanErrorCode.OUTCOME_PENDING
+    assert await repository.get(value.plan_id) == before
+    execution = await service.execute_directive(
+        directive.directive_id, positioned_state("100"), NEXT_OPEN
+    )
+    settled_inputs = replace(
+        inputs, remaining_quantity=Decimal("100") if rejected else Decimal("0")
+    )
+    outcome = await service.build_outcome(value.plan_id, settled_inputs)
+    assert outcome.source_execution_ids == (execution.evidence_id,)
+    assert outcome.adhered is not rejected
+    assert outcome.rejected_count == int(rejected)
+    assert await service.build_outcome(value.plan_id, settled_inputs) == outcome
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("trigger", ["stop", "target"])
+async def test_legacy_trigger_evidence_survives_restart_without_rearming(trigger: str) -> None:
+    quantity = Quantity(Decimal("100"))
+    value = (
+        command(hard_stop=HardStopPolicy(Decimal("11"), DirectiveType.REDUCE, quantity))
+        if trigger == "stop"
+        else command(profit_targets=(ProfitTarget(Decimal("9"), DirectiveType.REDUCE, quantity),))
+    )
+    service, repository, execution = await active_service(value)
+    first = await service.evaluate(
+        value.plan_id, observation("first", "10"), NOW + timedelta(hours=1)
+    )
+    payload = _record_json(await repository.get(value.plan_id))
+    for directive in payload["directives"]:
+        directive.pop("trigger_key", None)
+    restored = InMemoryTradePlanRepository()
+    await restored.save(_stored_record(payload))
+    service = TradePlanService(restored, Calendar(), execution)
+    repeated = await service.evaluate(
+        value.plan_id, observation("repeat", "10"), NOW + timedelta(hours=2)
+    )
+    assert repeated.directive_id == first.directive_id
+    before = await restored.get(value.plan_id)
+    with pytest.raises(TradePlanError) as error:
+        await service.evaluate(
+            value.plan_id, observation("historical", "10"), NOW + timedelta(minutes=30)
+        )
+    assert error.value.code is TradePlanErrorCode.FUTURE_EVIDENCE
+    assert await restored.get(value.plan_id) == before
+    await service.execute_directive(repeated.directive_id, positioned_state("300"), NEXT_OPEN)
+    service._calendar = FollowingDayCalendar()
+    after = await service.evaluate(
+        value.plan_id, observation("consumed", "10"), NEXT_OPEN + timedelta(hours=1)
+    )
+    assert after.directive_type is DirectiveType.HOLD if trigger == "target" else after == repeated
+    assert execution.calls == 1
+    assert len((await restored.get(value.plan_id)).executions) == 1
+
+
+@pytest.mark.asyncio
+async def test_draft_identity_is_immutable_at_service_and_repository_boundaries() -> None:
+    from aic_backend.application.ports.persistence import PersistenceError, PersistenceErrorCode
+
+    repository = InMemoryTradePlanRepository()
+    service = TradePlanService(repository, Calendar(), Execution())
+    original = command()
+    await service.create_draft(original)
+    before = await repository.get(original.plan_id)
+    for changed in (
+        replace(original, instrument=DOMESTIC_ETF),
+        replace(original, portfolio_id=PortfolioId("shadow")),
+    ):
+        with pytest.raises(TradePlanError) as error:
+            await service.edit_draft(original.plan_id, changed)
+        assert error.value.code is TradePlanErrorCode.PROTECTED_FIELD_MUTATION
+        with pytest.raises(PersistenceError) as persisted:
+            await repository.save(
+                replace(
+                    before,
+                    plan=replace(
+                        before.plan,
+                        portfolio_id=changed.portfolio_id,
+                        instrument=changed.instrument,
+                    ),
+                )
+            )
+        assert persisted.value.code is PersistenceErrorCode.IDENTITY_CONFLICT
+        assert await repository.get(original.plan_id) == before
+    edited = await service.edit_draft(
+        original.plan_id,
+        replace(
+            original,
+            horizon=InvestmentHorizon.LONG,
+            style=TradingStyle.VALUE,
+            thesis="valid edit",
+            hard_stop=HardStopPolicy(Decimal("7")),
+        ),
+    )
+    assert edited.instrument == original.instrument and edited.portfolio_id == original.portfolio_id
+    assert edited.horizon is InvestmentHorizon.LONG and edited.thesis == "valid edit"
 
 
 def test_domain_value_objects_reject_invalid_and_ambiguous_evidence() -> None:

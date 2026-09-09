@@ -10,6 +10,8 @@ Investment horizons are `T`, `SHORT`, `MEDIUM_SHORT`, `MEDIUM`, `MEDIUM_LONG` an
 Trading styles are `SWING`, `TREND`, `VALUE`, `EVENT`, `INDEX`, `MEAN_REVERSION` and `OTHER`.
 Both are descriptive plan policy, not strategies. They are editable while a plan is `DRAFT` and
 immutable after activation.
+Instrument and portfolio identity are immutable from creation, including in `DRAFT`. Changing
+either requires a new `plan_id`; draft thesis, taxonomy and policies remain editable.
 
 ```text
 DRAFT -> ACTIVE -> COMPLETED | CANCELLED | EXPIRED | INVALIDATED
@@ -35,6 +37,11 @@ Every decision produces an idempotently identified directive bound to an exact p
 - `REDUCE` and `EXIT` become SELL intents;
 - `HOLD` is evidence only and never becomes an order.
 
+Execution checks the authoritative account and remaining instrument position: `ENTRY` requires
+no position, `SCALE_IN` requires an existing position, `REDUCE` must sell strictly less than the
+remaining quantity, and `EXIT` sells that entire remaining quantity. A caller-supplied quantity
+hint cannot override account state, and another portfolio's account is rejected.
+
 Executable directives call the existing `AShareExecutionService` contract through an
 Application-owned protocol. The Trade Plan layer cannot declare a fill, bypass pre-trade risk or
 alter cash, settlement, lot, limit, trading-status, concentration, turnover or fee rules. Its
@@ -48,10 +55,21 @@ time stops, structured thesis-invalidation events and expiry. Natural-language t
 retained for audit but is never parsed as a signal. Invalid quantities, prices, state transitions,
 versions or unsupported identities fail closed with `TRADE_PLAN_*` reason codes.
 
+An automatic stop or target has a persisted canonical policy key. Repeated observations reuse
+its pending directive; a fill or rejection consumes that trigger without automatically retrying
+it. Ordered target evaluation proceeds to the next eligible unconsumed level. Equivalent decimal
+spellings, unrelated revisions and trailing high-water updates do not rearm a policy; an explicit
+change to its price/distance/deadline, action or quantity defines a different policy. Legacy
+directives without keys are matched to their bound revision, conservatively consuming ambiguous
+equal-action/quantity legacy targets instead of issuing duplicate orders.
+
 Terminal outcome materialization links stored revisions, directives and execution evidence with
 caller-supplied values derived from the authoritative portfolio/execution ledger. It reports
 holding duration, realized P&L, remaining quantity, trigger flags, scale/reduce/rejection counts
 and adherence. It is measurement evidence only and does not rank strategies.
+Materialization fails with `TRADE_PLAN_OUTCOME_PENDING` until every executable directive has
+fill or rejection evidence, including an EXIT issued by expiry or thesis invalidation. Rejection
+is a resolved attempt but never counts as adherence. The resulting outcome remains immutable.
 
 ## PIT and next eligible open
 
@@ -61,6 +79,11 @@ calendar and schedules a daily-bar directive no earlier than the next known elig
 Execution rechecks that time and then lets the existing execution service re-evaluate current
 calendar, tradability, price-limit, settlement and risk evidence. A future revision or bar is not
 visible to an earlier evaluation.
+Every directive creation path selects a revision whose effective and recorded times are both
+visible at `as_of`, or fails closed. Thesis invalidation and expiry validate their terminal
+transition before atomically saving the directive and terminal state. Failed validation or
+calendar lookup leaves no partial directive or high-water revision. Historical trigger decisions
+cannot consume future execution evidence or overwrite later trigger evidence.
 
 ## Asset and account boundaries
 
@@ -82,9 +105,15 @@ conflicting reuse is rejected. Migration `20260909_0014` upgrades from `20260906
 downgrade removes only SPEC-010 tables. Production downgrade requires an approved backup and
 change procedure because it deletes Trade Plan history.
 
+Existing plan saves hold a PostgreSQL row lock while validating the latest aggregate and writing
+the projection and normalized evidence in one transaction. A competing stale append is rejected
+with `IDENTITY_CONFLICT`; its caller must reload and explicitly append to the current history.
+It cannot silently replace another writer's revisions, directives or execution links. The optional
+directive policy key uses existing JSON fields, needs no new migration, and preserves old payloads.
+
 ## Deliberate V1 limits
 
 SPEC-010 has no AI Brain, signal generation, natural-language interpretation, Kelly sizing,
 leverage, direct US execution, UI, broker connectivity or new intraday engine. Profit target
-selection is deterministic from the ordered configured levels; strategy-specific target-consumed
-policy and richer partial-fill attribution remain future work.
+selection and consumption are deterministic from configured policies and recorded execution
+attempts; richer partial-fill attribution remains future work.

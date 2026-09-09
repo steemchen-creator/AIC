@@ -111,9 +111,9 @@ def _stored_record(value: dict[str, Any]) -> TradePlanRecord:
 def _validate_update(existing: TradePlanRecord, incoming: TradePlanRecord) -> None:
     old = existing.plan
     new = incoming.plan
-    immutable: tuple[str, ...] = ("plan_id", "portfolio_id", "created_at")
+    immutable: tuple[str, ...] = ("plan_id", "portfolio_id", "instrument", "created_at")
     if old.status is not TradePlanStatus.DRAFT:
-        immutable += ("instrument", "horizon", "style", "thesis")
+        immutable += ("horizon", "style", "thesis")
     if any(getattr(old, name) != getattr(new, name) for name in immutable):
         raise PersistenceError(
             PersistenceErrorCode.IDENTITY_CONFLICT,
@@ -218,9 +218,9 @@ class PostgreSQLTradePlanRepository(TradePlanRepository):
                 existing_row = (
                     (
                         await connection.execute(
-                            select(trade_plans).where(
-                                trade_plans.c.plan_id == record.plan.plan_id.value
-                            )
+                            select(trade_plans)
+                            .where(trade_plans.c.plan_id == record.plan.plan_id.value)
+                            .with_for_update()
                         )
                     )
                     .mappings()
@@ -257,7 +257,9 @@ class PostgreSQLTradePlanRepository(TradePlanRepository):
                             "directive_type": directive.directive_type.value,
                             "decision_as_of": directive.decision_as_of,
                             "not_before": directive.not_before,
-                            "payload": _DIRECTIVE_ADAPTER.dump_python(directive, mode="json"),
+                            "payload": _DIRECTIVE_ADAPTER.dump_python(
+                                directive, mode="json", exclude_defaults=True
+                            ),
                         },
                     )
                 for evidence in record.executions:

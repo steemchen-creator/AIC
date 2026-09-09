@@ -165,6 +165,13 @@ Equity, domestic ETF and CN-listed Nasdaq-QDII ETF remain CNY instruments; refer
 closed. Champion and every Shadow portfolio keep separate active-plan keys and evidence. See
 `docs/trade-plan/MULTI_HORIZON_TRADE_PLANS.md`.
 
+Every directive binds to a revision visible at its decision time. Entry, scale-in, partial reduce
+and full exit are checked against the authoritative account position. Persisted stop/target
+consumption prevents duplicate automatic orders across observations and restarts. Terminal
+outcomes wait for every executable directive to resolve, and PostgreSQL saves reject stale
+concurrent appends while preserving all recorded evidence. Instrument and portfolio identity
+remain immutable even while a plan is still a draft.
+
 ## Foundation prerequisites
 
 - .NET 8 SDK

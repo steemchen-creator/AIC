@@ -158,3 +158,49 @@ backup plus explicit operational authorization. No migration or state mutation i
 
 `APPROVED_CANDIDATE_FOR_ARCHITECTURE_REVIEW` after the external exact-HEAD required checks pass.
 Engineering does not self-approve, mark Ready, merge or enable Auto Merge.
+
+## 13. Architecture Review remediation (2026-09-10)
+
+This section records Engineering's fixes for the five blocking findings in
+[Architecture Review 5156808778](https://github.com/steemchen-creator/AIC/pull/19#pullrequestreview-5156808778),
+reaffirmed by
+[Architecture Review 5156995482](https://github.com/steemchen-creator/AIC/pull/19#pullrequestreview-5156995482)
+against `ae12e925fb5094e4274c9140a306325cd10a5334`. Earlier evidence above remains historical;
+this section supersedes the deferred target-consumption statement in section 10. Independent
+Architecture re-review is still required on the new exact HEAD; this is not approval.
+
+| Blocker | Implemented boundary | Regression evidence |
+| --- | --- | --- |
+| PIT / revision binding and invalidation atomicity | All directive paths select a revision with both effective and recorded timestamps visible at `as_of`. Terminal validation and calendar preparation precede one aggregate save. | All five manual directive kinds, future/late-recorded revisions, stale invalidation with and without an older policy, and calendar failure leaving no partial high-water or expiry evidence. |
+| Position semantics and repeated triggers | Account ownership and actual remaining position govern ENTRY, SCALE_IN, strictly partial REDUCE and full EXIT. Persisted canonical policy keys consume automatic stop/target attempts across observations and restarts. | Ten position cases, caller-hint/account mismatch, filled/rejected stop and target replay, independent target levels, equivalent policy amendments, legacy payloads, and historical decisions before future fills. |
+| Concurrent PostgreSQL lost updates | Lock the current plan row before validating append-only prefixes; hold the lock through the atomic projection and normalized evidence writes. Reject stale appends explicitly. | Three concurrent cases for revisions, directives and executions observe real PostgreSQL lock waits, reject the losing stale writer, then reload/append and verify both writers' evidence and normalized counts. |
+| Terminal outcome frozen before EXIT resolves | Block materialization while any executable directive lacks fill or rejection evidence. Completed outcomes remain immutable. | EXPIRED and INVALIDATED pending EXIT cases both fail without writes, then include subsequent fill/rejection evidence and correct adherence. |
+| Draft instrument identity | Instrument and portfolio are immutable for the full `plan_id` lifetime at service and repository boundaries. | Reject draft instrument/portfolio replacement, retain valid draft taxonomy/thesis/policy editing, and test the PostgreSQL boundary. |
+
+The fix adds 36 application regression cases and five PostgreSQL cases. The automatic policy
+identity excludes revision number, observation time and trailing high-water so incidental updates
+cannot rearm the same action. Fills and rejections both consume an attempt; there is no automatic
+retry after rejection. A changed price/distance/deadline, action or quantity is a different explicit
+policy. Legacy targets lacking a unique policy key are consumed conservatively when their
+revision/action/quantity match, avoiding duplicate execution of ambiguous historical targets.
+
+PostgreSQL writers now serialize on one plan row. Stale callers receive `IDENTITY_CONFLICT` and
+must reload and explicitly append; no automatic merge or unbounded retry is introduced. The
+optional trigger key fits existing directive JSON, defaults safely for old records, and is omitted
+from unchanged legacy normalized payloads. No DDL change, extra migration, evidence rewrite,
+execution/risk bypass or governance change is required. Rollback remains the existing code-revert
+procedure; migration 0014 and its destructive-downgrade precautions are unchanged.
+
+Local validation on Python 3.12.14:
+
+- `python -m pytest --ignore=apps/backend/tests/infrastructure --cov --cov-report=json:tmp/spec010-review-local-coverage.json --cov-report=term -q`:
+  `964 passed`, total branch-aware coverage `92.61%` (includes 60 Trade Plan and 34 architecture cases).
+- `python -m ruff check apps/backend/src apps/backend/tests`: passed.
+- `python -m mypy`: strict configuration passed, `147 source files`.
+- `git diff --check`: passed before commit.
+
+The unchanged exact-HEAD CI runs the full PostgreSQL 17 suite, including concurrent writes,
+migration 0013/0014 and base/head round-trips, architecture tests, coverage enforcement, Ruff,
+strict mypy, Governance Gate and desktop build. Its final run URL and complete counts are recorded
+in the PR description after execution, without creating a later untested documentation HEAD.
+PR #19 remains Draft; Engineering does not self-approve, merge or start SPEC-011.

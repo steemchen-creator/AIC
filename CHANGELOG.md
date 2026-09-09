@@ -21,6 +21,10 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   isolation, Equity/domestic ETF/Nasdaq-QDII compatibility and fail-closed Index references.
 - Outcome/adherence evidence, in-memory/PostgreSQL repository parity, reversible migration 0014,
   deterministic tests, design/migration documentation and recorded V1 limitations.
+- SPEC-010 Architecture Review fixes: PIT-bound directive creation and atomic terminal events,
+  authoritative position semantics and durable stop/target consumption, serialized PostgreSQL
+  appends, pending-execution outcome protection, and immutable draft instrument/portfolio identity
+  with regression coverage for all five blockers.
 
 - DEV-GOV-RECOVERY-001 protected principals-only deployment-policy rotation, with immutable
   setup preservation, chained canonical fingerprints, complete non-secret policy snapshots,
