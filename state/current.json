@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 36,
+  "revision": 37,
   "current_work_item": "SPEC-010",
   "work_items": {
     "DEV-GOV-001": {
@@ -240,17 +240,17 @@
       "kind": "SPEC",
       "parent_work_item": "DEV-GOV-VALIDATION-001",
       "previous_work_item": "DEV-GOV-VALIDATION-001",
-      "status": "RECOVERABLE_FAILURE",
+      "status": "REVIEW_REQUIRED",
       "created_at": "2026-09-08T19:31:07Z",
       "artifact_path": "SPEC-010-Multi-Horizon-Trade-Plan-and-Swing-Management-Foundation.md",
       "artifact_sha256": "b786de248003685aa91be001ad7e17101c4312d71d676225c9f2537e687db403",
       "target_branch": "feature/spec-010-multi-horizon-trade-plan",
       "execution_authorization": "CHAIRMAN-DELEGATION-AIC-STANDARD-WORK-V1",
       "pr_number": 19,
-      "head_sha": "7bafdbe589922209fc2bd1505ac177d7f9f61b66",
+      "head_sha": "99756090eeb267d79e33dc8789a00b395ec8f713",
       "base_sha": "ec09fa568f0513d9a0a9548044921d09edaf213c",
       "review_artifact": "REVIEW-SPEC010.md",
-      "architecture_status": "NOT_REVIEWED",
+      "architecture_status": "REVIEW_REQUIRED",
       "approved_head_sha": null,
       "review_id": null,
       "ci": {
@@ -272,10 +272,8 @@
       "blocked_reasons": [
         "SENSITIVE_DIFF:master_project_objective"
       ],
-      "recoverable_failures": [
-        "HEAD_CHANGE_WHILE_BLOCKED_OR_CLOSED"
-      ],
-      "recovery_stage": "CHAIRMAN_DECISION_REQUIRED",
+      "recoverable_failures": [],
+      "recovery_stage": null,
       "unresolved_fix": null,
       "governance_exception": false,
       "chairman_required": true,
@@ -708,6 +706,16 @@
         "reason": "HEAD_CHANGE_WHILE_BLOCKED_OR_CLOSED",
         "failure_class": "RECOVERABLE_READ"
       }
+    },
+    {
+      "event_id": "11053c825fe04448b4a6441aa55dbb95",
+      "event_type": "PR_HEAD_CHANGED",
+      "timestamp": "2026-09-09T04:12:58.120476Z",
+      "work_item_id": "SPEC-010",
+      "actor": "github-actions[bot]",
+      "input_sha": "99756090eeb267d79e33dc8789a00b395ec8f713",
+      "output_state": "REVIEW_REQUIRED",
+      "metadata": {}
     }
   ],
   "tasks": {
