@@ -138,14 +138,15 @@ round-trip, and build the desktop at the exact PR HEAD. Exact complete counts an
 conclusions bind to the external final HEAD attestation rather than being edited into a later
 commit.
 
-## 10. Accepted limitations / debt
+## 10. Deliberate V1 boundaries
 
 - No intraday observation engine; `T` is recorded intent under existing data capabilities.
 - Ordered target evaluation has no strategy-specific consumed-target state in V1.
 - Outcome monetary inputs require an explicit projection from existing authoritative ledgers.
 - No US/USD/FX, leverage, Kelly, AI or UI behavior.
 
-These are recorded in `docs/project/TECHNICAL_DEBT.md` and do not weaken required invariants.
+These are authorized SPEC-010 non-scope or future extensions, not newly accepted technical debt.
+No technical-debt registry entry is introduced by this PR.
 
 ## 11. Rollback
 
