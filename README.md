@@ -38,6 +38,12 @@ append-only policy rotation while `AIC_PIPELINE_ENABLED=false`. It preserves the
 permits only role-principal changes in V1, validates every fingerprint link and never invokes
 the autonomous runner. See the [policy rotation runbook](docs/dev-governance/POLICY_ROTATION.md).
 
+Sensitive-diff recovery uses the existing authenticated `event` command. A Chairman may
+request `SENSITIVE_DIFF_REVALIDATED` for an explicit current HEAD; trusted-main code rechecks
+the live PR identity and complete diff before removing a solely sensitive-diff latch. Other
+incidents and CI failure evidence remain protected. See the
+[recovery procedure](docs/dev-governance/DISASTER_RECOVERY.md#sensitive-diff-revalidation).
+
 ## Data Foundation architecture
 
 SPEC-004 Phase 11 adds the Point-in-Time/As-Of access layer and explicit no-lookahead

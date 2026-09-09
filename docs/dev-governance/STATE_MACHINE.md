@@ -53,6 +53,35 @@ items. Unknown mutation or paid-call outcomes, authority/security violations,
 governance exceptions and budget exhaustion stay fail-closed. There is no force-merge
 or rollback transition.
 
+### Sensitive-diff recovery (DEV-GOV-RECOVERY-002)
+
+`SENSITIVE_DIFF_REVALIDATED` is a dedicated Chairman-only event bound to an explicit
+current work-item HEAD. It is available through the existing authenticated `event`
+command. The trusted-main orchestrator fetches the actual PR, verifies number, target
+branch, repository, open/main status and exact HEAD, reads the current changed paths,
+and invokes `classify_changed_paths()`. Any sensitive area rejects recovery. It reads
+the PR again after the diff and rejects concurrent head/base/identity changes. Event
+metadata and caller-supplied PRs cannot replace repository evidence.
+
+Only `SENSITIVE_DIFF:*` reasons witnessed in prior `CHAIRMAN_ESCALATION` events may be
+removed. Mixed blockers, other Chairman escalation history, budget incidents/counters,
+declared sensitive work-item areas, governance exceptions and merge evidence reject
+the entire recovery atomically. This conservative rule retains ambiguous causes for
+separate authorized incident handling. Existing pause/auto-merge controls, reviews,
+artifacts, prior events and CI evidence are preserved. Recovery invalidates any old
+approval/eligibility; it never supplies Architecture Approval or CI success.
+
+| Input stage | Result after successful revalidation |
+|---|---|
+| `RECOVERABLE_FAILURE` | Keep stage, `recovery_stage`, `recoverable_failures` and CI unchanged; remove only the proven sensitive latch. Fresh exact-HEAD CI uses the existing recovery path. |
+| Solely sensitive `CHAIRMAN_DECISION_REQUIRED` | `REVIEW_REQUIRED`, or `FIXING` if an unresolved FIX exists. |
+| Any other stage | Reject. |
+
+The new event records authenticated actor, exact HEAD, actual PR number, base SHA,
+canonical changed-path SHA-256 and path count. Historical escalation events remain
+queryable; a clean later HEAD alone never clears their durable latch. Existing
+compare-and-swap persistence rejects concurrent state writers without losing incidents.
+
 CLOSED is terminal for implementation. A failure while requesting its successor is
 a project-level blocked/waiting reason; it does not reopen the closed predecessor.
 

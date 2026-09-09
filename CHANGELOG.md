@@ -8,6 +8,11 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- DEV-GOV-RECOVERY-002 Chairman-only `SENSITIVE_DIFF_REVALIDATED` event, with live PR
+  identity/diff revalidation, exact-HEAD binding, append-only audit, mixed-incident rejection
+  and preservation of recoverable CI failure state. Renamed source paths and incomplete
+  GitHub diff evidence fail closed; existing Governance Gate and branch protection are unchanged.
+
 - SPEC-010 multi-horizon and trading-style taxonomies, immutable Trade Plan lifecycle, one-active-
   plan-per-portfolio/instrument invariant and append-only revisions with anti-loss-relabel guards.
 - Idempotent entry, scale-in, hold, reduce and exit directives; deterministic hard/profit/trailing/

@@ -95,7 +95,15 @@ class GitHubClient:
         )
 
     def changed_paths(self, number: int) -> list[str]:
-        return [str(value["filename"]) for value in self.pages(f"/pulls/{number}/files")]
+        files = self.pages(f"/pulls/{number}/files")
+        # Fail closed at the PR-files API ceiling instead of certifying a partial diff.
+        if len(files) >= 3000:
+            raise GovernanceError("GITHUB_DIFF_INCOMPLETE")
+        paths = {str(value["filename"]) for value in files}
+        paths.update(
+            str(value["previous_filename"]) for value in files if "previous_filename" in value
+        )
+        return sorted(paths)
 
     def required_checks(self, policy: Policy) -> dict[str, int | None]:
         required: dict[str, int | None] = {
