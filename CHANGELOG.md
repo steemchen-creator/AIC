@@ -8,6 +8,11 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- DEV-GOV-RECOVERY-002 Chairman-only `SENSITIVE_DIFF_REVALIDATED` event, with live PR
+  identity/diff revalidation, exact-HEAD binding, append-only audit, mixed-incident rejection
+  and preservation of recoverable CI failure state. Renamed source paths and incomplete
+  GitHub diff evidence fail closed; existing Governance Gate and branch protection are unchanged.
+
 - DEV-GOV-RECOVERY-001 protected principals-only deployment-policy rotation, with immutable
   setup preservation, chained canonical fingerprints, complete non-secret policy snapshots,
   Chairman authentication, exact external OFF enforcement and append-only state artifacts.

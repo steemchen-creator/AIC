@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from .gates import ChairmanGatePolicy, evaluate_merge_eligibility
+from .gates import ChairmanGatePolicy, classify_changed_paths, evaluate_merge_eligibility
 from .models import (
     CI,
     ArchitectureResult,
@@ -15,6 +15,7 @@ from .models import (
     Role,
     Stage,
     State,
+    WorkItem,
 )
 
 TRANSITIONS: dict[EventType, tuple[set[Stage], Stage, Role]] = {
@@ -82,6 +83,7 @@ CHAIRMAN_EVENTS = {
     EventType.RESUME_PIPELINE,
     EventType.DISABLE_AUTO_MERGE,
     EventType.RECOVERY_AUTHORIZED,
+    EventType.SENSITIVE_DIFF_REVALIDATED,
 }
 INFORMATION_EVENTS = {
     EventType.TASK_RESERVED,
@@ -133,6 +135,7 @@ def apply_event(
     pr: PullRequest | None = None,
     ci: CI | None = None,
     review: ArchitectureResult | None = None,
+    revalidated_paths: list[str] | None = None,
 ) -> State:
     state = original.model_copy(deep=True)
     item = state.work_items.get(event.work_item_id)
@@ -184,7 +187,9 @@ def apply_event(
         state.project_blocked_reasons = [event.metadata.get("reason", event.event_type.value)]
         state.paused = event.event_type != EventType.BRIDGE_UNAVAILABLE
     elif event.event_type in CHAIRMAN_EVENTS:
-        if event.event_type == EventType.RECOVERY_AUTHORIZED:
+        if event.event_type == EventType.SENSITIVE_DIFF_REVALIDATED:
+            _revalidate_sensitive_diff(item, event, events, policy, pr, revalidated_paths)
+        elif event.event_type == EventType.RECOVERY_AUTHORIZED:
             if (
                 item.status != Stage.BLOCKED
                 or item.governance_exception
@@ -441,3 +446,77 @@ def apply_event(
 def _enabled(state: State, policy: Policy) -> None:
     if not policy.pipeline_enabled or state.paused:
         raise GovernanceError("PIPELINE_DISABLED_OR_PAUSED")
+
+
+def _revalidate_sensitive_diff(
+    item: WorkItem,
+    event: Event,
+    history: list[Event],
+    policy: Policy,
+    pr: PullRequest | None,
+    paths: list[str] | None,
+) -> None:
+    """Reduce only trusted repository evidence, never event metadata or PR prose."""
+    if not item.head_sha or event.input_sha != item.head_sha:
+        raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_STALE_HEAD")
+    if (
+        pr is None
+        or paths is None
+        or pr.number != item.pr_number
+        or pr.branch != item.target_branch
+        or pr.head_repository != policy.repository
+        or pr.base_branch != "main"
+        or pr.state != "OPEN"
+        or pr.head_sha != event.input_sha
+    ):
+        raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_EVIDENCE_REQUIRED")
+    if classify_changed_paths(paths):
+        raise GovernanceError("SENSITIVE_DIFF_STILL_PRESENT")
+    if (
+        item.status not in {Stage.RECOVERABLE_FAILURE, Stage.CHAIRMAN_DECISION_REQUIRED}
+        or item.governance_exception
+        or item.merge_commit
+        or item.merge_expected_sha
+        or pr.merge_commit
+    ):
+        raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_NOT_ALLOWED")
+    prefix = "SENSITIVE_DIFF:"
+    sensitive = [reason for reason in item.blocked_reasons if reason.startswith(prefix)]
+    if not sensitive:
+        raise GovernanceError("SENSITIVE_DIFF_BLOCKER_MISSING")
+    # Fail closed on mixed/ambiguous incidents. A path recheck cannot resolve their authority.
+    if (
+        len(sensitive) != len(item.blocked_reasons)
+        or item.budget.budget_limit_hits
+        or ChairmanGatePolicy().reasons(item)
+        or any(
+            entry.event_type
+            in {
+                EventType.BUDGET_LIMIT_REACHED,
+                EventType.GOVERNANCE_EXCEPTION,
+                EventType.MERGE_STARTED,
+                EventType.PR_MERGED,
+            }
+            or (
+                entry.event_type == EventType.CHAIRMAN_ESCALATION
+                and not entry.metadata.get("reason", "").startswith(prefix)
+            )
+            for entry in history
+        )
+    ):
+        raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_OTHER_BLOCKERS")
+    witnessed = {
+        entry.metadata.get("reason")
+        for entry in history
+        if entry.event_type == EventType.CHAIRMAN_ESCALATION
+    }
+    if not set(sensitive) <= witnessed:
+        raise GovernanceError("SENSITIVE_DIFF_ESCALATION_EVIDENCE_REQUIRED")
+    item.blocked_reasons = [reason for reason in item.blocked_reasons if reason not in sensitive]
+    item.chairman_required = False
+    item.approved_head_sha = None
+    item.architecture_status = ReviewStatus.REVIEW_REQUIRED
+    item.merge_eligible = False
+    if item.status == Stage.CHAIRMAN_DECISION_REQUIRED:
+        item.status = Stage.FIXING if item.unresolved_fix else Stage.REVIEW_REQUIRED
+    # RECOVERABLE_FAILURE, its resume stage, failure reasons and CI remain untouched.
