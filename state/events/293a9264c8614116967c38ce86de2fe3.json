@@ -1,0 +1,10 @@
+{
+  "event_id": "293a9264c8614116967c38ce86de2fe3",
+  "event_type": "CI_FAILED",
+  "timestamp": "2026-09-09T13:55:05.053848Z",
+  "work_item_id": "SPEC-010",
+  "actor": "github-actions[bot]",
+  "input_sha": "ae12e925fb5094e4274c9140a306325cd10a5334",
+  "output_state": "RECOVERABLE_FAILURE",
+  "metadata": {}
+}
