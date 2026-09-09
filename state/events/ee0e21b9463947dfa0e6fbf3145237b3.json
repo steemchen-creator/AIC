@@ -1,0 +1,15 @@
+{
+  "event_id": "ee0e21b9463947dfa0e6fbf3145237b3",
+  "event_type": "SENSITIVE_DIFF_REVALIDATED",
+  "timestamp": "2026-09-09T14:04:42.334947Z",
+  "work_item_id": "SPEC-010",
+  "actor": "steemchen-creator",
+  "input_sha": "ae12e925fb5094e4274c9140a306325cd10a5334",
+  "output_state": "RECOVERABLE_FAILURE",
+  "metadata": {
+    "pr_number": "19",
+    "base_sha": "690f4740e33643ae89b543447f3f7619791c1e77",
+    "changed_paths_sha256": "b89f8ba6787bfdef421bbcfe809164a6231136c66522beb071ee431f9be5344b",
+    "changed_path_count": "18"
+  }
+}
