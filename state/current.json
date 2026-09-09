@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 33,
+  "revision": 34,
   "current_work_item": "SPEC-010",
   "work_items": {
     "DEV-GOV-001": {
@@ -240,16 +240,16 @@
       "kind": "SPEC",
       "parent_work_item": "DEV-GOV-VALIDATION-001",
       "previous_work_item": "DEV-GOV-VALIDATION-001",
-      "status": "IMPLEMENTATION_COMPLETE",
+      "status": "REVIEW_REQUIRED",
       "created_at": "2026-09-08T19:31:07Z",
       "artifact_path": "SPEC-010-Multi-Horizon-Trade-Plan-and-Swing-Management-Foundation.md",
       "artifact_sha256": "b786de248003685aa91be001ad7e17101c4312d71d676225c9f2537e687db403",
       "target_branch": "feature/spec-010-multi-horizon-trade-plan",
       "execution_authorization": "CHAIRMAN-DELEGATION-AIC-STANDARD-WORK-V1",
-      "pr_number": null,
-      "head_sha": null,
-      "base_sha": null,
-      "review_artifact": null,
+      "pr_number": 19,
+      "head_sha": "7bafdbe589922209fc2bd1505ac177d7f9f61b66",
+      "base_sha": "ec09fa568f0513d9a0a9548044921d09edaf213c",
+      "review_artifact": "REVIEW-SPEC010.md",
       "architecture_status": "NOT_REVIEWED",
       "approved_head_sha": null,
       "review_id": null,
@@ -667,6 +667,18 @@
       "input_sha": null,
       "output_state": "IMPLEMENTATION_COMPLETE",
       "metadata": {}
+    },
+    {
+      "event_id": "382074396629458cab0f540f626972de",
+      "event_type": "PR_CREATED",
+      "timestamp": "2026-09-09T04:07:59.982572Z",
+      "work_item_id": "SPEC-010",
+      "actor": "github-actions[bot]",
+      "input_sha": "7bafdbe589922209fc2bd1505ac177d7f9f61b66",
+      "output_state": "REVIEW_REQUIRED",
+      "metadata": {
+        "review_artifact": "REVIEW-SPEC010.md"
+      }
     }
   ],
   "tasks": {

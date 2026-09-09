@@ -1,0 +1,12 @@
+{
+  "event_id": "382074396629458cab0f540f626972de",
+  "event_type": "PR_CREATED",
+  "timestamp": "2026-09-09T04:07:59.982572Z",
+  "work_item_id": "SPEC-010",
+  "actor": "github-actions[bot]",
+  "input_sha": "7bafdbe589922209fc2bd1505ac177d7f9f61b66",
+  "output_state": "REVIEW_REQUIRED",
+  "metadata": {
+    "review_artifact": "REVIEW-SPEC010.md"
+  }
+}
