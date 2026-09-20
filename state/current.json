@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 62,
+  "revision": 63,
   "current_work_item": "SPEC-010",
   "work_items": {
     "DEV-GOV-001": {
@@ -977,6 +977,18 @@
       "event_id": "76710e17e3d54745b41a8df4113e6d38",
       "event_type": "CHAIRMAN_ESCALATION",
       "timestamp": "2026-09-20T18:23:49.220510Z",
+      "work_item_id": "SPEC-010",
+      "actor": "github-actions[bot]",
+      "input_sha": "5b48a6d3f1ccc8550ee72b9f77df2e9c1bb5063c",
+      "output_state": "CHAIRMAN_DECISION_REQUIRED",
+      "metadata": {
+        "reason": "SENSITIVE_DIFF:master_project_objective"
+      }
+    },
+    {
+      "event_id": "782f3841d95946559f71ce5de5fa68c7",
+      "event_type": "CHAIRMAN_ESCALATION",
+      "timestamp": "2026-09-20T18:55:34.325786Z",
       "work_item_id": "SPEC-010",
       "actor": "github-actions[bot]",
       "input_sha": "5b48a6d3f1ccc8550ee72b9f77df2e9c1bb5063c",
