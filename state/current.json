@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 61,
+  "revision": 62,
   "current_work_item": "SPEC-010",
   "work_items": {
     "DEV-GOV-001": {
@@ -240,7 +240,7 @@
       "kind": "SPEC",
       "parent_work_item": "DEV-GOV-VALIDATION-001",
       "previous_work_item": "DEV-GOV-VALIDATION-001",
-      "status": "FIXING",
+      "status": "CHAIRMAN_DECISION_REQUIRED",
       "created_at": "2026-09-08T19:31:07Z",
       "artifact_path": "SPEC-010-Multi-Horizon-Trade-Plan-and-Swing-Management-Foundation.md",
       "artifact_sha256": "b786de248003685aa91be001ad7e17101c4312d71d676225c9f2537e687db403",
@@ -972,6 +972,18 @@
       "input_sha": "5b48a6d3f1ccc8550ee72b9f77df2e9c1bb5063c",
       "output_state": "FIXING",
       "metadata": {}
+    },
+    {
+      "event_id": "76710e17e3d54745b41a8df4113e6d38",
+      "event_type": "CHAIRMAN_ESCALATION",
+      "timestamp": "2026-09-20T18:23:49.220510Z",
+      "work_item_id": "SPEC-010",
+      "actor": "github-actions[bot]",
+      "input_sha": "5b48a6d3f1ccc8550ee72b9f77df2e9c1bb5063c",
+      "output_state": "CHAIRMAN_DECISION_REQUIRED",
+      "metadata": {
+        "reason": "SENSITIVE_DIFF:master_project_objective"
+      }
     }
   ],
   "tasks": {
