@@ -1,0 +1,10 @@
+{
+  "event_id": "8e4657f645cd40ef9b53e3f45d322e17",
+  "event_type": "PR_HEAD_CHANGED",
+  "timestamp": "2026-09-20T17:55:20.483435Z",
+  "work_item_id": "SPEC-010",
+  "actor": "github-actions[bot]",
+  "input_sha": "465237d297ccc67cb56ea8052b96212969d4869e",
+  "output_state": "FIXING",
+  "metadata": {}
+}
