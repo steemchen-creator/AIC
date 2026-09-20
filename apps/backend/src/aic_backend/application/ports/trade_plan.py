@@ -1,5 +1,6 @@
 """Application-owned persistence and execution ports for Trade Plans."""
 
+from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -17,6 +18,10 @@ if TYPE_CHECKING:
 
 
 class TradePlanRepository(Protocol):
+    def pair_fence(
+        self, portfolio_id: str, instrument_key: str
+    ) -> AbstractAsyncContextManager[None]: ...
+
     async def save(self, record: "TradePlanRecord") -> None: ...
 
     async def get(self, plan_id: TradePlanId) -> "TradePlanRecord | None": ...

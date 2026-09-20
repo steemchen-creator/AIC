@@ -346,3 +346,56 @@ architecture suite; Ruff, strict mypy over 150 source files and `git diff --chec
 PostgreSQL 17 suite, both migration round-trips and exact-HEAD required checks are attached to the
 Draft PR after CI. PR #19 remains Draft; Engineering does not mark Ready, self-approve, merge,
 enable Auto Merge or start SPEC-011.
+
+## 16. FIX-SPEC010-002 atomic terminal / execution fence (2026-09-21)
+
+This final Engineering remediation addresses only Architecture Blocker 08. It supersedes any
+concurrency assumption in section 15 that lifecycle checks alone isolate a terminal predecessor
+from a concurrently activating successor. It does not alter execution, risk, portfolio,
+settlement or governance authority and does not assert Architecture Approval.
+
+### Fence design
+
+The application-owned `TradePlanRepository.pair_fence` contract defines one concurrency boundary
+for a `(portfolio_id, instrument)` pair. `execute_directive`, cancellation/completion, audited
+expiry/invalidation settlement and successor activation acquire that fence and then re-read the
+authoritative Trade Plan before making a lifecycle or financial decision. PostgreSQL implements
+the contract with a deterministic signed 64-bit key and `pg_advisory_xact_lock`; the transaction
+holds the lock across authoritative execution, durable receipt creation and Trade Plan evidence
+linking. Separate processes and workers therefore use the same boundary. The in-memory adapter
+uses a keyed asynchronous lock for test parity.
+
+If execution wins the fence, its existing deterministic-order claim, receipt and Trade Plan link
+complete before terminal or successor work continues. If lifecycle wins, the later execution
+re-read observes the terminal predecessor and cannot originate a financial operation. A completed
+durable receipt still reconciles and appends its missing link under the fence, preserving the
+FIX-SPEC010-001 exactly-once recovery contract. The receipt remains the financial idempotency
+authority across crashes; the fence adds no execution engine or retry policy.
+
+No schema migration is required. The PostgreSQL advisory lock is ephemeral coordination state;
+migrations 0014 and 0015 and their destructive-downgrade warnings remain unchanged.
+
+### BLOCKER-08 requirement-to-test traceability
+
+| Requirement | Deterministic PostgreSQL evidence |
+| --- | --- |
+| Execution versus CANCELLED has only execution-first or terminal-first outcomes | `test_postgresql_execution_and_terminal_transition_share_pair_fence[CANCELLED]` runs both lock winners and checks financial mutation/link counts. |
+| Execution versus COMPLETED has the same boundary | The same parametrized test runs both lock winners for `COMPLETED`. |
+| Terminal transition versus successor activation is serialized | `test_postgresql_terminal_and_successor_activation_share_pair_fence` forces both winners; terminal-first activates the successor, while successor-first fails against the still-active predecessor before terminal completion. |
+| Predecessor execution, terminal transition and successor activation cannot cross | `test_postgresql_three_way_race_is_safe_and_survives_restart` holds terminal ownership while both competitors wait, then proves the predecessor cannot execute before or after the successor establishes quantity. |
+| State is re-read after lock acquisition | Terminal-first cases deliberately let execution/activation read identity before waiting; their post-lock decisions use the persisted terminal state. |
+| No double execution, lost link or predecessor consumption of successor quantity | Tests compare authoritative account snapshots and normalized claim/link counts, then retry the predecessor after successor execution. |
+| Crash/restart safety and completed-receipt reconciliation remain intact | The three-way test retries after a fresh PostgreSQL engine with a financial authority that raises if called; the existing durable conflict/reconciliation matrix remains unchanged. |
+
+### Non-blocking V1 limitations
+
+- **BLOCKER-09 reclassified limitation:** a terminal settlement EXIT that receives an authoritative
+  risk rejection retains immutable rejection evidence and keeps the settlement barrier closed.
+  V1 has no reviewed retry, replacement or operational resolution path for that terminal EXIT.
+- **BLOCKER-10 reclassified limitation:** a terminal Trade Plan with no authoritative execution
+  receipt cannot materialize an immutable outcome in V1 because no ledger projection can prove
+  its position or P&L attribution. It fails closed rather than freezing caller-supplied values.
+
+Both items require a later approved product iteration. FIX-SPEC010-002 intentionally implements
+neither. PR #19 remains Draft; Engineering does not modify DEV-GOV policy, mark Ready, self-approve,
+merge, enable Auto Merge or start SPEC-011.

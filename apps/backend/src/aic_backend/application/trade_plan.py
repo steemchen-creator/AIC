@@ -212,6 +212,15 @@ class TradePlanService:
     async def activate(
         self, plan_id: TradePlanId, at: datetime, *, actor: str, source: str
     ) -> TradePlan:
+        candidate = await self._required(plan_id)
+        async with self._repository.pair_fence(
+            candidate.plan.portfolio_id.value, candidate.plan.instrument.canonical_key
+        ):
+            return await self._activate_fenced(plan_id, at, actor=actor, source=source)
+
+    async def _activate_fenced(
+        self, plan_id: TradePlanId, at: datetime, *, actor: str, source: str
+    ) -> TradePlan:
         record = await self._required(plan_id)
         if record.plan.status is TradePlanStatus.ACTIVE:
             return record.plan
@@ -293,6 +302,15 @@ class TradePlanService:
         self, plan_id: TradePlanId, observation: PlanObservation, as_of: datetime
     ) -> TradePlanDirective:
         as_of = _trade_time(as_of, "as_of")
+        candidate = await self._required(plan_id)
+        async with self._repository.pair_fence(
+            candidate.plan.portfolio_id.value, candidate.plan.instrument.canonical_key
+        ):
+            return await self._evaluate_fenced(plan_id, observation, as_of)
+
+    async def _evaluate_fenced(
+        self, plan_id: TradePlanId, observation: PlanObservation, as_of: datetime
+    ) -> TradePlanDirective:
         record = await self._required(plan_id)
         plan = record.plan
         if plan.status is not TradePlanStatus.ACTIVE:
@@ -406,11 +424,26 @@ class TradePlanService:
         event_reference: str,
         as_of: datetime,
     ) -> TradePlanDirective:
+        as_of = _trade_time(as_of, "as_of")
+        candidate = await self._required(plan_id)
+        async with self._repository.pair_fence(
+            candidate.plan.portfolio_id.value, candidate.plan.instrument.canonical_key
+        ):
+            return await self._record_thesis_invalidation_fenced(
+                plan_id, event_reference=event_reference, as_of=as_of
+            )
+
+    async def _record_thesis_invalidation_fenced(
+        self,
+        plan_id: TradePlanId,
+        *,
+        event_reference: str,
+        as_of: datetime,
+    ) -> TradePlanDirective:
         record = await self._required(plan_id)
         plan = record.plan
         if plan.status is not TradePlanStatus.ACTIVE:
             raise TradePlanError(TradePlanErrorCode.INVALID_TRANSITION, "plan is not active")
-        as_of = _trade_time(as_of, "as_of")
         revision = self._visible_revision(record, as_of)
         if revision.thesis_invalidation_reference is None:
             raise TradePlanError(
@@ -467,6 +500,29 @@ class TradePlanService:
         price_limit_band: PriceLimitBand | None = None,
     ) -> PlanExecutionEvidence:
         execution_at = _trade_time(execution_at, "execution_at")
+        candidate, _ = await self._find_directive(directive_id)
+        async with self._repository.pair_fence(
+            candidate.plan.portfolio_id.value, candidate.plan.instrument.canonical_key
+        ):
+            return await self._execute_directive_fenced(
+                directive_id,
+                state,
+                execution_at,
+                position_quantity=position_quantity,
+                requested_price=requested_price,
+                price_limit_band=price_limit_band,
+            )
+
+    async def _execute_directive_fenced(
+        self,
+        directive_id: str,
+        state: ExecutionState,
+        execution_at: datetime,
+        *,
+        position_quantity: Quantity | None = None,
+        requested_price: Price | None = None,
+        price_limit_band: PriceLimitBand | None = None,
+    ) -> PlanExecutionEvidence:
         record, directive = await self._find_directive(directive_id)
         if state.account.portfolio_id != record.plan.portfolio_id:
             raise TradePlanError(
@@ -582,6 +638,19 @@ class TradePlanService:
         return evidence
 
     async def transition_terminal(
+        self,
+        plan_id: TradePlanId,
+        status: TradePlanStatus,
+        at: datetime,
+        reason: str,
+    ) -> TradePlan:
+        candidate = await self._required(plan_id)
+        async with self._repository.pair_fence(
+            candidate.plan.portfolio_id.value, candidate.plan.instrument.canonical_key
+        ):
+            return await self._transition_terminal_fenced(plan_id, status, at, reason)
+
+    async def _transition_terminal_fenced(
         self,
         plan_id: TradePlanId,
         status: TradePlanStatus,

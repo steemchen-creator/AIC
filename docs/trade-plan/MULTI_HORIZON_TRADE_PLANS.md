@@ -124,6 +124,15 @@ with `IDENTITY_CONFLICT`; its caller must reload and explicitly append to the cu
 It cannot silently replace another writer's revisions, directives or execution links. The optional
 directive policy key uses existing JSON fields, needs no new migration, and preserves old payloads.
 
+Directive execution, cancellation/completion, expiry/invalidation settlement and successor
+activation also share an application-owned fence keyed by portfolio and instrument. PostgreSQL
+implements the fence with a transaction-scoped advisory lock, so independent processes and workers
+serialize on the same key; the in-memory repository provides test parity. Each operation re-reads
+the authoritative Trade Plan after acquiring the fence. New financial execution therefore either
+finishes its durable receipt and Trade Plan link before a terminal transition proceeds, or observes
+the completed terminal transition and fails closed before creating an order. Completed durable
+receipts remain eligible for idempotent link reconciliation after a restart.
+
 ### Execution reconciliation after a Trade Plan conflict
 
 Durable Trade Plan execution requires `IdempotentExecutionService` around the existing

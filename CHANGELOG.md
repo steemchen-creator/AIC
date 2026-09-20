@@ -34,6 +34,10 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   settlement blocks same-portfolio successors across PostgreSQL restarts. Immutable outcomes now
   replay durable authoritative receipts and bind source identity, portfolio, instrument, `as_of`,
   provenance and order IDs instead of accepting caller-supplied P&L or position values.
+- FIX-SPEC010-002 atomic execution/lifecycle fence: directive execution, terminal transitions,
+  terminal settlement and successor activation now serialize by portfolio/instrument across
+  PostgreSQL workers, re-read authoritative plan state after lock acquisition, and retain durable
+  receipt reconciliation without duplicate financial execution.
 
 - DEV-GOV-RECOVERY-001 protected principals-only deployment-policy rotation, with immutable
   setup preservation, chained canonical fingerprints, complete non-secret policy snapshots,

@@ -1,9 +1,13 @@
 """PostgreSQL and in-memory persistence for append-only Trade Plan evidence."""
 
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from hashlib import sha256
 from typing import Any, cast
 
 from pydantic import TypeAdapter, ValidationError
-from sqlalchemy import JSON, Column, DateTime, Index, Integer, MetaData, String, Table, select
+from sqlalchemy import JSON, Column, DateTime, Index, Integer, MetaData, String, Table, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
@@ -142,6 +146,15 @@ def _validate_update(existing: TradePlanRecord, incoming: TradePlanRecord) -> No
 class InMemoryTradePlanRepository(TradePlanRepository):
     def __init__(self) -> None:
         self._records: dict[str, TradePlanRecord] = {}
+        self._pair_fences: dict[tuple[str, str], asyncio.Lock] = {}
+
+    @asynccontextmanager
+    async def pair_fence(
+        self, portfolio_id: str, instrument_key: str
+    ) -> AsyncIterator[None]:
+        lock = self._pair_fences.setdefault((portfolio_id, instrument_key), asyncio.Lock())
+        async with lock:
+            yield
 
     async def save(self, record: TradePlanRecord) -> None:
         existing = self._records.get(record.plan.plan_id.value)
@@ -211,6 +224,22 @@ class InMemoryTradePlanRepository(TradePlanRepository):
 class PostgreSQLTradePlanRepository(TradePlanRepository):
     def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
+
+    @asynccontextmanager
+    async def pair_fence(
+        self, portfolio_id: str, instrument_key: str
+    ) -> AsyncIterator[None]:
+        identity = f"trade-plan-fence/v1\0{portfolio_id}\0{instrument_key}".encode()
+        lock_key = int.from_bytes(sha256(identity).digest()[:8], "big", signed=True)
+        async with self._engine.begin() as connection:
+            try:
+                await connection.execute(select(func.pg_advisory_xact_lock(lock_key)))
+            except SQLAlchemyError as error:
+                raise PersistenceError(
+                    PersistenceErrorCode.TRANSACTION_ERROR,
+                    "Trade Plan execution/lifecycle fence failed",
+                ) from error
+            yield
 
     async def save(self, record: TradePlanRecord) -> None:
         try:

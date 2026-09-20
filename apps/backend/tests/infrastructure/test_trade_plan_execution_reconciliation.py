@@ -2,6 +2,7 @@ import asyncio
 import os
 import subprocess
 import sys
+from contextlib import asynccontextmanager
 from dataclasses import replace
 from datetime import timedelta
 from decimal import Decimal
@@ -93,6 +94,50 @@ def account() -> ExecutionState:
 class MustNotExecute:
     async def execute(self, *args, **kwargs):
         raise AssertionError("reconciliation must never create another execution")
+
+
+class PausingFenceRepository(PostgreSQLTradePlanRepository):
+    def __init__(self, database):
+        super().__init__(database)
+        self.acquired = asyncio.Event()
+        self.release = asyncio.Event()
+
+    @asynccontextmanager
+    async def pair_fence(self, portfolio_id, instrument_key):
+        async with super().pair_fence(portfolio_id, instrument_key):
+            self.acquired.set()
+            await self.release.wait()
+            yield
+
+
+class SignalingFenceRepository(PostgreSQLTradePlanRepository):
+    def __init__(self, database):
+        super().__init__(database)
+        self.attempted = asyncio.Event()
+
+    @asynccontextmanager
+    async def pair_fence(self, portfolio_id, instrument_key):
+        self.attempted.set()
+        async with super().pair_fence(portfolio_id, instrument_key):
+            yield
+
+
+class PausingExecution:
+    def __init__(self, delegate):
+        self.delegate = delegate
+        self.entered = asyncio.Event()
+        self.release = asyncio.Event()
+
+    async def reconcile(self, *args, **kwargs):
+        return await self.delegate.reconcile(*args, **kwargs)
+
+    async def execute(self, *args, **kwargs):
+        self.entered.set()
+        await self.release.wait()
+        return await self.delegate.execute(*args, **kwargs)
+
+    async def outcome_attribution(self, *args, **kwargs):
+        return await self.delegate.outcome_attribution(*args, **kwargs)
 
 
 @pytest.mark.asyncio
@@ -238,6 +283,281 @@ async def test_unresolved_claim_blocks_restart_after_receipt_write_failure(engin
         assert ExecutionStateSnapshot.capture(state) == before
     finally:
         await restarted.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("terminal_status", [TradePlanStatus.CANCELLED, TradePlanStatus.COMPLETED])
+@pytest.mark.parametrize("winner", ["execution", "terminal"])
+async def test_postgresql_execution_and_terminal_transition_share_pair_fence(
+    engine, terminal_status, winner
+):
+    setup_repository = PostgreSQLTradePlanRepository(engine)
+    initial = await build(setup_repository, f"fence-{terminal_status.value}-{winner}")
+    journal = PostgreSQLExecutionJournal(engine)
+    durable = IdempotentExecutionService(authority(engine), journal)
+    setup = TradePlanService(setup_repository, Calendar(), durable)
+    directive = await setup.create_directive(
+        initial.plan.plan_id,
+        DirectiveType.REDUCE,
+        Quantity(Decimal("100")),
+        NOW + timedelta(hours=1),
+        source_reference="blocker-08-race",
+    )
+    state = account()
+
+    if winner == "execution":
+        pausing_execution = PausingExecution(durable)
+        executor = TradePlanService(
+            PostgreSQLTradePlanRepository(engine), Calendar(), pausing_execution
+        )
+        terminal_repository = SignalingFenceRepository(engine)
+        terminal = TradePlanService(terminal_repository, Calendar(), durable)
+        execution_task = asyncio.create_task(
+            executor.execute_directive(
+                directive.directive_id,
+                state,
+                NEXT_OPEN,
+                price_limit_band=PriceLimitBand(
+                    Decimal("1"), Decimal("100"), "fixture", NEXT_OPEN
+                ),
+            )
+        )
+        await asyncio.wait_for(pausing_execution.entered.wait(), 2)
+        terminal_task = asyncio.create_task(
+            terminal.transition_terminal(
+                initial.plan.plan_id,
+                terminal_status,
+                NEXT_OPEN + timedelta(minutes=1),
+                "BLOCKER_08_RACE",
+            )
+        )
+        await asyncio.wait_for(terminal_repository.attempted.wait(), 2)
+        assert not terminal_task.done()
+        pausing_execution.release.set()
+        evidence, terminal_plan = await asyncio.gather(execution_task, terminal_task)
+        assert evidence.fill_id is not None
+        assert terminal_plan.status is terminal_status
+        snapshot = ExecutionStateSnapshot.capture(state)
+        assert snapshot.settlement_positions[0].total_quantity == Decimal("400")
+    else:
+        terminal_repository = PausingFenceRepository(engine)
+        terminal = TradePlanService(terminal_repository, Calendar(), durable)
+        execution_repository = SignalingFenceRepository(engine)
+        executor = TradePlanService(execution_repository, Calendar(), durable)
+        terminal_task = asyncio.create_task(
+            terminal.transition_terminal(
+                initial.plan.plan_id,
+                terminal_status,
+                NEXT_OPEN + timedelta(minutes=1),
+                "BLOCKER_08_RACE",
+            )
+        )
+        await asyncio.wait_for(terminal_repository.acquired.wait(), 2)
+        execution_task = asyncio.create_task(
+            executor.execute_directive(directive.directive_id, state, NEXT_OPEN)
+        )
+        await asyncio.wait_for(execution_repository.attempted.wait(), 2)
+        assert not execution_task.done()
+        terminal_repository.release.set()
+        terminal_plan = await terminal_task
+        with pytest.raises(TradePlanError) as blocked:
+            await execution_task
+        assert blocked.value.code is TradePlanErrorCode.TERMINAL_EXECUTION_BLOCKED
+        assert terminal_plan.status is terminal_status
+        snapshot = ExecutionStateSnapshot.capture(state)
+        assert snapshot.orders_today == 0
+        assert snapshot.settlement_positions[0].total_quantity == Decimal("500")
+
+    stored = await setup_repository.get(initial.plan.plan_id)
+    assert stored is not None
+    assert stored.plan.status is terminal_status
+    assert len(stored.executions) == (1 if winner == "execution" else 0)
+    async with engine.connect() as connection:
+        claim_count = (
+            await connection.execute(select(func.count()).select_from(execution_claims))
+        ).scalar_one()
+        link_count = (
+            await connection.execute(
+                select(func.count()).select_from(trade_plan_execution_evidence)
+            )
+        ).scalar_one()
+    assert claim_count == link_count == (1 if winner == "execution" else 0)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("winner", ["terminal", "successor"])
+async def test_postgresql_terminal_and_successor_activation_share_pair_fence(engine, winner):
+    setup_repository = PostgreSQLTradePlanRepository(engine)
+    predecessor = await build(setup_repository, f"activation-predecessor-{winner}")
+    successor = command(f"activation-successor-{winner}")
+    setup = TradePlanService(setup_repository, Calendar(), MustNotExecute())
+    await setup.create_draft(successor)
+
+    holder_repository = PausingFenceRepository(engine)
+    waiter_repository = SignalingFenceRepository(engine)
+    holder = TradePlanService(holder_repository, Calendar(), MustNotExecute())
+    waiter = TradePlanService(waiter_repository, Calendar(), MustNotExecute())
+    if winner == "terminal":
+        holder_task = asyncio.create_task(
+            holder.transition_terminal(
+                predecessor.plan.plan_id,
+                TradePlanStatus.CANCELLED,
+                NOW + timedelta(hours=1),
+                "BLOCKER_08_RACE",
+            )
+        )
+        await asyncio.wait_for(holder_repository.acquired.wait(), 2)
+        waiter_task = asyncio.create_task(
+            waiter.activate(
+                successor.plan_id,
+                NOW + timedelta(hours=2),
+                actor="aic-codex-cto",
+                source="blocker-08",
+            )
+        )
+    else:
+        holder_task = asyncio.create_task(
+            holder.activate(
+                successor.plan_id,
+                NOW + timedelta(hours=2),
+                actor="aic-codex-cto",
+                source="blocker-08",
+            )
+        )
+        await asyncio.wait_for(holder_repository.acquired.wait(), 2)
+        waiter_task = asyncio.create_task(
+            waiter.transition_terminal(
+                predecessor.plan.plan_id,
+                TradePlanStatus.CANCELLED,
+                NOW + timedelta(hours=1),
+                "BLOCKER_08_RACE",
+            )
+        )
+    await asyncio.wait_for(waiter_repository.attempted.wait(), 2)
+    assert not waiter_task.done()
+    holder_repository.release.set()
+
+    if winner == "terminal":
+        await asyncio.gather(holder_task, waiter_task)
+        assert (await setup_repository.get(successor.plan_id)).plan.status is TradePlanStatus.ACTIVE
+    else:
+        with pytest.raises(TradePlanError) as duplicate:
+            await holder_task
+        assert duplicate.value.code is TradePlanErrorCode.DUPLICATE_ACTIVE_PLAN
+        await waiter_task
+        assert (await setup_repository.get(successor.plan_id)).plan.status is TradePlanStatus.DRAFT
+    assert (
+        await setup_repository.get(predecessor.plan.plan_id)
+    ).plan.status is TradePlanStatus.CANCELLED
+
+
+@pytest.mark.asyncio
+async def test_postgresql_three_way_race_is_safe_and_survives_restart(engine):
+    setup_repository = PostgreSQLTradePlanRepository(engine)
+    predecessor = await build(setup_repository, "three-way-predecessor")
+    durable = IdempotentExecutionService(
+        authority(engine), PostgreSQLExecutionJournal(engine)
+    )
+    setup = TradePlanService(setup_repository, Calendar(), durable)
+    pending = await setup.create_directive(
+        predecessor.plan.plan_id,
+        DirectiveType.ENTRY,
+        Quantity(Decimal("100")),
+        NOW + timedelta(hours=1),
+        source_reference="predecessor-entry",
+    )
+    successor = command("three-way-successor")
+    await setup.create_draft(successor)
+    state = ExecutionState.initialize(PortfolioId("champion"), Money(Decimal("100000")), NOW)
+
+    terminal_repository = PausingFenceRepository(engine)
+    execution_repository = SignalingFenceRepository(engine)
+    activation_repository = SignalingFenceRepository(engine)
+    terminal = TradePlanService(terminal_repository, Calendar(), durable)
+    executor = TradePlanService(execution_repository, Calendar(), durable)
+    activator = TradePlanService(activation_repository, Calendar(), durable)
+    terminal_task = asyncio.create_task(
+        terminal.transition_terminal(
+            predecessor.plan.plan_id,
+            TradePlanStatus.CANCELLED,
+            NOW + timedelta(hours=2),
+            "BLOCKER_08_THREE_WAY",
+        )
+    )
+    await asyncio.wait_for(terminal_repository.acquired.wait(), 2)
+    execution_task = asyncio.create_task(
+        executor.execute_directive(pending.directive_id, state, NEXT_OPEN)
+    )
+    activation_task = asyncio.create_task(
+        activator.activate(
+            successor.plan_id,
+            NOW + timedelta(hours=3),
+            actor="aic-codex-cto",
+            source="blocker-08",
+        )
+    )
+    await asyncio.wait_for(execution_repository.attempted.wait(), 2)
+    await asyncio.wait_for(activation_repository.attempted.wait(), 2)
+    assert not execution_task.done() and not activation_task.done()
+    terminal_repository.release.set()
+    await terminal_task
+    with pytest.raises(TradePlanError) as blocked:
+        await execution_task
+    assert blocked.value.code is TradePlanErrorCode.TERMINAL_EXECUTION_BLOCKED
+    assert (await activation_task).status is TradePlanStatus.ACTIVE
+
+    entry = await setup.create_directive(
+        successor.plan_id,
+        DirectiveType.ENTRY,
+        Quantity(Decimal("100")),
+        NOW + timedelta(hours=4),
+        source_reference="successor-entry",
+    )
+    successor_evidence = await setup.execute_directive(
+        entry.directive_id,
+        state,
+        NEXT_OPEN,
+        price_limit_band=PriceLimitBand(Decimal("1"), Decimal("100"), "fixture", NEXT_OPEN),
+    )
+    after_successor = ExecutionStateSnapshot.capture(state)
+    assert after_successor.settlement_positions[0].total_quantity == Decimal("100")
+    with pytest.raises(TradePlanError) as retry_blocked:
+        await setup.execute_directive(pending.directive_id, state, NEXT_OPEN + timedelta(days=1))
+    assert retry_blocked.value.code is TradePlanErrorCode.TERMINAL_EXECUTION_BLOCKED
+    assert ExecutionStateSnapshot.capture(state) == after_successor
+
+    await engine.dispose()
+    restarted_engine = create_async_engine(os.environ["AIC_DATABASE_URL"])
+    try:
+        restarted_repository = PostgreSQLTradePlanRepository(restarted_engine)
+        restarted = TradePlanService(
+            restarted_repository,
+            Calendar(),
+            IdempotentExecutionService(
+                MustNotExecute(), PostgreSQLExecutionJournal(restarted_engine)
+            ),
+        )
+        with pytest.raises(TradePlanError) as restart_blocked:
+            await restarted.execute_directive(
+                pending.directive_id, state, NEXT_OPEN + timedelta(days=2)
+            )
+        assert restart_blocked.value.code is TradePlanErrorCode.TERMINAL_EXECUTION_BLOCKED
+        assert ExecutionStateSnapshot.capture(state) == after_successor
+        predecessor_record = await restarted_repository.get(predecessor.plan.plan_id)
+        successor_record = await restarted_repository.get(successor.plan_id)
+        assert predecessor_record.executions == ()
+        assert successor_record.executions == (successor_evidence,)
+        async with restarted_engine.connect() as connection:
+            assert (
+                await connection.execute(select(func.count()).select_from(execution_claims))
+            ).scalar_one() == 1
+            assert (
+                await connection.execute(
+                    select(func.count()).select_from(trade_plan_execution_evidence)
+                )
+            ).scalar_one() == 1
+    finally:
+        await restarted_engine.dispose()
 
 
 @pytest.mark.asyncio
