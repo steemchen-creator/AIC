@@ -30,6 +30,19 @@ The implementation must extend those components rather than reproduce them. In p
 5. `adapter_id` identifies the AIC adapter. `upstream_source_id` identifies the publisher/feed that
    originated the fact. Independence, confidence and voting are keyed by upstream identity, never
    by Python package or adapter count.
+6. Continuous acquisition is an application-owned scheduler that submits capability requests to the
+   existing Provider Runtime. Provider selection, health, cooldown, retryability and failover remain
+   Runtime responsibilities; acquisition cadence, cursors and durable progress do not form a second
+   Provider Runtime.
+7. The global market pulse uses reference-only cross-asset series for global equity indexes,
+   sovereign yields, FX, gold, crude oil and volatility. These facts inform risk transmission but do
+   not make a benchmark or reference series executable.
+8. A source-neutral `ScheduledEvent` stores the schedule known at each point in time. Reschedules and
+   cancellations append versions, and the scheduled record is later linked to the actual release,
+   observation or document without rewriting either item.
+9. Official evidence extends beyond central banks to fiscal, trade, sanctions, regulators,
+   statistics, energy, international institutions, exchange disclosures and issuer IR/management
+   statements under the same authority, provenance and PIT rules.
 
 The specification is therefore safe to import unchanged. The engineering questions below constrain
 implementation choices without changing the product requirements.
@@ -49,14 +62,17 @@ implementation choices without changing the product requirements.
 | Instrument master | `InstrumentIdentity`, A-share instrument master and PIT trading status | Extend supported identity coverage only as required for domestic Equity, ETF and index references. Quote ingestion must resolve a known canonical identity or fail closed. |
 | ETF / index | ETF profile, ETF-index relationship, index reference, execution profile and corresponding persistence | Reuse the same identities and tradability boundary. An index quote remains reference evidence and never becomes executable merely because it is fresh. |
 | Failover / health / scoring | Health monitor, cooldown, capacity, deterministic selection, quality score and retryable failure policy | Use these for transport/provider availability. Store reconciliation confidence separately from provider operational health. |
+| Historical backfill / coverage | `BackfillAttempt`, coverage repositories, interval gap calculation and deterministic idempotent ingestion | Generalize the attempt/checkpoint concepts for capability scopes and provider cursors; preserve the existing family-specific backfill behavior. |
+| Runtime operational state | Provider metrics including `last_success_at`, `last_failure_at`, freshness, capacity and cooldown | Reuse these signals in cadence decisions. Persist acquisition progress separately because provider health is not a source cursor or completion watermark. |
 
 ## Required architecture shape
 
 The data path for every new family is:
 
 ```text
-provider adapter
-  -> existing Provider Runtime invocation/health/failover
+application acquisition coordinator (cadence + durable checkpoint)
+  -> existing Provider Runtime invocation/health/selection/failover
+  -> provider adapter
   -> immutable RawObservation + SourceLineage
   -> family normalizer
   -> existing validation and quality contracts
@@ -96,6 +112,15 @@ Clean Architecture ownership remains unchanged:
    official document feeds, SEC EDGAR, CNINFO or GDELT.
 9. Evidence Pack/query contracts for downstream regime, research, radar and committee consumers are
    absent.
+10. There is no source-neutral reference model for global equity indexes, sovereign yields, FX,
+    commodities or volatility indicators, and existing `InstrumentIdentity` should not be stretched
+    into a second executable-asset model for non-tradable benchmarks.
+11. There is no durable continuous-acquisition plan/checkpoint contract covering cadence, cursors,
+    watermarks, leases, catch-up and rate-limit-aware recovery.
+12. Economic, policy and issuer calendars lack a source-neutral `ScheduledEvent` with append-only
+    schedule revisions and links to actual released evidence.
+13. The official-source roadmap needs adapters/classification for fiscal, trade, sanctions,
+    regulators, statistics, energy, international organizations and issuer IR sources.
 
 ## Engineering questions and assumptions
 
@@ -131,6 +156,22 @@ These questions are recorded for the implementation review. They do not modify t
 12. Raw payload retention, compression, redaction and license constraints require an operational
     retention decision before migration approval. At minimum, the immutable hash, lineage and
     transformation identity must survive.
+13. Global index, gold, crude and volatility benchmarks may be visible on public websites while
+    programmatic or redistributable realtime use remains licensed. AIC must record the license/SLA
+    basis and must not scrape a page whose terms prohibit automated extraction.
+14. A global pulse value is reference evidence. It cannot become an orderable instrument without a
+    separately approved instrument-master, market, currency, trading-status and execution mapping.
+15. Acquisition jobs use a PostgreSQL lease/fencing token for multi-worker ownership and advance a
+    cursor/watermark only after durable evidence persistence. Provider Runtime health/cooldown stays
+    authoritative for provider availability.
+16. When a feed has no resumable cursor, catch-up uses a bounded overlap window plus deterministic
+    identities. Duplicate observations are idempotent; late corrections append new versions.
+17. A scheduled event's first publication, later time changes, cancellation and completion are
+    separate immutable versions. Historical queries return the schedule known at `as_of`, not the
+    current calendar retroactively.
+18. Earnings schedules use issuer IR or official exchange disclosures as Tier 0 where available.
+    Aggregator calendars remain Tier 1 discovery until confirmed, and the actual filing/document is
+    linked after release.
 
 ## Dependency and source conclusion
 
@@ -148,6 +189,12 @@ SEC EDGAR should use the official `data.sec.gov` contract and required declared 
 party EDGAR libraries are references or optional accelerators, not the authority. GDELT client
 libraries reviewed so far do not justify a runtime dependency; the official feeds/APIs are simple
 enough for an owned adapter.
+
+Official daily/statistical sources can seed sovereign yields, FX and energy indicators, while
+realtime global index, commodity benchmark and volatility feeds may require exchange/index-owner
+licenses. Free publication access is not treated as programmatic redistribution permission. The
+roadmap therefore supports delayed/daily official evidence first and keeps licensed realtime
+enhancement behind an explicit source and contract review.
 
 ## Scope decision
 
