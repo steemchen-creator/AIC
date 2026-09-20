@@ -15,6 +15,7 @@ from apps.backend.tests.infrastructure.test_trade_plan_postgresql import (
     Calendar,
     build,
     clean_environment,
+    command,
 )
 from apps.backend.tests.infrastructure.test_trade_plan_postgresql import engine as engine
 from sqlalchemy import func, select, update
@@ -42,7 +43,13 @@ from aic_backend.domain.portfolio.models import (
     PositionKey,
     Quantity,
 )
-from aic_backend.domain.trade_plan import DirectiveType
+from aic_backend.domain.trade_plan import (
+    DirectiveType,
+    PlanObservation,
+    TradePlanError,
+    TradePlanErrorCode,
+    TradePlanStatus,
+)
 from aic_backend.infrastructure.execution_journal import (
     PostgreSQLExecutionJournal,
     execution_claims,
@@ -231,6 +238,177 @@ async def test_unresolved_claim_blocks_restart_after_receipt_write_failure(engin
         assert ExecutionStateSnapshot.capture(state) == before
     finally:
         await restarted.dispose()
+
+
+@pytest.mark.asyncio
+async def test_terminal_predecessor_cannot_mutate_successor_after_postgresql_restart(engine):
+    repository = PostgreSQLTradePlanRepository(engine)
+    predecessor = await build(repository, "terminal-predecessor")
+    journal = PostgreSQLExecutionJournal(engine)
+    runtime = TradePlanService(
+        repository, Calendar(), IdempotentExecutionService(authority(engine), journal)
+    )
+    pending = await runtime.create_directive(
+        predecessor.plan.plan_id,
+        DirectiveType.REDUCE,
+        Quantity(Decimal("100")),
+        NOW + timedelta(hours=1),
+        source_reference="predecessor-reduce",
+    )
+    await runtime.transition_terminal(
+        predecessor.plan.plan_id,
+        TradePlanStatus.CANCELLED,
+        NOW + timedelta(hours=2),
+        "SUPERSEDED",
+    )
+
+    await engine.dispose()
+    restarted_engine = create_async_engine(os.environ["AIC_DATABASE_URL"])
+    try:
+        restarted_repository = PostgreSQLTradePlanRepository(restarted_engine)
+        restarted = TradePlanService(
+            restarted_repository,
+            Calendar(),
+            IdempotentExecutionService(
+                authority(restarted_engine), PostgreSQLExecutionJournal(restarted_engine)
+            ),
+        )
+        successor = command("terminal-successor")
+        await restarted.create_draft(successor)
+        await restarted.activate(
+            successor.plan_id,
+            NOW + timedelta(hours=3),
+            actor="aic-codex-cto",
+            source="blocker-06",
+        )
+        entry = await restarted.create_directive(
+            successor.plan_id,
+            DirectiveType.ENTRY,
+            Quantity(Decimal("100")),
+            NOW + timedelta(hours=4),
+            source_reference="successor-entry",
+        )
+        state = ExecutionState.initialize(PortfolioId("champion"), Money(Decimal("100000")), NOW)
+        successor_evidence = await restarted.execute_directive(
+            entry.directive_id,
+            state,
+            NEXT_OPEN,
+            price_limit_band=PriceLimitBand(Decimal("1"), Decimal("100"), "fixture", NEXT_OPEN),
+        )
+        before_old_directive = ExecutionStateSnapshot.capture(state)
+        with pytest.raises(TradePlanError) as error:
+            await restarted.execute_directive(
+                pending.directive_id, state, NEXT_OPEN + timedelta(days=1)
+            )
+        assert error.value.code is TradePlanErrorCode.TERMINAL_EXECUTION_BLOCKED
+        assert ExecutionStateSnapshot.capture(state) == before_old_directive
+        await restarted.transition_terminal(
+            successor.plan_id,
+            TradePlanStatus.CANCELLED,
+            NEXT_OPEN + timedelta(hours=1),
+            "TEST_COMPLETE",
+        )
+        outcome = await restarted.build_outcome(successor.plan_id)
+        assert outcome.source_order_ids == (successor_evidence.order_id,)
+        assert outcome.remaining_quantity == Decimal("100")
+        assert outcome.attribution_provenance == "execution-order-claims/v1"
+    finally:
+        await restarted_engine.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("terminal", ["expiry", "invalidation"])
+async def test_terminal_settlement_barrier_and_outcome_survive_postgresql_restart(engine, terminal):
+    repository = PostgreSQLTradePlanRepository(engine)
+    value = command(f"terminal-settlement-{terminal}")
+    value = (
+        replace(value, expiry_at=NOW + timedelta(minutes=30))
+        if terminal == "expiry"
+        else replace(value, thesis_invalidation_reference="terminal-policy")
+    )
+    runtime = TradePlanService(
+        repository,
+        Calendar(),
+        IdempotentExecutionService(authority(engine), PostgreSQLExecutionJournal(engine)),
+    )
+    await runtime.create_draft(value)
+    await runtime.activate(value.plan_id, NOW, actor="aic-codex-cto", source="blocker-06")
+    settlement = (
+        await runtime.evaluate(
+            value.plan_id,
+            PlanObservation(
+                "terminal-observation",
+                NOW + timedelta(minutes=30),
+                NOW + timedelta(hours=1),
+                Decimal("10"),
+                Decimal("10"),
+                Decimal("10"),
+                Decimal("10"),
+            ),
+            NOW + timedelta(hours=1),
+        )
+        if terminal == "expiry"
+        else await runtime.record_thesis_invalidation(
+            value.plan_id,
+            event_reference="terminal-event",
+            as_of=NOW + timedelta(hours=1),
+        )
+    )
+    successor = command(f"terminal-settlement-successor-{terminal}")
+    await runtime.create_draft(successor)
+
+    await engine.dispose()
+    restarted_engine = create_async_engine(os.environ["AIC_DATABASE_URL"])
+    try:
+        restarted_repository = PostgreSQLTradePlanRepository(restarted_engine)
+        restarted = TradePlanService(
+            restarted_repository,
+            Calendar(),
+            IdempotentExecutionService(
+                authority(restarted_engine), PostgreSQLExecutionJournal(restarted_engine)
+            ),
+        )
+        with pytest.raises(TradePlanError) as error:
+            await restarted.activate(
+                successor.plan_id,
+                NOW + timedelta(hours=2),
+                actor="aic-codex-cto",
+                source="blocker-06",
+            )
+        assert error.value.code is TradePlanErrorCode.TERMINAL_SETTLEMENT_PENDING
+        evidence = await restarted.execute_directive(
+            settlement.directive_id,
+            account(),
+            NEXT_OPEN,
+            price_limit_band=PriceLimitBand(Decimal("1"), Decimal("100"), "fixture", NEXT_OPEN),
+        )
+        assert evidence.fill_id is not None
+        await restarted.activate(
+            successor.plan_id,
+            NEXT_OPEN + timedelta(minutes=1),
+            actor="aic-codex-cto",
+            source="blocker-06",
+        )
+        outcome = await restarted.build_outcome(value.plan_id)
+        assert outcome.remaining_quantity == 0
+        assert outcome.source_order_ids == (evidence.order_id,)
+        assert outcome.attribution_as_of == NEXT_OPEN
+        await restarted_engine.dispose()
+
+        second_restart = create_async_engine(os.environ["AIC_DATABASE_URL"])
+        try:
+            persisted = TradePlanService(
+                PostgreSQLTradePlanRepository(second_restart),
+                Calendar(),
+                IdempotentExecutionService(
+                    MustNotExecute(), PostgreSQLExecutionJournal(second_restart)
+                ),
+            )
+            assert await persisted.build_outcome(value.plan_id) == outcome
+        finally:
+            await second_restart.dispose()
+    finally:
+        await restarted_engine.dispose()
 
 
 def test_execution_claim_migration_round_trip():

@@ -5,10 +5,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from aic_backend.application.execution import ExecutionState
+from aic_backend.application.execution import ExecutionOrderIntent, ExecutionState
+from aic_backend.application.ports.execution_journal import ExecutionStateSnapshot
+from aic_backend.application.ports.trade_plan import (
+    AuthoritativeOutcomeAttribution,
+    OutcomeAttributionError,
+)
 from aic_backend.application.trade_plan import (
     CreateDraftPlan,
-    OutcomeInputs,
     PlanAmendment,
     PointInTimeNextOpenCalendar,
     TradePlanService,
@@ -66,6 +70,7 @@ from aic_backend.domain.trade_plan import (
     TriggerType,
     parse_investment_horizon,
     parse_trading_style,
+    stable_plan_id,
 )
 from aic_backend.infrastructure.trade_plan_persistence import (
     InMemoryTradePlanRepository,
@@ -89,12 +94,14 @@ class Calendar:
 
 class Execution:
     async def reconcile(self, state: ExecutionState, order_id: OrderId, as_of: datetime):
-        return None
+        return self.receipts.get(order_id.value)
 
     def __init__(self, rejected: bool = False) -> None:
         self.rejected = rejected
         self.calls = 0
         self.sides: list[OrderSide] = []
+        self.snapshots: dict[str, tuple[ExecutionStateSnapshot, ExecutionStateSnapshot]] = {}
+        self.receipts: dict[str, ExecutionOutcome] = {}
 
     async def execute(
         self,
@@ -107,6 +114,7 @@ class Execution:
         from aic_backend.application.execution import ExecutionOrderIntent
 
         assert isinstance(intent, ExecutionOrderIntent)
+        before = ExecutionStateSnapshot.capture(state)
         self.calls += 1
         self.sides.append(intent.side)
         order = Order(
@@ -161,7 +169,7 @@ class Execution:
                 "execution/v1",
             )
             state.account.apply_fill(fill, (f"cash-{order_id.value}",))
-        return ExecutionOutcome(
+        outcome = ExecutionOutcome(
             order,
             TradingEligibility(True, True, False, False, True),
             decision,
@@ -173,6 +181,51 @@ class Execution:
             ExecutionPolicyVersions("execution/v1", "lot/v1", "limit/v1", "t1/v1", "risk/v1"),
             (),
             {},
+        )
+        state.outcomes.append(outcome)
+        self.snapshots[order_id.value] = (before, ExecutionStateSnapshot.capture(state))
+        self.receipts[order_id.value] = outcome
+        return outcome
+
+    async def outcome_attribution(
+        self, portfolio_id, instrument, evidence, as_of
+    ) -> AuthoritativeOutcomeAttribution:
+        if not evidence:
+            raise OutcomeAttributionError("no authoritative execution evidence")
+        realized = Decimal("0")
+        average = None
+        remaining = Decimal("0")
+        order_ids: list[str] = []
+        latest = NOW
+        for link in evidence:
+            snapshots = self.snapshots.get(link.order_id)
+            if snapshots is None or link.executed_at > as_of:
+                raise OutcomeAttributionError("execution link is unavailable")
+            before, after = snapshots
+            if before.portfolio_id != portfolio_id:
+                raise OutcomeAttributionError("portfolio mismatch")
+            prior = next((p for p in before.positions if p.key.instrument == instrument), None)
+            final = next((p for p in after.positions if p.key.instrument == instrument), None)
+            realized += (Decimal("0") if final is None else final.realized_pnl) - (
+                Decimal("0") if prior is None else prior.realized_pnl
+            )
+            for candidate in (final, prior):
+                if candidate is not None and candidate.quantity > 0:
+                    average = candidate.average_cost
+                    break
+            remaining = Decimal("0") if final is None else final.quantity
+            order_ids.append(link.order_id)
+            latest = max(latest, link.executed_at)
+        return AuthoritativeOutcomeAttribution(
+            stable_plan_id("test-attribution", *order_ids),
+            portfolio_id,
+            instrument,
+            latest,
+            "test-execution-ledger/v1",
+            average,
+            remaining,
+            realized,
+            tuple(order_ids),
         )
 
 
@@ -655,10 +708,7 @@ async def test_next_open_lock_execution_link_rejection_and_outcome() -> None:
         NEXT_OPEN + timedelta(hours=1),
         "RISK_REJECTED",
     )
-    outcome = await service.build_outcome(
-        TradePlanId("plan-1"),
-        OutcomeInputs(None, Decimal("0"), Decimal("0")),
-    )
+    outcome = await service.build_outcome(TradePlanId("plan-1"))
     assert outcome.rejected_count == 1
     assert not outcome.adhered
     assert outcome.source_execution_ids == (evidence.evidence_id,)
@@ -698,7 +748,7 @@ async def test_idempotency_conflicts_missing_records_and_terminal_guards() -> No
         )
     assert error.value.code is TradePlanErrorCode.INVALID_FIELD
     with pytest.raises(TradePlanError) as error:
-        await service.build_outcome(item.plan_id, OutcomeInputs(None, Decimal("0"), Decimal("0")))
+        await service.build_outcome(item.plan_id)
     assert error.value.code is TradePlanErrorCode.INVALID_TRANSITION
     await service.transition_terminal(
         item.plan_id,
@@ -765,20 +815,14 @@ async def test_successful_exit_is_linked_completes_once_and_builds_adherence() -
     assert execution.calls == 1
     record = await repository.get(TradePlanId("plan-1"))
     assert record is not None and record.plan.status is TradePlanStatus.COMPLETED
-    outcome = await service.build_outcome(
-        record.plan.plan_id,
-        OutcomeInputs(Decimal("9"), Decimal("0"), Decimal("100")),
-    )
+    outcome = await service.build_outcome(record.plan.plan_id)
     assert outcome.adhered
-    assert outcome.average_entry_price == Decimal("9")
+    assert outcome.average_entry_price == Decimal("10")
+    assert outcome.remaining_quantity == Decimal("0")
+    assert outcome.realized_pnl == Decimal("0")
+    assert outcome.attribution_provenance == "test-execution-ledger/v1"
     assert outcome.revision_count == 1
-    assert (
-        await service.build_outcome(
-            record.plan.plan_id,
-            OutcomeInputs(Decimal("99"), Decimal("99"), Decimal("99")),
-        )
-        == outcome
-    )
+    assert await service.build_outcome(record.plan.plan_id) == outcome
     with pytest.raises(TradePlanError) as error:
         await service.execute_directive("missing-directive", state, NEXT_OPEN)
     assert error.value.code is TradePlanErrorCode.PLAN_NOT_FOUND
@@ -1105,22 +1149,264 @@ async def test_outcome_waits_for_terminal_exit_settlement(terminal: str, rejecte
         )
     )
     before = await repository.get(value.plan_id)
-    inputs = OutcomeInputs(Decimal("10"), Decimal("0"), Decimal("0"))
     with pytest.raises(TradePlanError) as error:
-        await service.build_outcome(value.plan_id, inputs)
+        await service.build_outcome(value.plan_id)
     assert error.value.code is TradePlanErrorCode.OUTCOME_PENDING
     assert await repository.get(value.plan_id) == before
     execution = await service.execute_directive(
         directive.directive_id, positioned_state("100"), NEXT_OPEN
     )
-    settled_inputs = replace(
-        inputs, remaining_quantity=Decimal("100") if rejected else Decimal("0")
-    )
-    outcome = await service.build_outcome(value.plan_id, settled_inputs)
+    if rejected:
+        with pytest.raises(TradePlanError) as error:
+            await service.build_outcome(value.plan_id)
+        assert error.value.code is TradePlanErrorCode.OUTCOME_PENDING
+        return
+    outcome = await service.build_outcome(value.plan_id)
     assert outcome.source_execution_ids == (execution.evidence_id,)
     assert outcome.adhered is not rejected
     assert outcome.rejected_count == int(rejected)
-    assert await service.build_outcome(value.plan_id, settled_inputs) == outcome
+    assert await service.build_outcome(value.plan_id) == outcome
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("kind", "terminal", "held"),
+    (
+        (DirectiveType.ENTRY, TradePlanStatus.CANCELLED, "0"),
+        (DirectiveType.SCALE_IN, TradePlanStatus.CANCELLED, "200"),
+        (DirectiveType.REDUCE, TradePlanStatus.COMPLETED, "200"),
+        (DirectiveType.EXIT, TradePlanStatus.COMPLETED, "200"),
+    ),
+)
+async def test_pending_directives_cannot_cross_a_plan_terminal_boundary(
+    kind: DirectiveType, terminal: TradePlanStatus, held: str
+) -> None:
+    service, repository, execution = await active_service()
+    directive = await service.create_directive(
+        TradePlanId("plan-1"),
+        kind,
+        None if kind is DirectiveType.EXIT else Quantity(Decimal("100")),
+        NOW + timedelta(hours=1),
+        source_reference="terminal-boundary",
+    )
+    await service.transition_terminal(
+        directive.plan_id, terminal, NOW + timedelta(hours=2), "TERMINAL_TEST"
+    )
+    before = await repository.get(directive.plan_id)
+    state = positioned_state(held)
+    with pytest.raises(TradePlanError) as error:
+        await service.execute_directive(directive.directive_id, state, NEXT_OPEN)
+    assert error.value.code is TradePlanErrorCode.TERMINAL_EXECUTION_BLOCKED
+    assert execution.calls == 0
+    assert await repository.get(directive.plan_id) == before
+    assert (
+        Decimal("0")
+        if EQUITY.canonical_key not in state.account.positions
+        else state.account.positions[EQUITY.canonical_key].quantity
+    ) == Decimal(held)
+
+
+@pytest.mark.asyncio
+async def test_completed_receipt_can_link_after_concurrent_terminal_transition() -> None:
+    service, repository, execution = await active_service()
+    directive = await service.create_directive(
+        TradePlanId("plan-1"),
+        DirectiveType.ENTRY,
+        Quantity(Decimal("100")),
+        NOW + timedelta(hours=1),
+        source_reference="receipt-before-terminal",
+    )
+    state = positioned_state("0")
+    order_id = OrderId(stable_plan_id("order", directive.directive_id))
+    await execution.execute(
+        state,
+        ExecutionOrderIntent(EQUITY, OrderSide.BUY, Quantity(Decimal("100"))),
+        order_id,
+        NEXT_OPEN,
+        None,
+    )
+    await service.transition_terminal(
+        directive.plan_id,
+        TradePlanStatus.CANCELLED,
+        NEXT_OPEN + timedelta(hours=1),
+        "CONCURRENT_TERMINAL",
+    )
+    evidence = await service.execute_directive(
+        directive.directive_id, state, NEXT_OPEN + timedelta(hours=2)
+    )
+    assert evidence.order_id == order_id.value
+    assert execution.calls == 1
+    record = await repository.get(directive.plan_id)
+    assert record is not None and record.executions == (evidence,)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "old_kind", [DirectiveType.ENTRY, DirectiveType.SCALE_IN, DirectiveType.REDUCE]
+)
+async def test_predecessor_pending_directive_cannot_mutate_successor_position(
+    old_kind: DirectiveType,
+) -> None:
+    service, _, execution = await active_service()
+    old = await service.create_directive(
+        TradePlanId("plan-1"),
+        old_kind,
+        Quantity(Decimal("100")),
+        NOW + timedelta(hours=1),
+        source_reference="predecessor",
+    )
+    await service.transition_terminal(
+        old.plan_id, TradePlanStatus.CANCELLED, NOW + timedelta(hours=2), "SUPERSEDED"
+    )
+    successor = command("successor")
+    await service.create_draft(successor)
+    await service.activate(
+        successor.plan_id,
+        NOW + timedelta(hours=3),
+        actor="cto",
+        source="successor",
+    )
+    entry = await service.create_directive(
+        successor.plan_id,
+        DirectiveType.ENTRY,
+        Quantity(Decimal("100")),
+        NOW + timedelta(hours=4),
+        source_reference="successor-entry",
+    )
+    state = positioned_state("0")
+    await service.execute_directive(entry.directive_id, state, NEXT_OPEN)
+    successor_position = ExecutionStateSnapshot.capture(state)
+    with pytest.raises(TradePlanError) as error:
+        await service.execute_directive(old.directive_id, state, NEXT_OPEN + timedelta(hours=1))
+    assert error.value.code is TradePlanErrorCode.TERMINAL_EXECUTION_BLOCKED
+    assert ExecutionStateSnapshot.capture(state) == successor_position
+    assert execution.calls == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("terminal", ["expiry", "invalidation"])
+async def test_terminal_settlement_is_the_only_terminal_execution_and_blocks_successor(
+    terminal: str,
+) -> None:
+    item = (
+        command(expiry_at=NOW + timedelta(minutes=30))
+        if terminal == "expiry"
+        else command(invalidation="terminal-policy")
+    )
+    service, _, execution = await active_service(item)
+    old = await service.create_directive(
+        item.plan_id,
+        DirectiveType.REDUCE,
+        Quantity(Decimal("100")),
+        NOW + timedelta(minutes=10),
+        source_reference="pre-terminal",
+    )
+    settlement = (
+        await service.evaluate(item.plan_id, observation("expiry", "10"), NOW + timedelta(hours=1))
+        if terminal == "expiry"
+        else await service.record_thesis_invalidation(
+            item.plan_id, event_reference="event", as_of=NOW + timedelta(hours=1)
+        )
+    )
+    successor = command("successor")
+    await service.create_draft(successor)
+    with pytest.raises(TradePlanError) as error:
+        await service.activate(
+            successor.plan_id,
+            NOW + timedelta(hours=2),
+            actor="cto",
+            source="successor",
+        )
+    assert error.value.code is TradePlanErrorCode.TERMINAL_SETTLEMENT_PENDING
+
+    state = positioned_state("200")
+    with pytest.raises(TradePlanError) as error:
+        await service.execute_directive(old.directive_id, state, NEXT_OPEN)
+    assert error.value.code is TradePlanErrorCode.TERMINAL_EXECUTION_BLOCKED
+    assert execution.calls == 0
+    evidence = await service.execute_directive(settlement.directive_id, state, NEXT_OPEN)
+    assert evidence.fill_id is not None
+    assert state.account.positions[EQUITY.canonical_key].quantity == 0
+    await service.activate(
+        successor.plan_id,
+        NEXT_OPEN + timedelta(minutes=1),
+        actor="cto",
+        source="successor",
+    )
+
+
+@pytest.mark.asyncio
+async def test_terminal_settlement_barrier_is_scoped_to_champion_or_shadow_portfolio() -> None:
+    expiring = command("champion-expiry", expiry_at=NOW + timedelta(minutes=30))
+    service, _, _ = await active_service(expiring)
+    await service.evaluate(expiring.plan_id, observation("expiry", "10"), NOW + timedelta(hours=1))
+    shadow = command("shadow-successor", portfolio="shadow-atlas")
+    await service.create_draft(shadow)
+    activated = await service.activate(
+        shadow.plan_id,
+        NOW + timedelta(hours=2),
+        actor="cto",
+        source="shadow",
+    )
+    assert activated.portfolio_id == PortfolioId("shadow-atlas")
+
+
+@pytest.mark.asyncio
+async def test_expiry_and_invalidation_cannot_bypass_audited_terminal_settlement() -> None:
+    service, _, _ = await active_service()
+    for status in (TradePlanStatus.EXPIRED, TradePlanStatus.INVALIDATED):
+        with pytest.raises(TradePlanError) as error:
+            await service.transition_terminal(
+                TradePlanId("plan-1"), status, NOW + timedelta(hours=1), "manual-bypass"
+            )
+        assert error.value.code is TradePlanErrorCode.INVALID_TRANSITION
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mismatch", ["portfolio", "instrument", "order", "as_of"])
+async def test_outcome_fails_closed_when_authoritative_attribution_identity_conflicts(
+    mismatch: str,
+) -> None:
+    service, _, execution = await active_service()
+    directive = await service.create_directive(
+        TradePlanId("plan-1"),
+        DirectiveType.ENTRY,
+        Quantity(Decimal("100")),
+        NOW + timedelta(hours=1),
+        source_reference="entry",
+    )
+    await service.execute_directive(directive.directive_id, positioned_state("0"), NEXT_OPEN)
+    terminal_at = NEXT_OPEN + timedelta(hours=1)
+    await service.transition_terminal(
+        directive.plan_id, TradePlanStatus.CANCELLED, terminal_at, "TEST"
+    )
+    authoritative = execution.outcome_attribution
+
+    async def conflicting_attribution(portfolio_id, instrument, evidence, as_of):
+        value = await authoritative(portfolio_id, instrument, evidence, as_of)
+        changes = {
+            "portfolio": {"portfolio_id": PortfolioId("shadow-atlas")},
+            "instrument": {"instrument": DOMESTIC_ETF},
+            "order": {"source_order_ids": ("forged-order",)},
+            "as_of": {"as_of": terminal_at + timedelta(days=1)},
+        }
+        return replace(value, **changes[mismatch])
+
+    execution.outcome_attribution = conflicting_attribution  # type: ignore[method-assign]
+    with pytest.raises(TradePlanError) as error:
+        await service.build_outcome(directive.plan_id)
+    assert error.value.code is TradePlanErrorCode.OUTCOME_ATTRIBUTION_INVALID
+
+
+@pytest.mark.asyncio
+async def test_outcome_requires_replayable_authoritative_execution_evidence() -> None:
+    service, _, _ = await active_service()
+    await service.transition_terminal(
+        TradePlanId("plan-1"), TradePlanStatus.CANCELLED, NOW + timedelta(hours=1), "NO_EXECUTION"
+    )
+    with pytest.raises(TradePlanError) as error:
+        await service.build_outcome(TradePlanId("plan-1"))
+    assert error.value.code is TradePlanErrorCode.OUTCOME_ATTRIBUTION_INVALID
 
 
 @pytest.mark.asyncio
@@ -1380,4 +1666,8 @@ def test_domain_value_objects_reject_invalid_and_ambiguous_evidence() -> None:
             False,
             1,
             (),
+            "source",
+            NOW,
+            "execution-ledger/v1",
+            ("order",),
         )

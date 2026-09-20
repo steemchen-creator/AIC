@@ -9,6 +9,7 @@ from aic_backend.application.point_in_time import AvailabilityMode, PointInTimeC
 from aic_backend.application.ports.trade_plan import (
     AuthoritativeExecution,
     NextEligibleOpenCalendar,
+    OutcomeAttributionError,
     TradePlanRepository,
 )
 from aic_backend.application.trade_plan_record import TradePlanRecord
@@ -89,13 +90,6 @@ class PlanAmendment:
     trailing_stop: TrailingStopPolicy | None = None
     time_stop: TimeStopPolicy | None = None
     thesis_invalidation_reference: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class OutcomeInputs:
-    average_entry_price: Decimal | None
-    remaining_quantity: Decimal
-    realized_pnl: Decimal
 
 
 class PointInTimeNextOpenCalendar:
@@ -228,6 +222,17 @@ class TradePlanService:
             raise TradePlanError(
                 TradePlanErrorCode.DUPLICATE_ACTIVE_PLAN,
                 "portfolio and instrument already have an active plan",
+            )
+        history = await self._repository.list_for_pair(
+            record.plan.portfolio_id.value, record.plan.instrument.canonical_key
+        )
+        if any(
+            item.plan.plan_id != plan_id and self._terminal_settlement_pending(item)
+            for item in history
+        ):
+            raise TradePlanError(
+                TradePlanErrorCode.TERMINAL_SETTLEMENT_PENDING,
+                "predecessor terminal settlement must fill before successor activation",
             )
         plan = record.plan.activate(at)
         revision = self._revision(plan, at, "ACTIVATED", actor, source)
@@ -468,7 +473,6 @@ class TradePlanService:
                 TradePlanErrorCode.POSITION_SEMANTICS, "execution account does not own the plan"
             )
         order_id = OrderId(stable_plan_id("order", directive_id))
-        outcome = await self._execution.reconcile(state, order_id, execution_at)
         prior = next(
             (item for item in record.executions if item.directive_id == directive_id), None
         )
@@ -478,11 +482,24 @@ class TradePlanService:
             raise TradePlanError(
                 TradePlanErrorCode.DIRECTIVE_NOT_EXECUTABLE, "HOLD never creates an order"
             )
-        if directive.not_before is None or execution_at < directive.not_before:
+        not_before = directive.not_before
+        if not_before is None:
             raise TradePlanError(
-                TradePlanErrorCode.EXECUTION_TOO_EARLY, "execution precedes eligible open"
+                TradePlanErrorCode.INVALID_FIELD,
+                "executable directive has no eligible-open boundary",
             )
+        outcome = await self._execution.reconcile(state, order_id, execution_at)
         if outcome is None:
+            if not self._directive_is_executable_for_status(record, directive):
+                raise TradePlanError(
+                    TradePlanErrorCode.TERMINAL_EXECUTION_BLOCKED,
+                    "directive cannot execute after its plan reached this terminal state",
+                )
+            if execution_at < not_before:
+                raise TradePlanError(
+                    TradePlanErrorCode.EXECUTION_TOO_EARLY,
+                    "execution precedes eligible open",
+                )
             position = state.account.positions.get(record.plan.instrument.canonical_key)
             held = Decimal("0") if position is None else position.quantity
             kind = directive.directive_type
@@ -532,7 +549,7 @@ class TradePlanService:
             or outcome.order.side != expected_side
             or (directive.quantity is not None and outcome.order.quantity != directive.quantity)
             or (requested_price is not None and outcome.order.requested_price != requested_price)
-            or outcome.risk_decision.as_of < directive.not_before
+            or outcome.risk_decision.as_of < not_before
             or outcome.risk_decision.as_of > execution_at
         ):
             raise TradePlanError(
@@ -572,6 +589,11 @@ class TradePlanService:
         reason: str,
     ) -> TradePlan:
         record = await self._required(plan_id)
+        if status in (TradePlanStatus.EXPIRED, TradePlanStatus.INVALIDATED):
+            raise TradePlanError(
+                TradePlanErrorCode.INVALID_TRANSITION,
+                "expiry and invalidation require their audited terminal-settlement paths",
+            )
         plan = record.plan.transition(status, at, reason)
         await self._repository.save(replace(record, plan=plan))
         return plan
@@ -587,21 +609,17 @@ class TradePlanService:
     ) -> tuple[TradePlanRecord, ...]:
         return await self._repository.list_for_pair(portfolio_id.value, instrument.canonical_key)
 
-    async def build_outcome(self, plan_id: TradePlanId, values: OutcomeInputs) -> TradePlanOutcome:
+    async def build_outcome(self, plan_id: TradePlanId) -> TradePlanOutcome:
         record = await self._required(plan_id)
         plan = record.plan
         if plan.status in (TradePlanStatus.DRAFT, TradePlanStatus.ACTIVE):
             raise TradePlanError(
                 TradePlanErrorCode.INVALID_TRANSITION, "outcome requires a terminal plan"
             )
-        resolved = {item.directive_id for item in record.executions}
-        if any(
-            item.directive_type is not DirectiveType.HOLD and item.directive_id not in resolved
-            for item in record.directives
-        ):
+        if self._terminal_settlement_pending(record):
             raise TradePlanError(
                 TradePlanErrorCode.OUTCOME_PENDING,
-                "outcome requires every executable directive to have fill or rejection evidence",
+                "outcome requires filled terminal settlement evidence",
             )
         if record.outcome is not None:
             return record.outcome
@@ -616,6 +634,36 @@ class TradePlanService:
             for item in record.directives
             if item.directive_type is not DirectiveType.HOLD
         }
+        ordered_executions = tuple(
+            sorted(record.executions, key=lambda item: (item.executed_at, item.order_id))
+        )
+        if any(item.plan_id != plan.plan_id for item in ordered_executions):
+            raise TradePlanError(
+                TradePlanErrorCode.OUTCOME_ATTRIBUTION_INVALID,
+                "execution evidence belongs to another Trade Plan",
+            )
+        attribution_as_of = max(
+            (item.executed_at for item in ordered_executions), default=plan.terminal_at
+        )
+        try:
+            attribution = await self._execution.outcome_attribution(
+                plan.portfolio_id, plan.instrument, ordered_executions, attribution_as_of
+            )
+        except OutcomeAttributionError as error:
+            raise TradePlanError(
+                TradePlanErrorCode.OUTCOME_ATTRIBUTION_INVALID,
+                "authoritative portfolio/execution evidence cannot verify outcome attribution",
+            ) from error
+        if (
+            attribution.portfolio_id != plan.portfolio_id
+            or attribution.instrument != plan.instrument
+            or attribution.as_of > attribution_as_of
+            or attribution.source_order_ids != tuple(item.order_id for item in ordered_executions)
+        ):
+            raise TradePlanError(
+                TradePlanErrorCode.OUTCOME_ATTRIBUTION_INVALID,
+                "outcome attribution identity conflicts with the Trade Plan",
+            )
         outcome = TradePlanOutcome(
             stable_plan_id("outcome", plan.plan_id.value),
             plan.plan_id,
@@ -626,9 +674,9 @@ class TradePlanService:
             plan.activated_at,
             plan.terminal_at,
             plan.terminal_reason,
-            values.average_entry_price,
-            values.remaining_quantity,
-            values.realized_pnl,
+            attribution.average_entry_price,
+            attribution.remaining_quantity,
+            attribution.realized_pnl,
             int((plan.terminal_at - plan.activated_at).total_seconds()),
             bool(
                 triggers & {TriggerType.HARD_STOP, TriggerType.TRAILING_STOP, TriggerType.TIME_STOP}
@@ -642,9 +690,48 @@ class TradePlanService:
             executable_directives <= filled_directives,
             len(record.revisions),
             tuple(item.evidence_id for item in record.executions),
+            attribution.source_id,
+            attribution.as_of,
+            attribution.provenance,
+            attribution.source_order_ids,
         )
         await self._repository.save(replace(record, outcome=outcome))
         return outcome
+
+    @staticmethod
+    def _directive_is_executable_for_status(
+        record: TradePlanRecord, directive: TradePlanDirective
+    ) -> bool:
+        status = record.plan.status
+        if status is TradePlanStatus.ACTIVE:
+            return True
+        expected_trigger = {
+            TradePlanStatus.EXPIRED: TriggerType.EXPIRY,
+            TradePlanStatus.INVALIDATED: TriggerType.THESIS_INVALIDATION,
+        }.get(status)
+        return (
+            expected_trigger is not None
+            and directive.directive_type is DirectiveType.EXIT
+            and directive.trigger is expected_trigger
+            and directive.decision_as_of == record.plan.terminal_at
+        )
+
+    @classmethod
+    def _terminal_settlement_pending(cls, record: TradePlanRecord) -> bool:
+        if record.plan.status not in (
+            TradePlanStatus.EXPIRED,
+            TradePlanStatus.INVALIDATED,
+        ):
+            return False
+        settlement = tuple(
+            item
+            for item in record.directives
+            if cls._directive_is_executable_for_status(record, item)
+        )
+        if not settlement:
+            return False
+        filled = {item.directive_id for item in record.executions if item.fill_id is not None}
+        return any(item.directive_id not in filled for item in settlement)
 
     async def _prepare_directive(
         self,

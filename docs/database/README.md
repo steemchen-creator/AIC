@@ -92,3 +92,8 @@ No existing table or evidence is rewritten. Repeated 0014/0015 and base/head rou
 Downgrade removes this journal and therefore destroys deduplication history: stop execution and
 back up the journal before an explicitly authorized production downgrade. Never delete an
 unfinished claim or restart execution with an empty journal to retry an old directive.
+
+FIX-SPEC010-001 adds no migration. Terminal-isolation state uses the existing plan/directive/link
+records, and authoritative outcome attribution fields use the existing JSON outcome and recovery
+payloads. They replay completed migration-0015 receipts; no historical row is rewritten. The
+destructive downgrade risks for migrations 0014 and 0015 therefore remain exactly as documented.

@@ -30,16 +30,20 @@ Trade Plan domain (pure policy, lifecycle, immutable evidence)
           ^
 Trade Plan application (use cases + owned ports + PIT next-open lock)
           ^                                  ^
-PostgreSQL / in-memory adapters       existing AShareExecutionService
+PostgreSQL / in-memory adapters       IdempotentExecutionService
+                                             |
+                                  existing AShareExecutionService
                                              |
                                existing execution / settlement / risk
 ```
 
-The application owns `TradePlanRepository`, `NextEligibleOpenCalendar` and
-`AuthoritativeExecution` protocols. `AShareExecutionService` structurally satisfies the execution
-port; Trade Plan does not calculate a fill or bypass the existing order/risk chain. SQL/Pydantic
-remain in Infrastructure. No ADR was added because this structure is explicitly authorized by
-SPEC-010 and does not change an earlier architectural decision.
+The application owns `TradePlanRepository`, `NextEligibleOpenCalendar`, `ExecutionJournal` and
+`AuthoritativeExecution` protocols. `IdempotentExecutionService` satisfies the current
+`AuthoritativeExecution` contract (`reconcile`, `execute` and authoritative outcome projection)
+and delegates financial execution to `AShareExecutionService`. Trade Plan does not calculate a
+fill or bypass the existing order/risk chain. SQL/Pydantic remain in Infrastructure. No ADR was
+added because this structure is explicitly authorized by SPEC-010 and does not change an earlier
+architectural decision.
 
 ## 4. Requirement traceability
 
@@ -97,9 +101,11 @@ explicit authorization.
 ## 7. Outcome and adherence semantics
 
 Trade Plan links plan, revision and directive identities to existing order/fill or stable rejection
-evidence. Terminal outcome values are supplied from the authoritative portfolio/execution ledger;
-Trade Plan does not become a second P&L authority. Adherence is false while any executable
-directive lacks a recorded fill. Rejected orders remain visible and do not pretend execution.
+evidence. Terminal outcome values are replayed from immutable completed execution receipts by the
+authoritative execution adapter; Trade Plan does not become a second P&L authority. The frozen
+projection records source identity, portfolio, instrument, `as_of`, provenance and order IDs.
+Adherence is false while a directive lacks a recorded fill. Rejected orders remain visible and do
+not pretend execution.
 
 ## 8. Scope confirmation
 
@@ -142,7 +148,8 @@ commit.
 
 - No intraday observation engine; `T` is recorded intent under existing data capabilities.
 - Ordered target evaluation has no strategy-specific consumed-target state in V1.
-- Outcome monetary inputs require an explicit projection from existing authoritative ledgers.
+- Outcome attribution is limited to completed authoritative receipts named by plan execution links;
+  missing or inconsistent evidence fails closed.
 - No US/USD/FX, leverage, Kelly, AI or UI behavior.
 
 These are authorized SPEC-010 non-scope or future extensions, not newly accepted technical debt.
@@ -275,3 +282,67 @@ Revert code through review; stopping execution, backing up this journal and expl
 authorization are prerequisites for a production downgrade because it removes deduplication
 evidence. No governance code, automation/dev-state or SPEC-011 work is included. Keep PR #19 Draft
 and require independent review of the final exact HEAD; no Ready, self-approval or merge action.
+
+## 15. FIX-SPEC010-001 terminal isolation and outcome attribution (2026-09-21)
+
+This Engineering remediation addresses only Architecture Blockers 06 and 07. It preserves the
+existing execution/risk/portfolio authority, deterministic order identity, PIT checks and
+append-only evidence. It does not assert Architecture Approval.
+
+### Terminal and successor isolation
+
+`execute_directive` now checks lifecycle authority before any new financial execution. A previously
+linked directive remains idempotently readable, and a completed durable receipt may reconcile its
+missing Trade Plan link after a concurrent terminal transition without originating another order.
+An unexecuted directive on `CANCELLED` or `COMPLETED` cannot create an order. `EXPIRED` and
+`INVALIDATED` permit only the terminal `EXIT` whose trigger and decision timestamp match the audited
+terminal event. Direct calls cannot transition into those statuses because evaluator/invalidation
+paths atomically create their settlement evidence.
+
+A pending terminal settlement blocks activation of a successor with the same portfolio and
+instrument. The barrier opens only after fill evidence; a rejection remains append-only evidence
+and keeps settlement unresolved. The portfolio key preserves Champion/Shadow isolation. These
+rules survive PostgreSQL reload and prevent a predecessor order from reducing or selling a
+successor position.
+
+### Authoritative immutable outcome
+
+`build_outcome` no longer accepts average entry price, remaining quantity or realized P&L from its
+caller. It submits the plan's exact execution links to `IdempotentExecutionService`, which loads
+their completed migration-0015 receipts and verifies portfolio, instrument, order, side, fill,
+rejection codes, execution time and projection identity. Average cost and remaining position come
+from authoritative account snapshots; realized P&L is the sum of their authoritative per-receipt
+deltas. The immutable outcome stores projection source ID, `as_of`, provenance and order IDs.
+Missing receipts, cross-plan links, stale/future evidence and identity mismatches fail closed.
+
+The implementation adds no accounting logic and no schema migration. New outcome fields use the
+existing migration-0014 JSON payload; source receipts use the existing migration-0015 journal.
+Migration upgrade/downgrade and full round-trip coverage remain required. Downgrading 0014 destroys
+Trade Plan history, and downgrading 0015 destroys execution deduplication and attribution evidence;
+both require the documented stop/backup/authorization procedure.
+
+The unresolved-claim limitation is now formally registered as
+`SPEC010-EXECUTION-CLAIM-RECONCILIATION` in the technical debt registry. It blocks the affected
+order and portfolio until operations reconcile authoritative evidence. Claims still cannot expire,
+be taken over, be deleted or trigger a blind retry; historical review evidence above is unchanged.
+
+### Requirement-to-test traceability
+
+| Blocker requirement | Deterministic regression evidence |
+| --- | --- |
+| ENTRY/SCALE_IN/REDUCE/EXIT cannot cross CANCELLED/COMPLETED | `test_pending_directives_cannot_cross_a_plan_terminal_boundary` |
+| Predecessor directive cannot mutate successor position | `test_predecessor_pending_directive_cannot_mutate_successor_position`; PostgreSQL restart counterpart |
+| EXPIRED/INVALIDATED settlement EXIT and successor barrier | Unit test for both terminal causes plus PostgreSQL restart test for both |
+| Champion/Shadow independence | `test_terminal_settlement_barrier_is_scoped_to_champion_or_shadow_portfolio` |
+| No manual terminal-settlement bypass | `test_expiry_and_invalidation_cannot_bypass_audited_terminal_settlement` |
+| Caller cannot freeze naked outcome numbers | `build_outcome(plan_id)` API and authoritative receipt replay tests |
+| Portfolio/instrument/plan/order/fill/time mismatch fails closed | Unit identity matrix plus exact completed-receipt replay test |
+| Immutable replay survives PostgreSQL restart | Terminal settlement/outcome restart test and existing append-only persistence tests |
+| Rejected execution remains evidence without false settlement | Terminal outcome rejection matrix and durable rejected-receipt reconciliation cases |
+
+Local validation on Python 3.12.14: `985 passed` in the complete non-PostgreSQL suite with `92.20%`
+branch-aware repository coverage; `81 passed` in focused Trade Plan tests; `34 passed` in the
+architecture suite; Ruff, strict mypy over 150 source files and `git diff --check` passed. The
+PostgreSQL 17 suite, both migration round-trips and exact-HEAD required checks are attached to the
+Draft PR after CI. PR #19 remains Draft; Engineering does not mark Ready, self-approve, merge,
+enable Auto Merge or start SPEC-011.

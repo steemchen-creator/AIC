@@ -167,10 +167,11 @@ closed. Champion and every Shadow portfolio keep separate active-plan keys and e
 
 Every directive binds to a revision visible at its decision time. Entry, scale-in, partial reduce
 and full exit are checked against the authoritative account position. Persisted stop/target
-consumption prevents duplicate automatic orders across observations and restarts. Terminal
-outcomes wait for every executable directive to resolve, and PostgreSQL saves reject stale
-concurrent appends while preserving all recorded evidence. Instrument and portfolio identity
-remain immutable even while a plan is still a draft.
+consumption prevents duplicate automatic orders across observations and restarts. Terminal plans
+block their old pending directives; expiry/invalidation permit only their audited settlement EXIT
+and block a same-portfolio successor until it fills. PostgreSQL saves reject stale concurrent
+appends while preserving all recorded evidence. Instrument and portfolio identity remain immutable
+even while a plan is still a draft.
 
 For durable execution, compose the existing `AShareExecutionService` with
 `IdempotentExecutionService` and a `PostgreSQLExecutionJournal`, then inject that adapter into
@@ -178,6 +179,9 @@ For durable execution, compose the existing `AShareExecutionService` with
 Retries reconcile an already executed order before position checks, so a Trade Plan save conflict
 cannot create a second fill or account mutation. Unfinished claims fail closed for operational
 reconciliation; tests may use `InMemoryExecutionJournal`.
+Immutable outcomes are derived by replaying those completed receipts and bind their portfolio,
+instrument, source identity, provenance, `as_of` and order IDs. Callers cannot supply final P&L or
+position numbers.
 
 ## Foundation prerequisites
 

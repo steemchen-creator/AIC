@@ -19,8 +19,14 @@ from aic_backend.application.idempotent_execution import (
 )
 from aic_backend.application.ports.execution_journal import ExecutionReceipt, ExecutionStateSnapshot
 from aic_backend.application.ports.persistence import PersistenceError
+from aic_backend.application.ports.trade_plan import OutcomeAttributionError
 from aic_backend.domain.execution import PriceLimitBand
 from aic_backend.domain.portfolio.models import OrderId, OrderSide, PortfolioId, Quantity
+from aic_backend.domain.trade_plan import (
+    DirectiveType,
+    PlanExecutionEvidence,
+    TradePlanId,
+)
 from aic_backend.infrastructure.execution_journal import _RECEIPT, InMemoryExecutionJournal, _json
 
 
@@ -77,6 +83,57 @@ async def test_receipt_replay_identity_pit_and_account_projection_guards():
         await journal.complete(replace(receipt, claim=replace(receipt.claim, claim_id="forged")))
     with pytest.raises(ValueError, match="immutable claim"):
         replace(receipt, after=before)
+
+
+@pytest.mark.asyncio
+async def test_outcome_attribution_replays_only_exact_completed_receipts():
+    state = account()
+    journal = InMemoryExecutionJournal()
+    runtime = IdempotentExecutionService(authority(), journal)
+    order_id = OrderId("outcome-attribution")
+    outcome = await runtime.execute(
+        state,
+        intent(),
+        order_id,
+        NEXT_OPEN,
+        PriceLimitBand(Decimal("1"), Decimal("100"), "fixture", NEXT_OPEN),
+    )
+    assert outcome.fill is not None
+    evidence = PlanExecutionEvidence(
+        "execution-evidence",
+        TradePlanId("attributed-plan"),
+        1,
+        "directive",
+        DirectiveType.SCALE_IN,
+        order_id.value,
+        outcome.fill.fill_id.value,
+        NEXT_OPEN,
+    )
+    attribution = await runtime.outcome_attribution(
+        PortfolioId("champion"), INSTRUMENT, (evidence,), NEXT_OPEN
+    )
+    assert (
+        attribution.average_entry_price
+        == state.account.positions[INSTRUMENT.canonical_key].average_cost
+    )
+    assert attribution.remaining_quantity == Decimal("600")
+    assert attribution.realized_pnl == 0
+    assert attribution.source_order_ids == (order_id.value,)
+    assert attribution.provenance == "execution-order-claims/v1"
+
+    for portfolio_id, linked, as_of in (
+        (PortfolioId("another"), evidence, NEXT_OPEN),
+        (PortfolioId("champion"), replace(evidence, fill_id="forged"), NEXT_OPEN),
+        (PortfolioId("champion"), evidence, NEXT_OPEN - timedelta(seconds=1)),
+    ):
+        with pytest.raises(OutcomeAttributionError):
+            await runtime.outcome_attribution(portfolio_id, INSTRUMENT, (linked,), as_of)
+    with pytest.raises(OutcomeAttributionError):
+        await runtime.outcome_attribution(PortfolioId("champion"), INSTRUMENT, (), NEXT_OPEN)
+    with pytest.raises(OutcomeAttributionError):
+        await runtime.outcome_attribution(
+            PortfolioId("champion"), INSTRUMENT, (evidence, evidence), NEXT_OPEN
+        )
 
 
 @pytest.mark.asyncio

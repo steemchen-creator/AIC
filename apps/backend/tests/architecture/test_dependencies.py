@@ -982,6 +982,17 @@ def test_spec_010_trade_plan_preserves_clean_and_authoritative_boundaries() -> N
     assert "aic_backend.application.ports.trade_plan" in adapter_imports
     assert any(module.startswith("sqlalchemy") for module in adapter_imports)
 
+    reconciliation_imports = imported_modules(
+        PACKAGE_ROOT / "application/idempotent_execution.py"
+    )
+    assert "aic_backend.application.ports.execution_journal" in reconciliation_imports
+    assert "aic_backend.application.ports.trade_plan" in reconciliation_imports
+    assert not {
+        module
+        for module in reconciliation_imports
+        if module.startswith(("aic_backend.infrastructure", "sqlalchemy"))
+    }
+
     source = "\n".join(
         path.read_text(encoding="utf-8")
         for path in (

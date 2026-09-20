@@ -29,6 +29,11 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   authoritative outcome/account recovery receipts, reconciliation before Trade Plan position
   checks, immutable original execution links, reversible migration 0015, and PostgreSQL
   conflict/restart regression coverage for SCALE_IN, REDUCE, EXIT and rejected executions.
+- FIX-SPEC010-001 terminal execution isolation: cancelled/completed plans reject all pending
+  directives, expiry/invalidation allow only their audited settlement EXIT, and an unresolved
+  settlement blocks same-portfolio successors across PostgreSQL restarts. Immutable outcomes now
+  replay durable authoritative receipts and bind source identity, portfolio, instrument, `as_of`,
+  provenance and order IDs instead of accepting caller-supplied P&L or position values.
 
 - DEV-GOV-RECOVERY-001 protected principals-only deployment-policy rotation, with immutable
   setup preservation, chained canonical fingerprints, complete non-secret policy snapshots,

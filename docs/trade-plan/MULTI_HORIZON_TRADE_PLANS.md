@@ -42,11 +42,12 @@ no position, `SCALE_IN` requires an existing position, `REDUCE` must sell strict
 remaining quantity, and `EXIT` sells that entire remaining quantity. A caller-supplied quantity
 hint cannot override account state, and another portfolio's account is rejected.
 
-Executable directives call the existing `AShareExecutionService` contract through an
-Application-owned protocol. The Trade Plan layer cannot declare a fill, bypass pre-trade risk or
-alter cash, settlement, lot, limit, trading-status, concentration, turnover or fee rules. Its
-execution link records plan/revision/directive, existing order/fill identities, and stable
-rejection codes.
+Executable directives call the application-owned `AuthoritativeExecution` protocol. Production
+composition is `TradePlanService -> IdempotentExecutionService -> AShareExecutionService`: the
+durable wrapper owns deterministic-order reconciliation, while the existing A-share service keeps
+order, fill, risk, cash, settlement, lot, limit, trading-status, concentration, turnover and fee
+authority. The Trade Plan layer cannot declare a fill or bypass that chain. Its execution link
+records plan/revision/directive, existing order/fill identities, and stable rejection codes.
 
 ## Stops, targets and terminal evidence
 
@@ -63,13 +64,25 @@ change to its price/distance/deadline, action or quantity defines a different po
 directives without keys are matched to their bound revision, conservatively consuming ambiguous
 equal-action/quantity legacy targets instead of issuing duplicate orders.
 
-Terminal outcome materialization links stored revisions, directives and execution evidence with
-caller-supplied values derived from the authoritative portfolio/execution ledger. It reports
-holding duration, realized P&L, remaining quantity, trigger flags, scale/reduce/rejection counts
-and adherence. It is measurement evidence only and does not rank strategies.
-Materialization fails with `TRADE_PLAN_OUTCOME_PENDING` until every executable directive has
-fill or rejection evidence, including an EXIT issued by expiry or thesis invalidation. Rejection
-is a resolved attempt but never counts as adherence. The resulting outcome remains immutable.
+`CANCELLED` and `COMPLETED` are hard execution boundaries: an unexecuted directive created while
+the plan was active cannot create a later financial operation. `EXPIRED` and `INVALIDATED` retain
+one narrowly identified terminal-settlement `EXIT`, created atomically with the terminal event and
+bound to that event's timestamp and trigger. No other predecessor directive remains executable.
+A successor for the same portfolio/instrument cannot activate while this settlement lacks a fill;
+a rejection remains auditable but keeps the barrier closed. Champion and Shadow portfolios use
+different barriers. These checks run before any new financial execution. A completed durable
+receipt may still reconcile and append its missing link after a concurrent terminal transition;
+reconciliation cannot originate another order.
+
+Terminal outcome materialization no longer accepts caller-supplied P&L or position numbers. It
+asks `IdempotentExecutionService` to replay the exact completed receipts named by the plan's
+execution evidence. The resulting immutable projection binds a source identity, portfolio,
+instrument, `as_of`, provenance and source order IDs to average entry price, remaining quantity
+and realized P&L. Missing receipts, future evidence, identity/side/fill/rejection mismatches and
+cross-plan evidence fail closed. The Trade Plan stores the projection and adherence facts but does
+not implement portfolio accounting. A terminal settlement must have fill evidence before an
+outcome or successor can proceed; other terminal pending directives remain visible and make
+adherence false without being allowed to execute. The resulting outcome remains immutable.
 
 ## PIT and next eligible open
 
@@ -142,6 +155,11 @@ state-edit command. An in-memory journal exists only for deterministic tests/res
 contract covers the existing deterministic execution engine; it introduces no external broker
 side effects or new risk authority. Callers retain ownership of their account's single-writer
 execution scope; conflicting account projections fail closed.
+
+Outcome projection uses the same completed receipts after restart. No migration is needed for the
+FIX-SPEC010-001 fields because outcomes and recovery projections are JSON payloads already owned by
+migration 0014, and authoritative receipt inputs remain in migration 0015. Existing migration
+downgrade warnings remain unchanged and destructive.
 
 ## Deliberate V1 limits
 

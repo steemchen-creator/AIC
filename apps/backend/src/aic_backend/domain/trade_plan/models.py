@@ -91,6 +91,9 @@ class TradePlanErrorCode(StrEnum):
     EXECUTION_REJECTED = "TRADE_PLAN_EXECUTION_REJECTED"
     POSITION_SEMANTICS = "TRADE_PLAN_POSITION_SEMANTICS"
     OUTCOME_PENDING = "TRADE_PLAN_OUTCOME_PENDING"
+    TERMINAL_EXECUTION_BLOCKED = "TRADE_PLAN_TERMINAL_EXECUTION_BLOCKED"
+    TERMINAL_SETTLEMENT_PENDING = "TRADE_PLAN_TERMINAL_SETTLEMENT_PENDING"
+    OUTCOME_ATTRIBUTION_INVALID = "TRADE_PLAN_OUTCOME_ATTRIBUTION_INVALID"
 
 
 class TradePlanError(ValueError):
@@ -482,14 +485,36 @@ class TradePlanOutcome:
     adhered: bool
     revision_count: int
     source_execution_ids: tuple[str, ...]
+    attribution_source_id: str
+    attribution_as_of: datetime
+    attribution_provenance: str
+    source_order_ids: tuple[str, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "outcome_id", _text(self.outcome_id, "outcome_id"))
         object.__setattr__(self, "activated_at", _aware(self.activated_at, "activated_at"))
         object.__setattr__(self, "terminal_at", _aware(self.terminal_at, "terminal_at"))
         object.__setattr__(self, "terminal_reason", _text(self.terminal_reason, "terminal_reason"))
+        object.__setattr__(
+            self,
+            "attribution_source_id",
+            _text(self.attribution_source_id, "attribution_source_id"),
+        )
+        object.__setattr__(
+            self,
+            "attribution_provenance",
+            _text(self.attribution_provenance, "attribution_provenance"),
+        )
+        object.__setattr__(
+            self, "attribution_as_of", _aware(self.attribution_as_of, "attribution_as_of")
+        )
         if self.terminal_at < self.activated_at or self.remaining_quantity < 0:
             raise TradePlanError(TradePlanErrorCode.INVALID_FIELD, "invalid outcome values")
+        if self.attribution_as_of < self.activated_at or not self.source_order_ids:
+            raise TradePlanError(
+                TradePlanErrorCode.INVALID_FIELD,
+                "outcome attribution is unavailable after activation",
+            )
         if self.average_entry_price is not None and self.average_entry_price <= 0:
             raise TradePlanError(
                 TradePlanErrorCode.INVALID_FIELD, "average entry price must be positive"
