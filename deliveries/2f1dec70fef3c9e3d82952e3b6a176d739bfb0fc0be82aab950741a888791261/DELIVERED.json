@@ -1,0 +1,10 @@
+{
+  "task_id": "2f1dec70fef3c9e3d82952e3b6a176d739bfb0fc0be82aab950741a888791261",
+  "work_item_id": "SPEC-011-C",
+  "kind": "ARCHITECTURE_REVIEW",
+  "head_sha": "d32aff35177a48547aa2cfddc6d47f1531248730",
+  "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
+  "manifest_path": "requests/2f1dec70fef3c9e3d82952e3b6a176d739bfb0fc0be82aab950741a888791261/REVIEW_CONTEXT.json",
+  "status": "DELIVERED",
+  "delivery_reference": "https://github.com/steemchen-creator/AIC/pull/31#issuecomment-5764433313"
+}
