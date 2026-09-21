@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 101,
+  "revision": 102,
   "current_work_item": "SPEC-011",
   "work_items": {
     "DEV-GOV-001": {
@@ -370,75 +370,20 @@
       "target_branch": "feature/spec-011-global-data-fabric",
       "execution_authorization": "CHAIRMAN-DELEGATION-AIC-STANDARD-WORK-V1",
       "pr_number": 27,
-      "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
+      "head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
       "base_sha": "dea338e48ccc33e22cbfb87cae6a33638b080ebe",
       "review_artifact": "REVIEW-SPEC011.md",
-      "architecture_status": "NOT_REVIEWED",
+      "architecture_status": "REVIEW_REQUIRED",
       "approved_head_sha": null,
       "review_id": null,
       "ci": {
-        "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-        "status": "PASSED",
-        "required_checks": {
-          "Governance baseline": 15368,
-          "Backend tests": 15368,
-          "Desktop build": 15368,
-          "AIC Development Governance Gate": 15368
-        },
-        "checks": [
-          {
-            "name": "Backend tests",
-            "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "conclusion": "success",
-            "run_id": 35600224517,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106335255557"
-          },
-          {
-            "name": "AIC Development Governance Gate",
-            "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "conclusion": "success",
-            "run_id": 35600224517,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106335255533"
-          },
-          {
-            "name": "Desktop build",
-            "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "conclusion": "success",
-            "run_id": 35600224517,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106335255513"
-          },
-          {
-            "name": "Governance baseline",
-            "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "conclusion": "success",
-            "run_id": 35600224517,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106335255206"
-          },
-          {
-            "name": "orchestrate",
-            "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "conclusion": "success",
-            "run_id": 106334314884,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600225047/job/106334314884"
-          }
-        ],
-        "discovery_complete": true,
-        "branch_protection_enabled": true,
-        "workflow_runs": [
-          {
-            "run_id": 35600224517,
-            "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "status": "completed",
-            "conclusion": "success",
-            "attempt": 2,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517"
-          }
-        ]
+        "head_sha": null,
+        "status": "UNKNOWN",
+        "required_checks": {},
+        "checks": [],
+        "discovery_complete": false,
+        "branch_protection_enabled": false,
+        "workflow_runs": []
       },
       "budget": {
         "architecture_calls_used": 1,
@@ -1612,6 +1557,16 @@
       "work_item_id": "SPEC-011",
       "actor": "github-actions[bot]",
       "input_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
+      "output_state": "REVIEW_REQUIRED",
+      "metadata": {}
+    },
+    {
+      "event_id": "bdc1b3d550f54062bc82c342e25b30c1",
+      "event_type": "PR_HEAD_CHANGED",
+      "timestamp": "2026-09-21T12:40:50.705418Z",
+      "work_item_id": "SPEC-011",
+      "actor": "github-actions[bot]",
+      "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
       "output_state": "REVIEW_REQUIRED",
       "metadata": {}
     }
