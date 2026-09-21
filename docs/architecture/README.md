@@ -12,4 +12,5 @@ High-level system boundaries, component relationships, quality attributes, and a
 - [Paper Performance Baseline](../performance/PERFORMANCE_BASELINE.md)
 - [Shadow Portfolios 与公平实验](../experiments/SHADOW_PORTFOLIOS.md)
 - [Shadow Performance Comparison](../performance/SHADOW_COMPARISON.md)
+- [Multi-Horizon Trade Plans](../trade-plan/MULTI_HORIZON_TRADE_PLANS.md)
 - [Architecture Decision Records](../adr/README.md)
