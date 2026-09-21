@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 102,
+  "revision": 103,
   "current_work_item": "SPEC-011",
   "work_items": {
     "DEV-GOV-001": {
@@ -363,7 +363,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-010",
       "previous_work_item": "SPEC-010",
-      "status": "REVIEW_REQUIRED",
+      "status": "RECOVERABLE_FAILURE",
       "created_at": "2026-09-21T12:02:16.343903Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -377,13 +377,68 @@
       "approved_head_sha": null,
       "review_id": null,
       "ci": {
-        "head_sha": null,
-        "status": "UNKNOWN",
-        "required_checks": {},
-        "checks": [],
-        "discovery_complete": false,
-        "branch_protection_enabled": false,
-        "workflow_runs": []
+        "head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+        "status": "FAILED",
+        "required_checks": {
+          "Governance baseline": 15368,
+          "Backend tests": 15368,
+          "Desktop build": 15368,
+          "AIC Development Governance Gate": 15368
+        },
+        "checks": [
+          {
+            "name": "AIC Development Governance Gate",
+            "head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+            "conclusion": "failure",
+            "run_id": 35600907899,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600907899/job/106336513114"
+          },
+          {
+            "name": "Backend tests",
+            "head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+            "conclusion": "pending",
+            "run_id": 35600907899,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600907899/job/106336513037"
+          },
+          {
+            "name": "Governance baseline",
+            "head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+            "conclusion": "success",
+            "run_id": 35600907899,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600907899/job/106336512926"
+          },
+          {
+            "name": "Desktop build",
+            "head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+            "conclusion": "pending",
+            "run_id": 35600907899,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600907899/job/106336512641"
+          },
+          {
+            "name": "orchestrate",
+            "head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+            "conclusion": "pending",
+            "run_id": 106336504004,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600904651/job/106336504004"
+          }
+        ],
+        "discovery_complete": true,
+        "branch_protection_enabled": true,
+        "workflow_runs": [
+          {
+            "run_id": 35600907899,
+            "head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+            "status": "in_progress",
+            "conclusion": null,
+            "attempt": 1,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600907899"
+          }
+        ]
       },
       "budget": {
         "architecture_calls_used": 1,
@@ -395,8 +450,10 @@
         ]
       },
       "blocked_reasons": [],
-      "recoverable_failures": [],
-      "recovery_stage": null,
+      "recoverable_failures": [
+        "CI_FAILED"
+      ],
+      "recovery_stage": "REVIEW_REQUIRED",
       "unresolved_fix": null,
       "governance_exception": false,
       "chairman_required": false,
@@ -1568,6 +1625,16 @@
       "actor": "github-actions[bot]",
       "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
       "output_state": "REVIEW_REQUIRED",
+      "metadata": {}
+    },
+    {
+      "event_id": "f6ecb05cfc2c41e18d48ea46fe8b86ad",
+      "event_type": "CI_FAILED",
+      "timestamp": "2026-09-21T12:40:56.278652Z",
+      "work_item_id": "SPEC-011",
+      "actor": "github-actions[bot]",
+      "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+      "output_state": "RECOVERABLE_FAILURE",
       "metadata": {}
     }
   ],
