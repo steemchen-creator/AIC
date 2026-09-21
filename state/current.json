@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 151,
+  "revision": 152,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -509,6 +509,14 @@
           "AIC Development Governance Gate": 15368
         },
         "checks": [
+          {
+            "name": "orchestrate",
+            "head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+            "conclusion": "pending",
+            "run_id": 106410482495,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35623024239/job/106410482495"
+          },
           {
             "name": "Governance baseline",
             "head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
@@ -2287,6 +2295,16 @@
       "event_id": "80d98dd328364e62ad9d45a7ad6c3851",
       "event_type": "MERGE_GATE_PASSED",
       "timestamp": "2026-09-21T16:03:52.348244Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "github-actions[bot]",
+      "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+      "output_state": "MERGE_ELIGIBLE",
+      "metadata": {}
+    },
+    {
+      "event_id": "36e43a86499e4537b56e9676f262f4f7",
+      "event_type": "CI_PASSED",
+      "timestamp": "2026-09-21T16:03:59.421644Z",
       "work_item_id": "SPEC-011-B",
       "actor": "github-actions[bot]",
       "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
