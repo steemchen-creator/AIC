@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 84,
+  "revision": 85,
   "current_work_item": "SPEC-010",
   "work_items": {
     "DEV-GOV-001": {
@@ -240,7 +240,7 @@
       "kind": "SPEC",
       "parent_work_item": "DEV-GOV-VALIDATION-001",
       "previous_work_item": "DEV-GOV-VALIDATION-001",
-      "status": "MERGE_ELIGIBLE",
+      "status": "MERGED",
       "created_at": "2026-09-08T19:31:07Z",
       "artifact_path": "SPEC-010-Multi-Horizon-Trade-Plan-and-Swing-Management-Foundation.md",
       "artifact_sha256": "b786de248003685aa91be001ad7e17101c4312d71d676225c9f2537e687db403",
@@ -343,7 +343,7 @@
       "chairman_required": false,
       "changed_areas": [],
       "merge_eligible": true,
-      "merge_commit": null,
+      "merge_commit": "0a23132f54e718c76f2c250e186ed887d3cd330e",
       "merge_expected_sha": null,
       "closeout": {},
       "next_spec_requested": false,
@@ -1306,6 +1306,16 @@
       "actor": "github-actions[bot]",
       "input_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
       "output_state": "MERGE_ELIGIBLE",
+      "metadata": {}
+    },
+    {
+      "event_id": "dba4df3647d34899ba18db60fc62a7c7",
+      "event_type": "PR_MERGED",
+      "timestamp": "2026-09-21T08:57:33.079059Z",
+      "work_item_id": "SPEC-010",
+      "actor": "github-actions[bot]",
+      "input_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+      "output_state": "MERGED",
       "metadata": {}
     }
   ],
