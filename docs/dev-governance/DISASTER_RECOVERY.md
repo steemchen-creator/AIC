@@ -56,14 +56,18 @@ change. `RECOVERY_AUTHORIZED` retains its original restrictions and is not a sub
    main, the configured Chairman uses **AIC Development Orchestrator**, on **main**, with
    command **event** and the exact payload below. Re-read the actual HEAD before dispatch;
    the example is the SPEC-010 HEAD at recovery-task authorization, not a mutable alias.
-3. Trusted-main code fetches the PR and current diff itself. It verifies PR identity
+3. Trusted-main code fetches the PR and current raw diff itself. It verifies PR identity
    (registered PR number, target branch, repository, main base, open
-   status, exact HEAD), classifies the changed paths, then rereads the PR to detect drift.
+   status, exact HEAD), classifies the changed paths, captures current main as an exact SHA,
+   and compares immutable blob identity for every sensitive path at PR HEAD versus captured
+   main. It excludes only paths present at both refs with identical blob SHA, leaves all
+   non-sensitive paths untouched, then rereads PR and main to detect drift.
    Both old and new paths of renames are classified. The adapter rejects results at the
    [GitHub PR-files API ceiling](https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files)
    of 3,000 files, because completeness cannot be established from that response.
-4. Verify the new append-only `SENSITIVE_DIFF_REVALIDATED` event and its actor, HEAD,
-   base SHA, PR number and path digest. No historical event or approval is rewritten.
+4. Verify the append-only `SENSITIVE_DIFF_REVALIDATED` event and its actor, PR number,
+   exact HEAD, captured main SHA, raw/effective path digests, and equalized path/blob mapping.
+   No historical event or approval is rewritten.
 5. For SPEC-010's `RECOVERABLE_FAILURE`, confirm that `CI_FAILED`, recovery stage and
    failed CI snapshot remain intact. Re-run the failed exact-HEAD CI checks and let ordinary
    reconciliation process fresh results. Then continue independent Architecture Review.
@@ -72,7 +76,7 @@ change. `RECOVERY_AUTHORIZED` retains its original restrictions and is not a sub
 {
   "work_item_id": "SPEC-010",
   "event_type": "SENSITIVE_DIFF_REVALIDATED",
-  "head_sha": "99756090eeb267d79e33dc8789a00b395ec8f713"
+  "head_sha": "5b48a6d3f1ccc8550ee72b9f77df2e9c1bb5063c"
 }
 ```
 
@@ -80,9 +84,10 @@ The three fields above are required; metadata, changed-path claims, PR-number ov
 and actor claims are rejected. GitHub's authenticated workflow actor provides authority.
 The reducer additionally requires repository evidence supplied outside event metadata.
 
-Recovery fails closed for a stale HEAD, identity drift, unavailable/incomplete GitHub
-evidence, any current sensitive area, missing historical escalation evidence, unrelated
-blockers, other Chairman causes, budget incidents, governance exceptions or merge evidence.
+Recovery fails closed for a stale HEAD, PR identity/base drift, current-main drift,
+unavailable/incomplete GitHub evidence, a sensitive path missing from either ref, unequal
+sensitive blobs, any remaining effective sensitive area, missing historical escalation evidence,
+unrelated blockers, other Chairman causes, budget incidents, governance exceptions or merge evidence.
 Mixed incidents reject the entire request and preserve every blocker; no broad reset occurs.
 A pure solely sensitive `CHAIRMAN_DECISION_REQUIRED` may return to `REVIEW_REQUIRED` or
 `FIXING`. Neither path marks Ready, approves or merges. Existing workflow permissions,

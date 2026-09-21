@@ -53,15 +53,19 @@ items. Unknown mutation or paid-call outcomes, authority/security violations,
 governance exceptions and budget exhaustion stay fail-closed. There is no force-merge
 or rollback transition.
 
-### Sensitive-diff recovery (DEV-GOV-RECOVERY-002)
+### Sensitive-diff recovery (DEV-GOV-RECOVERY-002/003)
 
 `SENSITIVE_DIFF_REVALIDATED` is a dedicated Chairman-only event bound to an explicit
 current work-item HEAD. It is available through the existing authenticated `event`
 command. The trusted-main orchestrator fetches the actual PR, verifies number, target
 branch, repository, open/main status and exact HEAD, reads the current changed paths,
-and invokes `classify_changed_paths()`. Any sensitive area rejects recovery. It reads
-the PR again after the diff and rejects concurrent head/base/identity changes. Event
-metadata and caller-supplied PRs cannot replace repository evidence.
+and invokes `classify_changed_paths()`. For every sensitive path only, it captures current
+`main` as an exact SHA and asks the repository adapter for immutable blob identity at the PR
+HEAD and captured main. A path is excluded from the effective diff only when it exists as a
+file at both refs and both blob SHAs are exactly equal. Non-sensitive paths remain unchanged.
+Unequal blobs remain sensitive; missing/invalid evidence fails closed. It then reads the PR
+and current main again and rejects concurrent head/base/identity or main changes. Event metadata
+and caller-supplied PR/path claims cannot replace repository evidence.
 
 Only `SENSITIVE_DIFF:*` reasons witnessed in prior `CHAIRMAN_ESCALATION` events may be
 removed. Mixed blockers, other Chairman escalation history, budget incidents/counters,
@@ -77,10 +81,11 @@ approval/eligibility; it never supplies Architecture Approval or CI success.
 | Solely sensitive `CHAIRMAN_DECISION_REQUIRED` | `REVIEW_REQUIRED`, or `FIXING` if an unresolved FIX exists. |
 | Any other stage | Reject. |
 
-The new event records authenticated actor, exact HEAD, actual PR number, base SHA,
-canonical changed-path SHA-256 and path count. Historical escalation events remain
-queryable; a clean later HEAD alone never clears their durable latch. Existing
-compare-and-swap persistence rejects concurrent state writers without losing incidents.
+The event records authenticated actor, exact PR HEAD, actual PR number, PR base SHA, captured
+current main SHA, canonical raw/effective changed-path SHA-256 values and the canonical mapping
+of equalized sensitive path to blob SHA. Historical escalation events remain queryable; a clean
+later HEAD alone never clears their durable latch. Existing compare-and-swap persistence rejects
+concurrent state writers without losing incidents.
 
 CLOSED is terminal for implementation. A failure while requesting its successor is
 a project-level blocked/waiting reason; it does not reopen the closed predecessor.
