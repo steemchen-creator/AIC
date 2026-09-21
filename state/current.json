@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 154,
+  "revision": 155,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -486,7 +486,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-011",
       "previous_work_item": "SPEC-011",
-      "status": "CLOSEOUT",
+      "status": "CLOSED",
       "created_at": "2026-09-21T14:31:50.028962Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -591,7 +591,15 @@
       "merge_eligible": true,
       "merge_commit": "4a3ceae61c9170dc22c3d77bec5ad26802ad618d",
       "merge_expected_sha": null,
-      "closeout": {},
+      "closeout": {
+        "merge_commit": "4a3ceae61c9170dc22c3d77bec5ad26802ad618d",
+        "tree_sha": "1fa4a3387669b43340e0486e2cd99861f3a6268a",
+        "main_sha": "4a3ceae61c9170dc22c3d77bec5ad26802ad618d",
+        "ci_head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+        "local_branch_deleted": "true",
+        "remote_branch_deleted": "true",
+        "workspace_clean": "true"
+      },
       "next_spec_requested": false,
       "memory_update_required": false
     }
@@ -2330,6 +2338,24 @@
       "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
       "output_state": "CLOSEOUT",
       "metadata": {}
+    },
+    {
+      "event_id": "10477d6282584f7cb444af078d41d263",
+      "event_type": "CLOSEOUT_COMPLETED",
+      "timestamp": "2026-09-21T16:05:44.266105Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "github-actions[bot]",
+      "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+      "output_state": "CLOSED",
+      "metadata": {
+        "merge_commit": "4a3ceae61c9170dc22c3d77bec5ad26802ad618d",
+        "tree_sha": "1fa4a3387669b43340e0486e2cd99861f3a6268a",
+        "main_sha": "4a3ceae61c9170dc22c3d77bec5ad26802ad618d",
+        "ci_head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+        "local_branch_deleted": "true",
+        "remote_branch_deleted": "true",
+        "workspace_clean": "true"
+      }
     }
   ],
   "tasks": {
