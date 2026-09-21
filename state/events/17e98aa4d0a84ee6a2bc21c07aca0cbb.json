@@ -1,0 +1,10 @@
+{
+  "event_id": "17e98aa4d0a84ee6a2bc21c07aca0cbb",
+  "event_type": "NEXT_SPEC_REQUESTED",
+  "timestamp": "2026-09-21T08:57:44.091791Z",
+  "work_item_id": "SPEC-010",
+  "actor": "github-actions[bot]",
+  "input_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+  "output_state": "CLOSED",
+  "metadata": {}
+}
