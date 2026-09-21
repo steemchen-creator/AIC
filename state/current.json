@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 178,
+  "revision": 179,
   "current_work_item": "SPEC-011-C",
   "work_items": {
     "DEV-GOV-001": {
@@ -608,7 +608,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-011-B",
       "previous_work_item": "SPEC-011-B",
-      "status": "FIXING",
+      "status": "RECOVERABLE_FAILURE",
       "created_at": "2026-09-21T16:15:41Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -642,7 +642,7 @@
           {
             "name": "Backend tests",
             "head_sha": "00ee619553313a1b97eac0ead03733d456173a56",
-            "conclusion": "pending",
+            "conclusion": "success",
             "run_id": 35631632528,
             "app_id": 15368,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/35631632528/job/106438965516"
@@ -678,8 +678,8 @@
           {
             "run_id": 35631632528,
             "head_sha": "00ee619553313a1b97eac0ead03733d456173a56",
-            "status": "in_progress",
-            "conclusion": null,
+            "status": "completed",
+            "conclusion": "failure",
             "attempt": 1,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/35631632528"
           }
@@ -695,8 +695,10 @@
         ]
       },
       "blocked_reasons": [],
-      "recoverable_failures": [],
-      "recovery_stage": null,
+      "recoverable_failures": [
+        "CI_FAILED"
+      ],
+      "recovery_stage": "FIXING",
       "unresolved_fix": "ARCH-SPEC011-C-001",
       "governance_exception": false,
       "chairman_required": false,
@@ -2705,6 +2707,16 @@
       "actor": "aic-codex-cto",
       "input_sha": "00ee619553313a1b97eac0ead03733d456173a56",
       "output_state": "FIXING",
+      "metadata": {}
+    },
+    {
+      "event_id": "0cc6b4279ccc44c4a8897e78a20be9f1",
+      "event_type": "CI_FAILED",
+      "timestamp": "2026-09-21T17:27:25.113835Z",
+      "work_item_id": "SPEC-011-C",
+      "actor": "github-actions[bot]",
+      "input_sha": "00ee619553313a1b97eac0ead03733d456173a56",
+      "output_state": "RECOVERABLE_FAILURE",
       "metadata": {}
     }
   ],
