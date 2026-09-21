@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 93,
+  "revision": 94,
   "current_work_item": "SPEC-011",
   "work_items": {
     "DEV-GOV-001": {
@@ -363,7 +363,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-010",
       "previous_work_item": "SPEC-010",
-      "status": "SPEC_READY",
+      "status": "IMPLEMENTING",
       "created_at": "2026-09-21T12:02:16.343903Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -1471,6 +1471,16 @@
       "metadata": {
         "task_id": "89504b0988ecf25066800aa92e871474e68c8aa0d7eadbde4be8fafdd7214dd4"
       }
+    },
+    {
+      "event_id": "0ef3805dd1224900bbf3c61df89edbbb",
+      "event_type": "CODEX_STARTED",
+      "timestamp": "2026-09-21T12:07:59.592465Z",
+      "work_item_id": "SPEC-011",
+      "actor": "aic-codex-cto",
+      "input_sha": null,
+      "output_state": "IMPLEMENTING",
+      "metadata": {}
     }
   ],
   "tasks": {
