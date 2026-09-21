@@ -6,7 +6,6 @@ from typing import Protocol
 
 import httpx
 
-from aic_backend.shared.config import get_settings
 from aic_backend.provider_runtime.errors import (
     InvalidRequestError,
     ProviderInvalidResponseError,
@@ -26,6 +25,7 @@ from aic_backend.provider_runtime.models import (
     ProviderMetadata,
     ProviderType,
 )
+from aic_backend.shared.config import get_settings
 
 MACRO_SERIES_READ = ProviderCapability("macro.series.read", "1.0.0", CapabilityMode.SNAPSHOT)
 MACRO_RELEASE_READ = ProviderCapability("macro.release.read", "1.0.0", CapabilityMode.SNAPSHOT)
