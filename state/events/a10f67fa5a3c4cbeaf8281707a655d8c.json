@@ -1,0 +1,13 @@
+{
+  "event_id": "a10f67fa5a3c4cbeaf8281707a655d8c",
+  "event_type": "TASK_RESERVED",
+  "timestamp": "2026-09-21T16:16:08.051275Z",
+  "work_item_id": "SPEC-011-C",
+  "actor": "github-actions[bot]",
+  "input_sha": null,
+  "output_state": "PLANNED",
+  "metadata": {
+    "reason": "EXECUTION_AUTHORIZATION",
+    "authorized_actor": "aic-architect-2"
+  }
+}
