@@ -1,0 +1,12 @@
+{
+  "event_id": "921938c069cf4b0bbea63f7b85172184",
+  "event_type": "TASK_RESERVED",
+  "timestamp": "2026-09-21T17:08:00.718232Z",
+  "work_item_id": "SPEC-011-C",
+  "actor": "github-actions[bot]",
+  "input_sha": "d32aff35177a48547aa2cfddc6d47f1531248730",
+  "output_state": "REVIEW_REQUIRED",
+  "metadata": {
+    "task_id": "2f1dec70fef3c9e3d82952e3b6a176d739bfb0fc0be82aab950741a888791261"
+  }
+}
