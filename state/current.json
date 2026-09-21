@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 141,
+  "revision": 142,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -486,82 +486,27 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-011",
       "previous_work_item": "SPEC-011",
-      "status": "ARCHITECTURE_REVIEWING",
+      "status": "REVIEW_REQUIRED",
       "created_at": "2026-09-21T14:31:50.028962Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
       "target_branch": "feature/spec-011-checkpoint-b",
       "execution_authorization": "CHAIRMAN-DELEGATION-AIC-STANDARD-WORK-V1",
       "pr_number": 29,
-      "head_sha": "43618302261680c242a389721e2beb2527fd26db",
+      "head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
       "base_sha": "8839eadc0dae5b7be0654531ef49aa76da2ced0e",
       "review_artifact": "REVIEW-SPEC011.md",
       "architecture_status": "REVIEW_REQUIRED",
       "approved_head_sha": null,
       "review_id": null,
       "ci": {
-        "head_sha": "43618302261680c242a389721e2beb2527fd26db",
-        "status": "PASSED",
-        "required_checks": {
-          "Governance baseline": 15368,
-          "Backend tests": 15368,
-          "Desktop build": 15368,
-          "AIC Development Governance Gate": 15368
-        },
-        "checks": [
-          {
-            "name": "AIC Development Governance Gate",
-            "head_sha": "43618302261680c242a389721e2beb2527fd26db",
-            "conclusion": "success",
-            "run_id": 35618525722,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35618525722/job/106397010357"
-          },
-          {
-            "name": "Governance baseline",
-            "head_sha": "43618302261680c242a389721e2beb2527fd26db",
-            "conclusion": "success",
-            "run_id": 35618525722,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35618525722/job/106397009924"
-          },
-          {
-            "name": "Backend tests",
-            "head_sha": "43618302261680c242a389721e2beb2527fd26db",
-            "conclusion": "success",
-            "run_id": 35618525722,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35618525722/job/106397009910"
-          },
-          {
-            "name": "Desktop build",
-            "head_sha": "43618302261680c242a389721e2beb2527fd26db",
-            "conclusion": "success",
-            "run_id": 35618525722,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35618525722/job/106397009614"
-          },
-          {
-            "name": "orchestrate",
-            "head_sha": "43618302261680c242a389721e2beb2527fd26db",
-            "conclusion": "success",
-            "run_id": 106395395610,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35618522822/job/106395395610"
-          }
-        ],
-        "discovery_complete": true,
-        "branch_protection_enabled": true,
-        "workflow_runs": [
-          {
-            "run_id": 35618525722,
-            "head_sha": "43618302261680c242a389721e2beb2527fd26db",
-            "status": "completed",
-            "conclusion": "success",
-            "attempt": 2,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35618525722"
-          }
-        ]
+        "head_sha": null,
+        "status": "UNKNOWN",
+        "required_checks": {},
+        "checks": [],
+        "discovery_complete": false,
+        "branch_protection_enabled": false,
+        "workflow_runs": []
       },
       "budget": {
         "architecture_calls_used": 1,
@@ -2186,6 +2131,16 @@
       "actor": "github-actions[bot]",
       "input_sha": "43618302261680c242a389721e2beb2527fd26db",
       "output_state": "ARCHITECTURE_REVIEWING",
+      "metadata": {}
+    },
+    {
+      "event_id": "a3653db3ae4e4fa49a905d0bf9642881",
+      "event_type": "PR_HEAD_CHANGED",
+      "timestamp": "2026-09-21T15:42:13.561426Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "github-actions[bot]",
+      "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+      "output_state": "REVIEW_REQUIRED",
       "metadata": {}
     }
   ],
