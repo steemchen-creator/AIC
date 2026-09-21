@@ -1011,3 +1011,63 @@ def test_spec_010_trade_plan_preserves_clean_and_authoritative_boundaries() -> N
             "usd cash",
         )
     )
+
+
+def test_spec_011_checkpoint_a_extends_existing_data_and_runtime_boundaries() -> None:
+    domain_paths = (
+        PACKAGE_ROOT / "domain/market_data/lineage.py",
+        PACKAGE_ROOT / "domain/market_data/quotes.py",
+    )
+    application_paths = (
+        PACKAGE_ROOT / "application/ports/market_intelligence.py",
+        PACKAGE_ROOT / "application/use_cases/realtime_market_quotes.py",
+    )
+    domain_imports: set[str] = set()
+    application_imports: set[str] = set()
+    for path in domain_paths:
+        domain_imports.update(imported_modules(path))
+    for path in application_paths:
+        application_imports.update(imported_modules(path))
+
+    forbidden_domain = (
+        "aic_backend.application",
+        "aic_backend.infrastructure",
+        "aic_backend.provider_runtime",
+        "aic_backend.providers",
+        "httpx",
+        "sqlalchemy",
+    )
+    forbidden_application = (
+        "aic_backend.infrastructure",
+        "aic_backend.providers",
+        "httpx",
+        "sqlalchemy",
+    )
+    assert not {module for module in domain_imports if module.startswith(forbidden_domain)}
+    assert not {
+        module for module in application_imports if module.startswith(forbidden_application)
+    }
+
+    service_source = application_paths[1].read_text(encoding="utf-8")
+    assert "ProviderRuntimePort" in service_source
+    assert "upstream_source_id" in service_source
+    assert "ProviderSelector" not in service_source
+    assert "ProviderFailoverManager" not in service_source
+
+    adapter_imports = imported_modules(PACKAGE_ROOT / "providers/domestic_quotes.py")
+    persistence_imports = imported_modules(
+        PACKAGE_ROOT / "infrastructure/market_intelligence_persistence.py"
+    )
+    assert "aic_backend.infrastructure" not in adapter_imports
+    assert "aic_backend.application.ports.market_intelligence" in persistence_imports
+    assert any(module.startswith("sqlalchemy") for module in persistence_imports)
+
+    execution_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            PACKAGE_ROOT / "application/execution.py",
+            PACKAGE_ROOT / "domain/execution/models.py",
+        )
+    )
+    assert "MarketSeriesIdentity" not in execution_source
+    assert "MarketPulseObservation" not in execution_source

@@ -1,6 +1,6 @@
 # SPEC-011 Source, Capability and Dependency Roadmap
 
-Status: planning evidence only
+Status: approved roadmap; Checkpoint A implementation status recorded
 Review date: 2026-09-21
 
 ## Source matrix
@@ -26,6 +26,11 @@ the only identity used to count independent confirmations.
 | US filings | `sec.edgar.v1` | `SEC_EDGAR` | Tier 0 / official API/files | Public/free; declared User-Agent and fair-access limits | Accession/filing/XBRL PIT evidence | Direct `data.sec.gov` first; nightly bulk for backfill where appropriate |
 | China disclosures | `cninfo.disclosure.v1` | `CNINFO` | Tier 0 / official disclosure platform | Official public pages/files; documented machine-access terms need validation | Announcement/document PIT evidence | Do not depend on undocumented reversed endpoints; identity must bind issuer/security |
 | Event discovery | `gdelt.events.v2` | `GDELT` | Tier 2 / radar feed | Public/free | Candidate discovery only | Cannot promote/overwrite Tier-0 fact; official verification link required |
+
+Checkpoint A implementation status (2026-09-21): the three domestic quote adapter contracts and
+fixtures exist, but all remain disabled by default. Production enablement requires a separately
+reviewed `upstream_access_authorized=true` record for the actual upstream; AKShare, efinance,
+easyquotation and other clients grant no upstream rights and do not add independent votes.
 
 ## Global Cross-Asset Market Pulse capability universe
 

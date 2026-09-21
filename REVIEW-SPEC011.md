@@ -1,14 +1,87 @@
 # Engineering Review — SPEC-011 Global Data Fabric and Event Intelligence Foundation
 
 Review date: 2026-09-21
-Repository baseline: `origin/main` at `690f4740e33643ae89b543447f3f7619791c1e77`
+Repository baseline for implementation: `origin/main` at `dea338e48ccc33e22cbfb87cae6a33638b080ebe`
 Reviewed artifact: `SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md`
 Source-file SHA-256: `7b4d788cede5863be20197da2072e714fa7f1164b443e69d9b6c096bd4ccbc8b`
 Imported-file SHA-256: `fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581`
 Import normalization: trailing Markdown whitespace and the extra final blank line were removed;
 the specification text and requirements are unchanged.
 Decision: **APPROVED FOR REPOSITORY IMPORT AND IMPLEMENTATION PLANNING**
-Development status: **NOT AUTHORIZED — wait for SPEC-010 formal closeout and an explicit start instruction**
+Development status: **CHECKPOINT A IMPLEMENTED — Draft PR and independent Architecture Review pending**
+
+## Checkpoint A implementation review
+
+Checkpoint A extends the reviewed architecture without creating a second provider registry,
+failover engine, PIT engine, canonical path or quality framework. The delivered path is:
+
+```text
+RealtimeMarketQuoteService
+  -> existing ProviderRuntimePort
+  -> disabled-by-default domestic quote adapter
+  -> immutable RawObservation + SourceLineage
+  -> MarketQuote normalizer / existing validation and quality contracts
+  -> PostgreSQL raw, quote and reconciliation repositories
+  -> existing DataAvailabilityPolicy
+```
+
+The implementation adds `SourceLineage` with separate adapter and real upstream identities,
+authority/source classification, event/publication/observation/ingestion timestamps, raw hash,
+transformation version, stable source locators and optional license identity. Reconciliation
+collapses observations by `upstream_source_id`: AKShare(Eastmoney), efinance(Eastmoney), a transport
+fallback or another AIC adapter over Eastmoney remains one vote. Confirmed confidence requires at
+least two fresh independent upstreams with compatible prices and session state. Missing quorum,
+stale evidence and conflicts remain explicit degraded, unavailable or conflicted results.
+
+`MarketQuote` uses the existing canonical `InstrumentIdentity`. Equity must exist in Instrument
+Master, ETF in the existing ETF profile repository and index quotes in the existing non-tradable
+`IndexReference` namespace. Unknown identities fail before Provider Runtime invocation. Index source
+codes preserve their exchange suffix while the canonical identity remains `REFERENCE.INDEX`; no
+reference series can enter the execution model.
+
+The global Market Pulse foundation covers equity index, sovereign yield, FX, gold, crude oil and
+volatility families through `MarketSeriesIdentity` and immutable `MarketPulseObservation`.
+Checkpoint A deliberately adds no licensed realtime benchmark adapter. Daily, delayed and realtime
+publication modes are distinct, and execution imports neither pulse identity nor observations.
+
+Migration `20260921_0016` creates immutable raw observations, canonical source quotes,
+reconciliation decisions and market-pulse observations. Inserts use deterministic identity with
+insert-or-verify conflicts. Downgrade removes all four tables and their audit evidence, so it is
+destructive and requires backup plus explicit operational authorization outside isolated tests.
+
+### Source and license gate
+
+The source review was refreshed on 2026-09-21. No stable official developer contract granting AIC
+commercial machine access to the Eastmoney `push2`, Sina `hq.sinajs.cn` or Tencent `qt.gtimg.cn`
+quote endpoints was found. The [Sina Finance user agreement](https://finance.sina.com.cn/roll/2021-05-12/doc-ikmxzfmm2033220.shtml)
+requires written permission for relevant captured data and prohibits commercial use beyond the
+written permission scope. Tencent's [corporate terms](https://www.tencent.com/term-of-service/)
+defer product use to the product-specific agreement and do not establish quote API rights. The
+documented Eastmoney EMT/Quant products are separate licensed products and do not authorize the
+public `push2` endpoint by implication.
+
+Accordingly, all three builders reject an enabled configuration unless
+`upstream_access_authorized=true` is explicitly recorded. Required tests use owned deterministic
+fixtures and never contact those endpoints. AKShare, efinance and easyquotation remain protocol
+references only; none is a runtime dependency or an independent authority.
+
+### Requirement-to-test traceability
+
+| Checkpoint A requirement | Deterministic evidence |
+| --- | --- |
+| Lineage, immutable raw evidence and PIT/no-lookahead | `test_spec011_market_quotes.py`; `test_market_intelligence_postgresql.py` |
+| Equity/ETF/index-reference identity fail closed | `test_realtime_market_quotes.py`; `test_domestic_quote_providers.py` |
+| Three upstream adapter contracts and production authorization gate | `test_domestic_quote_providers.py` |
+| Independent-source, stale and conflict reconciliation | `test_spec011_market_quotes.py` |
+| Adapter/library aliases and failover cannot fabricate consensus | `test_realtime_market_quotes.py` |
+| PostgreSQL restart/idempotency and reversible migration | `test_market_intelligence_postgresql.py` |
+| Global pulse identity/PIT and execution isolation | `test_spec011_market_quotes.py`; repository architecture tests |
+
+Checkpoint A does not implement the Checkpoint B macro/vintage providers, Checkpoint C
+ScheduledEvent/document/event intelligence, Checkpoint D Evidence Pack, or the later durable cadence
+and lease scheduler. The application quote coordinator invokes the existing Provider Runtime for
+the bounded Checkpoint A acquisition path; continuous plan/cursor scheduling remains a later frozen
+checkpoint deliverable.
 
 ## Review result
 

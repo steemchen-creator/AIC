@@ -63,6 +63,7 @@ branch = true
 source = [
   "aic_dev_governance",
   "aic_backend.application.ports.persistence",
+  "aic_backend.application.ports.market_intelligence",
   "aic_backend.application.point_in_time",
   "aic_backend.application.ports.calendar",
   "aic_backend.application.ports.historical",
@@ -93,6 +94,7 @@ source = [
   "aic_backend.application.use_cases.persist_ingestion",
   "aic_backend.application.use_cases.point_in_time_market_data",
   "aic_backend.application.use_cases.trading_calendar",
+  "aic_backend.application.use_cases.realtime_market_quotes",
   "aic_backend.data_foundation",
   "aic_backend.domain.market_data",
   "aic_backend.domain.portfolio",
@@ -110,8 +112,10 @@ source = [
   "aic_backend.infrastructure.etf_persistence",
   "aic_backend.infrastructure.paper_persistence",
   "aic_backend.infrastructure.experiment_persistence",
+  "aic_backend.infrastructure.market_intelligence_persistence",
   "aic_backend.provider_runtime",
   "aic_backend.providers.tushare",
+  "aic_backend.providers.domestic_quotes",
 ]
 
 [tool.coverage.report]

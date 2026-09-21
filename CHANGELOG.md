@@ -8,6 +8,15 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-011 Checkpoint A auditable market-data foundation: source/upstream lineage,
+  immutable raw evidence, PIT-safe domestic Equity/ETF/index-reference quotes,
+  deterministic independent-source reconciliation and reference-only global
+  cross-asset pulse identities. PostgreSQL migration 0016 is reversible.
+- Eastmoney, Sina and Tencent quote adapter contracts with bounded payloads,
+  sanitized failures and deterministic fixtures. They are registered disabled by
+  default and cannot be production-enabled without an explicit upstream access
+  authorization; open-source client licenses are not treated as data rights.
+
 - Imported the architect-prepared SPEC-011 Global Data Fabric and Event Intelligence Foundation,
   with an engineering reuse review, checkpoint A-D implementation plan, source-authority matrix
   and dependency investigation. This planning artifact starts no product code, schema migration,
