@@ -1,0 +1,10 @@
+{
+  "event_id": "dcc4ab2360eb405ebfa030618da295ce",
+  "event_type": "FIX_IMPLEMENTED",
+  "timestamp": "2026-09-21T08:29:16.124828Z",
+  "work_item_id": "SPEC-010",
+  "actor": "aic-codex-cto",
+  "input_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+  "output_state": "REVIEW_REQUIRED",
+  "metadata": {}
+}
