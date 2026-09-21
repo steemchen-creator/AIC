@@ -1,0 +1,38 @@
+{
+  "work_item": "SPEC-010",
+  "review_id": "SPEC010-ARCH-FINAL-20260921-01",
+  "result": "FINAL_APPROVED",
+  "reviewed_head_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+  "blocking_items": [],
+  "non_blocking_items": [
+    {
+      "debt_id": "SPEC010-TERMINAL-EXIT-REJECTION-RECOVERY",
+      "origin_spec": "SPEC-010",
+      "description": "V1 preserves authoritative risk rejection for a terminal settlement EXIT and keeps the settlement barrier closed; retry, replacement, and operational resolution require a later approved product iteration.",
+      "severity": "HIGH",
+      "blocking": false,
+      "target_phase": "Future approved terminal-settlement recovery",
+      "status": "OPEN"
+    },
+    {
+      "debt_id": "SPEC010-OUTCOME-WITHOUT-EXECUTION-EVIDENCE",
+      "origin_spec": "SPEC-010",
+      "description": "A terminal Trade Plan without an authoritative execution receipt cannot materialize an immutable outcome in V1; it fails closed instead of accepting caller-supplied position or PnL values.",
+      "severity": "MEDIUM",
+      "blocking": false,
+      "target_phase": "Future approved outcome-evidence expansion",
+      "status": "OPEN"
+    },
+    {
+      "debt_id": "SPEC010-EXECUTION-CLAIM-RECONCILIATION",
+      "origin_spec": "SPEC-010",
+      "description": "A durable execution claim without a completed receipt has unknown financial disposition and blocks the affected order and portfolio until operations reconcile authoritative evidence; claims never expire, transfer, or retry blindly.",
+      "severity": "HIGH",
+      "blocking": false,
+      "target_phase": "Approved operational reconciliation before execution resume",
+      "status": "OPEN"
+    }
+  ],
+  "reviewed_at": "2026-09-21T16:48:58+08:00",
+  "reviewer_role": "CHIEF_INVESTMENT_ARCHITECT"
+}

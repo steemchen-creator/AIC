@@ -1,0 +1,10 @@
+{
+  "event_id": "edb7ea70950f47dd8cb49965b864ad2d",
+  "event_type": "ARCH_FINAL_APPROVED",
+  "timestamp": "2026-09-21T16:48:58+08:00",
+  "work_item_id": "SPEC-010",
+  "actor": "aic-architect-2",
+  "input_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+  "output_state": "FINAL_APPROVED",
+  "metadata": {}
+}
