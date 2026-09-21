@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 67,
+  "revision": 68,
   "current_work_item": "SPEC-010",
   "work_items": {
     "DEV-GOV-001": {
@@ -240,7 +240,7 @@
       "kind": "SPEC",
       "parent_work_item": "DEV-GOV-VALIDATION-001",
       "previous_work_item": "DEV-GOV-VALIDATION-001",
-      "status": "CHAIRMAN_DECISION_REQUIRED",
+      "status": "FIXING",
       "created_at": "2026-09-08T19:31:07Z",
       "artifact_path": "SPEC-010-Multi-Horizon-Trade-Plan-and-Swing-Management-Foundation.md",
       "artifact_sha256": "b786de248003685aa91be001ad7e17101c4312d71d676225c9f2537e687db403",
@@ -271,14 +271,12 @@
           "54a67b5d8802171a39d702116fcbca71b5587b3327686a376d5462ae709c4b7a"
         ]
       },
-      "blocked_reasons": [
-        "SENSITIVE_DIFF:master_project_objective"
-      ],
+      "blocked_reasons": [],
       "recoverable_failures": [],
       "recovery_stage": null,
       "unresolved_fix": "SPEC010-ARCH-CHG-1",
       "governance_exception": false,
-      "chairman_required": true,
+      "chairman_required": false,
       "changed_areas": [],
       "merge_eligible": false,
       "merge_commit": null,
@@ -1043,6 +1041,27 @@
       "output_state": "CHAIRMAN_DECISION_REQUIRED",
       "metadata": {
         "reason": "SENSITIVE_DIFF:master_project_objective"
+      }
+    },
+    {
+      "event_id": "30601d062b0c4530abb6aadb4d90f0f9",
+      "event_type": "SENSITIVE_DIFF_REVALIDATED",
+      "timestamp": "2026-09-21T07:43:05.796905Z",
+      "work_item_id": "SPEC-010",
+      "actor": "steemchen-creator",
+      "input_sha": "5b48a6d3f1ccc8550ee72b9f77df2e9c1bb5063c",
+      "output_state": "FIXING",
+      "metadata": {
+        "pr_number": "19",
+        "pr_head_sha": "5b48a6d3f1ccc8550ee72b9f77df2e9c1bb5063c",
+        "base_sha": "690f4740e33643ae89b543447f3f7619791c1e77",
+        "captured_main_sha": "395e3875e709d245a04f4043b01d1bb56935b10a",
+        "changed_paths_sha256": "4f874f28607e9832a3e73601243446b79d4711dc709a07a0299bfe5d6e085189",
+        "raw_changed_paths_sha256": "4f874f28607e9832a3e73601243446b79d4711dc709a07a0299bfe5d6e085189",
+        "effective_changed_paths_sha256": "3d7c4c8319a5798b2b09ddb71e5c7777ae45a26a461d79507dbb08f9f39aea6f",
+        "changed_path_count": "25",
+        "effective_changed_path_count": "24",
+        "equalized_sensitive_blobs": "{\"docs/project/TECHNICAL_DEBT.md\":\"8b36d725c4b6d5f3c40191477fa7889f8bcfef81\"}"
       }
     }
   ],

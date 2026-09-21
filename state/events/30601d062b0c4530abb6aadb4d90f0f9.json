@@ -1,0 +1,21 @@
+{
+  "event_id": "30601d062b0c4530abb6aadb4d90f0f9",
+  "event_type": "SENSITIVE_DIFF_REVALIDATED",
+  "timestamp": "2026-09-21T07:43:05.796905Z",
+  "work_item_id": "SPEC-010",
+  "actor": "steemchen-creator",
+  "input_sha": "5b48a6d3f1ccc8550ee72b9f77df2e9c1bb5063c",
+  "output_state": "FIXING",
+  "metadata": {
+    "pr_number": "19",
+    "pr_head_sha": "5b48a6d3f1ccc8550ee72b9f77df2e9c1bb5063c",
+    "base_sha": "690f4740e33643ae89b543447f3f7619791c1e77",
+    "captured_main_sha": "395e3875e709d245a04f4043b01d1bb56935b10a",
+    "changed_paths_sha256": "4f874f28607e9832a3e73601243446b79d4711dc709a07a0299bfe5d6e085189",
+    "raw_changed_paths_sha256": "4f874f28607e9832a3e73601243446b79d4711dc709a07a0299bfe5d6e085189",
+    "effective_changed_paths_sha256": "3d7c4c8319a5798b2b09ddb71e5c7777ae45a26a461d79507dbb08f9f39aea6f",
+    "changed_path_count": "25",
+    "effective_changed_path_count": "24",
+    "equalized_sensitive_blobs": "{\"docs/project/TECHNICAL_DEBT.md\":\"8b36d725c4b6d5f3c40191477fa7889f8bcfef81\"}"
+  }
+}
