@@ -1,0 +1,10 @@
+{
+  "event_id": "28c41de6093e4ede9d6d28ea1b8fdd59",
+  "event_type": "SPEC_PUBLISHED",
+  "timestamp": "2026-09-21T16:16:11.381355Z",
+  "work_item_id": "SPEC-011-C",
+  "actor": "aic-architect-2",
+  "input_sha": null,
+  "output_state": "SPEC_READY",
+  "metadata": {}
+}
