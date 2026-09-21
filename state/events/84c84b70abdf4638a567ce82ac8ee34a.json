@@ -1,0 +1,10 @@
+{
+  "event_id": "84c84b70abdf4638a567ce82ac8ee34a",
+  "event_type": "CI_PASSED",
+  "timestamp": "2026-09-21T14:20:52.920696Z",
+  "work_item_id": "SPEC-011",
+  "actor": "github-actions[bot]",
+  "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+  "output_state": "MERGE_ELIGIBLE",
+  "metadata": {}
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 112,
+  "revision": 113,
   "current_work_item": "SPEC-011",
   "work_items": {
     "DEV-GOV-001": {
@@ -386,6 +386,14 @@
           "AIC Development Governance Gate": 15368
         },
         "checks": [
+          {
+            "name": "orchestrate",
+            "head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+            "conclusion": "pending",
+            "run_id": 106371349875,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35611459176/job/106371349875"
+          },
           {
             "name": "Desktop build",
             "head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
@@ -1724,6 +1732,16 @@
       "event_id": "c307c06cb33041bb9912b6b76a29b60f",
       "event_type": "MERGE_GATE_PASSED",
       "timestamp": "2026-09-21T14:20:45.413596Z",
+      "work_item_id": "SPEC-011",
+      "actor": "github-actions[bot]",
+      "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+      "output_state": "MERGE_ELIGIBLE",
+      "metadata": {}
+    },
+    {
+      "event_id": "84c84b70abdf4638a567ce82ac8ee34a",
+      "event_type": "CI_PASSED",
+      "timestamp": "2026-09-21T14:20:52.920696Z",
       "work_item_id": "SPEC-011",
       "actor": "github-actions[bot]",
       "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
