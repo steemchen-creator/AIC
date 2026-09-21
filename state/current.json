@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 97,
+  "revision": 98,
   "current_work_item": "SPEC-011",
   "work_items": {
     "DEV-GOV-001": {
@@ -363,7 +363,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-010",
       "previous_work_item": "SPEC-010",
-      "status": "RECOVERABLE_FAILURE",
+      "status": "REVIEW_REQUIRED",
       "created_at": "2026-09-21T12:02:16.343903Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -378,7 +378,7 @@
       "review_id": null,
       "ci": {
         "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-        "status": "FAILED",
+        "status": "PENDING",
         "required_checks": {
           "Governance baseline": 15368,
           "Backend tests": 15368,
@@ -387,20 +387,20 @@
         },
         "checks": [
           {
-            "name": "orchestrate",
+            "name": "Backend tests",
             "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "conclusion": "success",
-            "run_id": 106334314884,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600225047/job/106334314884"
-          },
-          {
-            "name": "Governance baseline",
-            "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "conclusion": "success",
+            "conclusion": "pending",
             "run_id": 35600224517,
             "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106334311639"
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106335255557"
+          },
+          {
+            "name": "AIC Development Governance Gate",
+            "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
+            "conclusion": "pending",
+            "run_id": 35600224517,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106335255533"
           },
           {
             "name": "Desktop build",
@@ -408,23 +408,23 @@
             "conclusion": "pending",
             "run_id": 35600224517,
             "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106334311484"
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106335255513"
           },
           {
-            "name": "AIC Development Governance Gate",
-            "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "conclusion": "failure",
-            "run_id": 35600224517,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106334311462"
-          },
-          {
-            "name": "Backend tests",
+            "name": "Governance baseline",
             "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
             "conclusion": "pending",
             "run_id": 35600224517,
             "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106334311403"
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106335255206"
+          },
+          {
+            "name": "orchestrate",
+            "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
+            "conclusion": "success",
+            "run_id": 106334314884,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600225047/job/106334314884"
           }
         ],
         "discovery_complete": true,
@@ -435,7 +435,7 @@
             "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
             "status": "in_progress",
             "conclusion": null,
-            "attempt": 1,
+            "attempt": 2,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517"
           }
         ]
@@ -448,10 +448,8 @@
         "reserved_requests": []
       },
       "blocked_reasons": [],
-      "recoverable_failures": [
-        "CI_FAILED"
-      ],
-      "recovery_stage": "REVIEW_REQUIRED",
+      "recoverable_failures": [],
+      "recovery_stage": null,
       "unresolved_fix": null,
       "governance_exception": false,
       "chairman_required": false,
@@ -1569,6 +1567,16 @@
       "actor": "github-actions[bot]",
       "input_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
       "output_state": "RECOVERABLE_FAILURE",
+      "metadata": {}
+    },
+    {
+      "event_id": "271cc6f4ddee44a5bdfbbe509d74cf65",
+      "event_type": "CI_STARTED",
+      "timestamp": "2026-09-21T12:36:36.160169Z",
+      "work_item_id": "SPEC-011",
+      "actor": "github-actions[bot]",
+      "input_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
+      "output_state": "REVIEW_REQUIRED",
       "metadata": {}
     }
   ],
