@@ -1,0 +1,18 @@
+{
+  "event_id": "317e93b84632484faa105c0cc15ee62b",
+  "event_type": "CLOSEOUT_COMPLETED",
+  "timestamp": "2026-09-21T08:57:41.540836Z",
+  "work_item_id": "SPEC-010",
+  "actor": "github-actions[bot]",
+  "input_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+  "output_state": "CLOSED",
+  "metadata": {
+    "merge_commit": "0a23132f54e718c76f2c250e186ed887d3cd330e",
+    "tree_sha": "e55733a7b98fda2a0db5b5d3efd04ad41915c2eb",
+    "main_sha": "0a23132f54e718c76f2c250e186ed887d3cd330e",
+    "ci_head_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+    "local_branch_deleted": "true",
+    "remote_branch_deleted": "true",
+    "workspace_clean": "true"
+  }
+}
