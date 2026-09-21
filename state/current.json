@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 150,
+  "revision": 151,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -486,7 +486,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-011",
       "previous_work_item": "SPEC-011",
-      "status": "FINAL_APPROVED",
+      "status": "MERGE_ELIGIBLE",
       "created_at": "2026-09-21T14:31:50.028962Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -580,7 +580,7 @@
       "governance_exception": false,
       "chairman_required": false,
       "changed_areas": [],
-      "merge_eligible": false,
+      "merge_eligible": true,
       "merge_commit": null,
       "merge_expected_sha": null,
       "closeout": {},
@@ -2281,6 +2281,16 @@
       "actor": "github-actions[bot]",
       "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
       "output_state": "FINAL_APPROVED",
+      "metadata": {}
+    },
+    {
+      "event_id": "80d98dd328364e62ad9d45a7ad6c3851",
+      "event_type": "MERGE_GATE_PASSED",
+      "timestamp": "2026-09-21T16:03:52.348244Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "github-actions[bot]",
+      "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+      "output_state": "MERGE_ELIGIBLE",
       "metadata": {}
     }
   ],
