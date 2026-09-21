@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 157,
+  "revision": 158,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -2378,6 +2378,16 @@
       "metadata": {
         "reason": "DAILY_SPEC_LIMIT"
       }
+    },
+    {
+      "event_id": "2634c79551c441b281e56ced1a46d572",
+      "event_type": "RESUME_PIPELINE",
+      "timestamp": "2026-09-21T16:13:10.846364Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "steemchen-creator",
+      "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+      "output_state": "CLOSED",
+      "metadata": {}
     }
   ],
   "tasks": {
@@ -2709,7 +2719,7 @@
     "2026-09-08": 1,
     "2026-09-21": 2
   },
-  "paused": true,
+  "paused": false,
   "auto_merge_disabled": false,
   "project_blocked_reasons": [
     "DAILY_SPEC_LIMIT"
