@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 131,
+  "revision": 132,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -486,14 +486,14 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-011",
       "previous_work_item": "SPEC-011",
-      "status": "RECOVERABLE_FAILURE",
+      "status": "REVIEW_REQUIRED",
       "created_at": "2026-09-21T14:31:50.028962Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
       "target_branch": "feature/spec-011-checkpoint-b",
       "execution_authorization": "CHAIRMAN-DELEGATION-AIC-STANDARD-WORK-V1",
       "pr_number": 29,
-      "head_sha": "fd5af19d28b8d5cd32d2a17c4285e7f88743c796",
+      "head_sha": "210710051ab048ec87b7423208c625cd1fcccd64",
       "base_sha": "8839eadc0dae5b7be0654531ef49aa76da2ced0e",
       "review_artifact": "REVIEW-SPEC011.md",
       "architecture_status": "REVIEW_REQUIRED",
@@ -518,10 +518,8 @@
       "blocked_reasons": [
         "SENSITIVE_DIFF:secret_permission_model"
       ],
-      "recoverable_failures": [
-        "HEAD_CHANGE_WHILE_BLOCKED_OR_CLOSED"
-      ],
-      "recovery_stage": "CHAIRMAN_DECISION_REQUIRED",
+      "recoverable_failures": [],
+      "recovery_stage": null,
       "unresolved_fix": null,
       "governance_exception": false,
       "chairman_required": true,
@@ -2019,6 +2017,16 @@
         "reason": "HEAD_CHANGE_WHILE_BLOCKED_OR_CLOSED",
         "failure_class": "RECOVERABLE_READ"
       }
+    },
+    {
+      "event_id": "f424862afc2740eba50389288ff96dc9",
+      "event_type": "PR_HEAD_CHANGED",
+      "timestamp": "2026-09-21T15:15:29.402393Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "github-actions[bot]",
+      "input_sha": "210710051ab048ec87b7423208c625cd1fcccd64",
+      "output_state": "REVIEW_REQUIRED",
+      "metadata": {}
     }
   ],
   "tasks": {
