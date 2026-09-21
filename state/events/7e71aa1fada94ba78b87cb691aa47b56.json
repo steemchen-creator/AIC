@@ -1,0 +1,13 @@
+{
+  "event_id": "7e71aa1fada94ba78b87cb691aa47b56",
+  "event_type": "OPERATION_FAILED",
+  "timestamp": "2026-09-21T15:15:23.409476Z",
+  "work_item_id": "SPEC-011-B",
+  "actor": "github-actions[bot]",
+  "input_sha": "fd5af19d28b8d5cd32d2a17c4285e7f88743c796",
+  "output_state": "RECOVERABLE_FAILURE",
+  "metadata": {
+    "reason": "HEAD_CHANGE_WHILE_BLOCKED_OR_CLOSED",
+    "failure_class": "RECOVERABLE_READ"
+  }
+}
