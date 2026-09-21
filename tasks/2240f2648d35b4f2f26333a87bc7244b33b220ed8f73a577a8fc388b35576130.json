@@ -1,0 +1,10 @@
+{
+  "task_id": "2240f2648d35b4f2f26333a87bc7244b33b220ed8f73a577a8fc388b35576130",
+  "work_item_id": "SPEC-011-B",
+  "kind": "ARCHITECTURE_REVIEW",
+  "head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+  "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
+  "manifest_path": "requests/2240f2648d35b4f2f26333a87bc7244b33b220ed8f73a577a8fc388b35576130/REVIEW_CONTEXT.json",
+  "status": "RESERVED",
+  "delivery_reference": null
+}
