@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 100,
+  "revision": 101,
   "current_work_item": "SPEC-011",
   "work_items": {
     "DEV-GOV-001": {
@@ -378,7 +378,7 @@
       "review_id": null,
       "ci": {
         "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-        "status": "PENDING",
+        "status": "PASSED",
         "required_checks": {
           "Governance baseline": 15368,
           "Backend tests": 15368,
@@ -389,7 +389,7 @@
           {
             "name": "Backend tests",
             "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "conclusion": "pending",
+            "conclusion": "success",
             "run_id": 35600224517,
             "app_id": 15368,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106335255557"
@@ -397,7 +397,7 @@
           {
             "name": "AIC Development Governance Gate",
             "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "conclusion": "pending",
+            "conclusion": "success",
             "run_id": 35600224517,
             "app_id": 15368,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106335255533"
@@ -405,7 +405,7 @@
           {
             "name": "Desktop build",
             "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "conclusion": "pending",
+            "conclusion": "success",
             "run_id": 35600224517,
             "app_id": 15368,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106335255513"
@@ -413,7 +413,7 @@
           {
             "name": "Governance baseline",
             "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "conclusion": "pending",
+            "conclusion": "success",
             "run_id": 35600224517,
             "app_id": 15368,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517/job/106335255206"
@@ -433,8 +433,8 @@
           {
             "run_id": 35600224517,
             "head_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
-            "status": "in_progress",
-            "conclusion": null,
+            "status": "completed",
+            "conclusion": "success",
             "attempt": 2,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/35600224517"
           }
@@ -1604,6 +1604,16 @@
       "metadata": {
         "task_id": "7b907c88f891a23a4dfdc5ef87ac2060821f6da3c0e2ad1cc5cda35986d4e53f"
       }
+    },
+    {
+      "event_id": "c0059ccb86474733b0c739fc930fe1f6",
+      "event_type": "CI_PASSED",
+      "timestamp": "2026-09-21T12:39:16.559301Z",
+      "work_item_id": "SPEC-011",
+      "actor": "github-actions[bot]",
+      "input_sha": "276e569302a46d8d61e7a3cd6c3420629e1edb95",
+      "output_state": "REVIEW_REQUIRED",
+      "metadata": {}
     }
   ],
   "tasks": {
