@@ -1,0 +1,10 @@
+{
+  "event_id": "c68dbb1492f843d29f76609ac7bdb5bd",
+  "event_type": "ARCH_CHANGES_REQUIRED",
+  "timestamp": "2026-09-21T17:14:18.930308Z",
+  "work_item_id": "SPEC-011-C",
+  "actor": "aic-architect-2",
+  "input_sha": "d32aff35177a48547aa2cfddc6d47f1531248730",
+  "output_state": "CHANGES_REQUIRED",
+  "metadata": {}
+}

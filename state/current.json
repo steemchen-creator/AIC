@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 171,
+  "revision": 172,
   "current_work_item": "SPEC-011-C",
   "work_items": {
     "DEV-GOV-001": {
@@ -608,7 +608,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-011-B",
       "previous_work_item": "SPEC-011-B",
-      "status": "ARCHITECTURE_REVIEWING",
+      "status": "CHANGES_REQUIRED",
       "created_at": "2026-09-21T16:15:41Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -618,9 +618,9 @@
       "head_sha": "d32aff35177a48547aa2cfddc6d47f1531248730",
       "base_sha": "4a3ceae61c9170dc22c3d77bec5ad26802ad618d",
       "review_artifact": "REVIEW-SPEC011.md",
-      "architecture_status": "NOT_REVIEWED",
+      "architecture_status": "CHANGES_REQUIRED",
       "approved_head_sha": null,
-      "review_id": null,
+      "review_id": "ARCH-SPEC011-C-001",
       "ci": {
         "head_sha": "d32aff35177a48547aa2cfddc6d47f1531248730",
         "status": "PASSED",
@@ -697,7 +697,7 @@
       "blocked_reasons": [],
       "recoverable_failures": [],
       "recovery_stage": null,
-      "unresolved_fix": null,
+      "unresolved_fix": "ARCH-SPEC011-C-001",
       "governance_exception": false,
       "chairman_required": false,
       "changed_areas": [],
@@ -2636,6 +2636,16 @@
       "input_sha": "d32aff35177a48547aa2cfddc6d47f1531248730",
       "output_state": "ARCHITECTURE_REVIEWING",
       "metadata": {}
+    },
+    {
+      "event_id": "c68dbb1492f843d29f76609ac7bdb5bd",
+      "event_type": "ARCH_CHANGES_REQUIRED",
+      "timestamp": "2026-09-21T17:14:18.930308Z",
+      "work_item_id": "SPEC-011-C",
+      "actor": "aic-architect-2",
+      "input_sha": "d32aff35177a48547aa2cfddc6d47f1531248730",
+      "output_state": "CHANGES_REQUIRED",
+      "metadata": {}
     }
   ],
   "tasks": {
@@ -2893,6 +2903,18 @@
       "blocking_items": [],
       "non_blocking_items": [],
       "reviewed_at": "2026-09-21T15:51:48Z",
+      "reviewer_role": "CHIEF_INVESTMENT_ARCHITECT"
+    },
+    "ARCH-SPEC011-C-001": {
+      "work_item": "SPEC-011-C",
+      "review_id": "ARCH-SPEC011-C-001",
+      "result": "CHANGES_REQUIRED",
+      "reviewed_head_sha": "d32aff35177a48547aa2cfddc6d47f1531248730",
+      "blocking_items": [
+        "BLOCKER-C01: Tier-0 upstream authority is self-asserted by provider payload"
+      ],
+      "non_blocking_items": [],
+      "reviewed_at": "2026-09-21T17:14:18.930308Z",
       "reviewer_role": "CHIEF_INVESTMENT_ARCHITECT"
     }
   },

@@ -1,0 +1,12 @@
+{
+  "work_item": "SPEC-011-C",
+  "review_id": "ARCH-SPEC011-C-001",
+  "result": "CHANGES_REQUIRED",
+  "reviewed_head_sha": "d32aff35177a48547aa2cfddc6d47f1531248730",
+  "blocking_items": [
+    "BLOCKER-C01: Tier-0 upstream authority is self-asserted by provider payload"
+  ],
+  "non_blocking_items": [],
+  "reviewed_at": "2026-09-21T17:14:18.930308Z",
+  "reviewer_role": "CHIEF_INVESTMENT_ARCHITECT"
+}
