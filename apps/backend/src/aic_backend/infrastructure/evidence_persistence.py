@@ -19,6 +19,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    UniqueConstraint,
     and_,
     select,
     update,
@@ -30,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from aic_backend.application.ports.evidence import (
     AcquisitionPlanRepository,
     MacroObservationRepository,
+    PolicyEventEvidenceRepository,
     ScheduledEventRepository,
 )
 from aic_backend.application.ports.persistence import (
@@ -42,6 +44,14 @@ from aic_backend.domain.evidence import (
     AcquisitionCheckpoint,
     AcquisitionClaim,
     AcquisitionPlan,
+    DocumentType,
+    EntityIdentity,
+    EntityType,
+    EventCandidate,
+    EventDocumentLink,
+    EventDocumentRelation,
+    EvidenceQuarantine,
+    EvidenceVerification,
     MacroFrequency,
     MacroObservation,
     MacroQueryMode,
@@ -50,6 +60,7 @@ from aic_backend.domain.evidence import (
     ScheduledEventStatus,
     ScheduledEventType,
     SeasonalAdjustment,
+    SourceDocument,
 )
 from aic_backend.domain.market_data import AuthorityLevel, SourceLineage, SourceType
 
@@ -157,6 +168,105 @@ acquisition_checkpoints = Table(
     Column("lease_expires_at", DateTime(timezone=True)),
     Column("fencing_token", BigInteger, nullable=False, default=0),
     Column("active", Boolean, nullable=False, default=True),
+)
+evidence_entities = Table(
+    "evidence_entities",
+    metadata,
+    Column("entity_id", String(160), primary_key=True),
+    Column("entity_type", String(32), nullable=False),
+    Column("namespace", String(96), nullable=False),
+    Column("official_identifier", String(255), nullable=False),
+    Column("canonical_name", Text, nullable=False),
+    Column("aliases", ARRAY(Text), nullable=False),
+    UniqueConstraint("namespace", "official_identifier", name="uq_evidence_entity_authority"),
+)
+source_documents = Table(
+    "source_documents",
+    metadata,
+    Column("document_version_id", String(96), primary_key=True),
+    Column("document_id", String(160), nullable=False, index=True),
+    Column(
+        "publisher_entity_id",
+        String(160),
+        ForeignKey("evidence_entities.entity_id"),
+        nullable=False,
+    ),
+    Column("document_type", String(48), nullable=False),
+    Column("title", Text, nullable=False),
+    Column("language", String(32), nullable=False),
+    Column("speaker_entity_id", String(160), ForeignKey("evidence_entities.entity_id")),
+    Column("source_declared_role", Text),
+    Column("event_time", DateTime(timezone=True), nullable=False),
+    Column("published_at", DateTime(timezone=True), nullable=False),
+    Column("observed_at", DateTime(timezone=True), nullable=False),
+    Column("ingested_at", DateTime(timezone=True), nullable=False),
+    Column("source_uri", String(2048), nullable=False),
+    Column("source_record_id", String(255), nullable=False),
+    Column("content_hash", String(64), nullable=False),
+    Column("raw_observation_id", String(96), nullable=False),
+    Column("normalized_text_hash", String(64)),
+    Column("version", Integer, nullable=False),
+    Column(
+        "predecessor_version_id", String(96), ForeignKey("source_documents.document_version_id")
+    ),
+    Column("verification", String(32), nullable=False),
+    Column("adapter_id", String(64), nullable=False),
+    Column("upstream_source_id", String(96), nullable=False),
+    Column("authority_level", String(32), nullable=False),
+    Column("source_type", String(32), nullable=False),
+    Column("raw_hash", String(64), nullable=False),
+    Column("transformation_version", String(96), nullable=False),
+    Column("license_id", String(96)),
+)
+event_candidates = Table(
+    "event_candidates",
+    metadata,
+    Column("candidate_id", String(96), primary_key=True),
+    Column("event_category", String(96), nullable=False),
+    Column("event_time", DateTime(timezone=True), nullable=False),
+    Column("detected_at", DateTime(timezone=True), nullable=False),
+    Column("observed_at", DateTime(timezone=True), nullable=False),
+    Column("ingested_at", DateTime(timezone=True), nullable=False),
+    Column("entity_ids", ARRAY(String(160)), nullable=False),
+    Column("location_codes", ARRAY(String(64)), nullable=False),
+    Column("source_document_version_ids", ARRAY(String(96)), nullable=False),
+    Column("authority_level", String(32), nullable=False),
+    Column("confidence", Numeric(8, 7), nullable=False),
+    Column("verification", String(32), nullable=False),
+    Column("adapter_id", String(64), nullable=False),
+    Column("upstream_source_id", String(96), nullable=False),
+    Column("source_type", String(32), nullable=False),
+    Column("published_at", DateTime(timezone=True)),
+    Column("raw_hash", String(64), nullable=False),
+    Column("transformation_version", String(96), nullable=False),
+    Column("source_uri", String(2048)),
+    Column("source_record_id", String(255)),
+    Column("license_id", String(96)),
+)
+event_document_links = Table(
+    "event_document_links",
+    metadata,
+    Column("link_id", String(96), primary_key=True),
+    Column("candidate_id", String(96), ForeignKey("event_candidates.candidate_id"), nullable=False),
+    Column(
+        "document_version_id",
+        String(96),
+        ForeignKey("source_documents.document_version_id"),
+        nullable=False,
+    ),
+    Column("relation", String(32), nullable=False),
+    Column("linked_at", DateTime(timezone=True), nullable=False),
+)
+evidence_quarantines = Table(
+    "evidence_quarantines",
+    metadata,
+    Column("quarantine_id", String(96), primary_key=True),
+    Column("raw_observation_id", String(96), nullable=False, index=True),
+    Column("upstream_source_id", String(96), nullable=False),
+    Column("reason_code", String(96), nullable=False),
+    Column("detail", Text, nullable=False),
+    Column("observed_at", DateTime(timezone=True), nullable=False),
+    Column("ingested_at", DateTime(timezone=True), nullable=False),
 )
 
 
@@ -274,9 +384,7 @@ def _select_macro(
         if as_of is None or as_of.tzinfo is None:
             raise ValueError("KNOWN_AT requires aware as_of")
         eligible = [
-            value
-            for value in values
-            if max(value.source_known_at, value.observed_at) <= as_of
+            value for value in values if max(value.source_known_at, value.observed_at) <= as_of
         ]
     elif mode is MacroQueryMode.AS_PUBLISHED:
         if vintage_date is None:
@@ -321,8 +429,68 @@ def _checkpoint(row: Mapping[str, Any] | RowMapping) -> AcquisitionCheckpoint:
     )
 
 
+def _entity(row: Mapping[str, Any] | RowMapping) -> EntityIdentity:
+    return EntityIdentity(
+        row["entity_id"],
+        EntityType(row["entity_type"]),
+        row["namespace"],
+        row["official_identifier"],
+        row["canonical_name"],
+        tuple(row["aliases"]),
+    )
+
+
+def _document(row: Mapping[str, Any] | RowMapping) -> SourceDocument:
+    observed, ingested = row["observed_at"].astimezone(UTC), row["ingested_at"].astimezone(UTC)
+    return SourceDocument(
+        row["document_version_id"],
+        row["document_id"],
+        row["publisher_entity_id"],
+        DocumentType(row["document_type"]),
+        row["title"],
+        row["language"],
+        row["event_time"].astimezone(UTC),
+        row["published_at"].astimezone(UTC),
+        observed,
+        ingested,
+        row["source_uri"],
+        row["source_record_id"],
+        row["content_hash"],
+        row["raw_observation_id"],
+        row["version"],
+        row["predecessor_version_id"],
+        EvidenceVerification(row["verification"]),
+        _lineage(row, observed, ingested),
+        row["speaker_entity_id"],
+        row["source_declared_role"],
+        row["normalized_text_hash"],
+    )
+
+
+def _candidate(row: Mapping[str, Any] | RowMapping) -> EventCandidate:
+    observed, ingested = row["observed_at"].astimezone(UTC), row["ingested_at"].astimezone(UTC)
+    return EventCandidate(
+        row["candidate_id"],
+        row["event_category"],
+        row["event_time"].astimezone(UTC),
+        row["detected_at"].astimezone(UTC),
+        observed,
+        ingested,
+        tuple(row["entity_ids"]),
+        tuple(row["location_codes"]),
+        tuple(row["source_document_version_ids"]),
+        AuthorityLevel(row["authority_level"]),
+        row["confidence"],
+        EvidenceVerification(row["verification"]),
+        _lineage(row, observed, ingested),
+    )
+
+
 class PostgreSQLEvidenceRepository(
-    MacroObservationRepository, ScheduledEventRepository, AcquisitionPlanRepository
+    MacroObservationRepository,
+    ScheduledEventRepository,
+    AcquisitionPlanRepository,
+    PolicyEventEvidenceRepository,
 ):
     def __init__(self, engine: AsyncEngine) -> None:
         self._engine = engine
@@ -637,9 +805,283 @@ class PostgreSQLEvidenceRepository(
             raise PersistenceError(PersistenceErrorCode.TRANSACTION_ERROR, "checkpoint disappeared")
         return result
 
+    async def save_entity(self, value: EntityIdentity) -> SaveResult:
+        async with self._engine.connect() as connection:
+            collision = (
+                (
+                    await connection.execute(
+                        select(evidence_entities.c.entity_id).where(
+                            evidence_entities.c.namespace == value.namespace,
+                            evidence_entities.c.official_identifier == value.official_identifier,
+                            evidence_entities.c.entity_id != value.entity_id,
+                        )
+                    )
+                )
+                .scalars()
+                .first()
+            )
+        if collision is not None:
+            raise PersistenceError(
+                PersistenceErrorCode.IDENTITY_CONFLICT, "official entity identity collision"
+            )
+        values = {
+            "entity_id": value.entity_id,
+            "entity_type": value.entity_type.value,
+            "namespace": value.namespace,
+            "official_identifier": value.official_identifier,
+            "canonical_name": value.canonical_name,
+            "aliases": list(value.aliases),
+        }
+        return await _immutable_save(
+            self._engine, evidence_entities, ("entity_id",), values, value.entity_id
+        )
+
+    async def save_document(self, value: SourceDocument) -> SaveResult:
+        async with self._engine.connect() as connection:
+            collision = (
+                (
+                    await connection.execute(
+                        select(source_documents.c.document_version_id).where(
+                            source_documents.c.document_id == value.document_id,
+                            source_documents.c.version == value.version,
+                            source_documents.c.document_version_id != value.document_version_id,
+                        )
+                    )
+                )
+                .scalars()
+                .first()
+            )
+            predecessor = None
+            if value.predecessor_version_id is not None:
+                predecessor = (
+                    (
+                        await connection.execute(
+                            select(source_documents).where(
+                                source_documents.c.document_version_id
+                                == value.predecessor_version_id
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+        if collision is not None:
+            raise PersistenceError(
+                PersistenceErrorCode.IDENTITY_CONFLICT, "document version identity collision"
+            )
+        if value.predecessor_version_id is not None and (
+            predecessor is None
+            or predecessor["document_id"] != value.document_id
+            or predecessor["version"] + 1 != value.version
+        ):
+            raise PersistenceError(
+                PersistenceErrorCode.IDENTITY_CONFLICT, "document predecessor identity mismatch"
+            )
+        values = {
+            "document_version_id": value.document_version_id,
+            "document_id": value.document_id,
+            "publisher_entity_id": value.publisher_entity_id,
+            "document_type": value.document_type.value,
+            "title": value.title,
+            "language": value.language,
+            "speaker_entity_id": value.speaker_entity_id,
+            "source_declared_role": value.source_declared_role,
+            "observed_at": value.observed_at,
+            "ingested_at": value.ingested_at,
+            "content_hash": value.content_hash,
+            "raw_observation_id": value.raw_observation_id,
+            "normalized_text_hash": value.normalized_text_hash,
+            "version": value.version,
+            "predecessor_version_id": value.predecessor_version_id,
+            "verification": value.verification.value,
+            **_lineage_values(value.lineage),
+        }
+        return await _immutable_save(
+            self._engine,
+            source_documents,
+            ("document_version_id",),
+            values,
+            value.document_version_id,
+        )
+
+    async def save_event_candidate(self, value: EventCandidate) -> SaveResult:
+        if value.source_document_version_ids:
+            async with self._engine.connect() as connection:
+                known = set(
+                    (
+                        await connection.execute(
+                            select(source_documents.c.document_version_id).where(
+                                source_documents.c.document_version_id.in_(
+                                    value.source_document_version_ids
+                                )
+                            )
+                        )
+                    ).scalars()
+                )
+            if known != set(value.source_document_version_ids):
+                raise PersistenceError(
+                    PersistenceErrorCode.IDENTITY_CONFLICT,
+                    "event candidate source-document evidence is missing",
+                )
+        values = {
+            "candidate_id": value.candidate_id,
+            "event_category": value.event_category,
+            "detected_at": value.detected_at,
+            "observed_at": value.observed_at,
+            "ingested_at": value.ingested_at,
+            "entity_ids": list(value.entity_ids),
+            "location_codes": list(value.location_codes),
+            "source_document_version_ids": list(value.source_document_version_ids),
+            "confidence": value.confidence,
+            "verification": value.verification.value,
+            **_lineage_values(value.lineage),
+        }
+        return await _immutable_save(
+            self._engine, event_candidates, ("candidate_id",), values, value.candidate_id
+        )
+
+    async def save_event_document_link(self, value: EventDocumentLink) -> SaveResult:
+        values = {
+            "link_id": value.link_id,
+            "candidate_id": value.candidate_id,
+            "document_version_id": value.document_version_id,
+            "relation": value.relation.value,
+            "linked_at": value.linked_at,
+        }
+        return await _immutable_save(
+            self._engine, event_document_links, ("link_id",), values, value.link_id
+        )
+
+    async def documents_as_of(
+        self,
+        as_of: datetime,
+        *,
+        operational_replay: bool = False,
+        publisher_entity_id: str | None = None,
+    ) -> tuple[SourceDocument, ...]:
+        predicates = [
+            source_documents.c.ingested_at <= as_of
+            if operational_replay
+            else and_(
+                source_documents.c.published_at <= as_of,
+                source_documents.c.observed_at <= as_of,
+            )
+        ]
+        if publisher_entity_id is not None:
+            predicates.append(source_documents.c.publisher_entity_id == publisher_entity_id)
+        async with self._engine.connect() as connection:
+            rows = (
+                (
+                    await connection.execute(
+                        select(source_documents)
+                        .where(*predicates)
+                        .order_by(source_documents.c.document_id, source_documents.c.version)
+                    )
+                )
+                .mappings()
+                .all()
+            )
+        latest: dict[str, SourceDocument] = {}
+        for row in rows:
+            value = _document(row)
+            latest[value.document_id] = value
+        return tuple(sorted(latest.values(), key=lambda value: value.document_id))
+
+    async def event_candidates_as_of(
+        self, as_of: datetime, *, operational_replay: bool = False
+    ) -> tuple[EventCandidate, ...]:
+        predicates = (
+            (event_candidates.c.ingested_at <= as_of,)
+            if operational_replay
+            else (
+                event_candidates.c.detected_at <= as_of,
+                event_candidates.c.observed_at <= as_of,
+            )
+        )
+        async with self._engine.connect() as connection:
+            rows = (
+                (await connection.execute(select(event_candidates).where(*predicates)))
+                .mappings()
+                .all()
+            )
+        return tuple(
+            sorted((_candidate(row) for row in rows), key=lambda value: value.candidate_id)
+        )
+
+    async def links_for_candidate(self, candidate_id: str) -> tuple[EventDocumentLink, ...]:
+        async with self._engine.connect() as connection:
+            rows = (
+                (
+                    await connection.execute(
+                        select(event_document_links)
+                        .where(event_document_links.c.candidate_id == candidate_id)
+                        .order_by(event_document_links.c.linked_at, event_document_links.c.link_id)
+                    )
+                )
+                .mappings()
+                .all()
+            )
+        return tuple(
+            EventDocumentLink(
+                row["link_id"],
+                row["candidate_id"],
+                row["document_version_id"],
+                EventDocumentRelation(row["relation"]),
+                row["linked_at"].astimezone(UTC),
+            )
+            for row in rows
+        )
+
+    async def save_quarantine(self, value: EvidenceQuarantine) -> SaveResult:
+        values = {
+            "quarantine_id": value.quarantine_id,
+            "raw_observation_id": value.raw_observation_id,
+            "upstream_source_id": value.upstream_source_id,
+            "reason_code": value.reason_code,
+            "detail": value.detail,
+            "observed_at": value.observed_at,
+            "ingested_at": value.ingested_at,
+        }
+        return await _immutable_save(
+            self._engine,
+            evidence_quarantines,
+            ("quarantine_id",),
+            values,
+            value.quarantine_id,
+        )
+
+    async def quarantines_for_raw(self, raw_observation_id: str) -> tuple[EvidenceQuarantine, ...]:
+        async with self._engine.connect() as connection:
+            rows = (
+                (
+                    await connection.execute(
+                        select(evidence_quarantines)
+                        .where(evidence_quarantines.c.raw_observation_id == raw_observation_id)
+                        .order_by(evidence_quarantines.c.observed_at)
+                    )
+                )
+                .mappings()
+                .all()
+            )
+        return tuple(
+            EvidenceQuarantine(
+                row["quarantine_id"],
+                row["raw_observation_id"],
+                row["upstream_source_id"],
+                row["reason_code"],
+                row["detail"],
+                row["observed_at"].astimezone(UTC),
+                row["ingested_at"].astimezone(UTC),
+            )
+            for row in rows
+        )
+
 
 class InMemoryEvidenceRepository(
-    MacroObservationRepository, ScheduledEventRepository, AcquisitionPlanRepository
+    MacroObservationRepository,
+    ScheduledEventRepository,
+    AcquisitionPlanRepository,
+    PolicyEventEvidenceRepository,
 ):
     def __init__(self) -> None:
         self.series: dict[str, MacroSeriesIdentity] = {}
@@ -647,6 +1089,11 @@ class InMemoryEvidenceRepository(
         self.events: dict[str, ScheduledEvent] = {}
         self.plans: dict[tuple[str, int], AcquisitionPlan] = {}
         self.checkpoints: dict[str, AcquisitionCheckpoint] = {}
+        self.entities: dict[str, EntityIdentity] = {}
+        self.documents: dict[str, SourceDocument] = {}
+        self.event_candidates: dict[str, EventCandidate] = {}
+        self.event_document_links: dict[str, EventDocumentLink] = {}
+        self.quarantines: dict[str, EvidenceQuarantine] = {}
         self._lock = asyncio.Lock()
 
     @staticmethod
@@ -813,3 +1260,132 @@ class InMemoryEvidenceRepository(
         )
         self.checkpoints[claim.plan_id] = result
         return result
+
+    async def save_entity(self, value: EntityIdentity) -> SaveResult:
+        if any(
+            existing.authority_key == value.authority_key and existing.entity_id != value.entity_id
+            for existing in self.entities.values()
+        ):
+            raise PersistenceError(
+                PersistenceErrorCode.IDENTITY_CONFLICT, "official entity identity collision"
+            )
+        return self._save(self.entities, value.entity_id, value)
+
+    async def save_document(self, value: SourceDocument) -> SaveResult:
+        if value.publisher_entity_id not in self.entities:
+            raise PersistenceError(
+                PersistenceErrorCode.IDENTITY_CONFLICT, "document publisher is not registered"
+            )
+        if value.speaker_entity_id is not None and value.speaker_entity_id not in self.entities:
+            raise PersistenceError(
+                PersistenceErrorCode.IDENTITY_CONFLICT, "document speaker is not registered"
+            )
+        if any(
+            existing.document_id == value.document_id
+            and existing.version == value.version
+            and existing.document_version_id != value.document_version_id
+            for existing in self.documents.values()
+        ):
+            raise PersistenceError(
+                PersistenceErrorCode.IDENTITY_CONFLICT, "document version identity collision"
+            )
+        if value.predecessor_version_id is not None:
+            predecessor = self.documents.get(value.predecessor_version_id)
+            if (
+                predecessor is None
+                or predecessor.document_id != value.document_id
+                or predecessor.version + 1 != value.version
+            ):
+                raise PersistenceError(
+                    PersistenceErrorCode.IDENTITY_CONFLICT,
+                    "document predecessor identity mismatch",
+                )
+        return self._save(self.documents, value.document_version_id, value)
+
+    async def save_event_candidate(self, value: EventCandidate) -> SaveResult:
+        if any(
+            document_id not in self.documents for document_id in value.source_document_version_ids
+        ):
+            raise PersistenceError(
+                PersistenceErrorCode.IDENTITY_CONFLICT,
+                "event candidate source-document evidence is missing",
+            )
+        return self._save(self.event_candidates, value.candidate_id, value)
+
+    async def save_event_document_link(self, value: EventDocumentLink) -> SaveResult:
+        if (
+            value.candidate_id not in self.event_candidates
+            or value.document_version_id not in self.documents
+        ):
+            raise PersistenceError(
+                PersistenceErrorCode.IDENTITY_CONFLICT, "event-document link target is missing"
+            )
+        return self._save(self.event_document_links, value.link_id, value)
+
+    async def documents_as_of(
+        self,
+        as_of: datetime,
+        *,
+        operational_replay: bool = False,
+        publisher_entity_id: str | None = None,
+    ) -> tuple[SourceDocument, ...]:
+        latest: dict[str, SourceDocument] = {}
+        for value in sorted(
+            self.documents.values(), key=lambda item: (item.document_id, item.version)
+        ):
+            available_at = (
+                value.ingested_at
+                if operational_replay
+                else max(value.published_at, value.observed_at)
+            )
+            if available_at <= as_of and (
+                publisher_entity_id is None or value.publisher_entity_id == publisher_entity_id
+            ):
+                latest[value.document_id] = value
+        return tuple(sorted(latest.values(), key=lambda value: value.document_id))
+
+    async def event_candidates_as_of(
+        self, as_of: datetime, *, operational_replay: bool = False
+    ) -> tuple[EventCandidate, ...]:
+        return tuple(
+            sorted(
+                (
+                    value
+                    for value in self.event_candidates.values()
+                    if (
+                        value.ingested_at
+                        if operational_replay
+                        else max(value.detected_at, value.observed_at)
+                    )
+                    <= as_of
+                ),
+                key=lambda value: value.candidate_id,
+            )
+        )
+
+    async def links_for_candidate(self, candidate_id: str) -> tuple[EventDocumentLink, ...]:
+        return tuple(
+            sorted(
+                (
+                    value
+                    for value in self.event_document_links.values()
+                    if value.candidate_id == candidate_id
+                ),
+                key=lambda value: (value.linked_at, value.link_id),
+            )
+        )
+
+    async def save_quarantine(self, value: EvidenceQuarantine) -> SaveResult:
+        return self._save(self.quarantines, value.quarantine_id, value)
+
+    async def quarantines_for_raw(self, raw_observation_id: str) -> tuple[EvidenceQuarantine, ...]:
+        return tuple(
+            sorted(
+                (
+                    value
+                    for value in self.quarantines.values()
+                    if value.raw_observation_id == raw_observation_id
+                ),
+                key=lambda value: (value.observed_at, value.quarantine_id),
+            )
+        )

@@ -1,14 +1,71 @@
 # Engineering Review — SPEC-011 Global Data Fabric and Event Intelligence Foundation
 
 Review date: 2026-09-21
-Repository baseline for Checkpoint B: `origin/main` at `8839eadc0dae5b7be0654531ef49aa76da2ced0e`
+Repository baseline for Checkpoint C: `origin/main` at `4a3ceae61c9170dc22c3d77bec5ad26802ad618d`
 Reviewed artifact: `SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md`
 Source-file SHA-256: `7b4d788cede5863be20197da2072e714fa7f1164b443e69d9b6c096bd4ccbc8b`
 Imported-file SHA-256: `fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581`
 Import normalization: trailing Markdown whitespace and the extra final blank line were removed;
 the specification text and requirements are unchanged.
 Decision: **APPROVED FOR REPOSITORY IMPORT AND IMPLEMENTATION PLANNING**
-Development status: **CHECKPOINT B IMPLEMENTED — validation and independent Architecture Review pending**
+Development status: **CHECKPOINT C IMPLEMENTED — validation and independent Architecture Review pending**
+
+## Checkpoint C implementation review
+
+Checkpoint C adds source-neutral official-document, entity and event-discovery evidence without
+building the Checkpoint D Evidence Query layer:
+
+```text
+PolicyEventIngestionService
+  -> existing ProviderRuntimePort
+  -> Federal Reserve / SEC EDGAR / GDELT adapter
+  -> existing immutable RawObservation + SourceLineage
+  -> PolicyEventNormalizer
+  -> SourceDocument / EntityIdentity / EventCandidate
+  -> PostgreSQL evidence repository + existing DataAvailabilityPolicy
+```
+
+`SourceDocument` keeps immutable versions, publisher identity, type, title/language, optional
+speaker plus source-declared role, event/publication/observation/ingestion times, canonical source
+identity, hashes and raw-observation linkage. A correction can append only with an explicit version
+and predecessor identity. The repository rejects same-version content drift and official entity
+collisions. Research visibility requires publication plus AIC observation; operational replay uses
+actual ingestion time.
+
+`EventCandidate` is evidence only. GDELT records are permanently `RADAR_ONLY` and carry
+`AuthorityLevel.RADAR`; they cannot construct a verified official document or overwrite a Tier-0
+record. A later Tier-0 document is joined through an immutable `EventDocumentLink`, preserving both
+records and their original authority.
+
+The Federal Reserve adapter uses allowlisted official RSS URLs, conditional headers, response/item
+bounds and XML DTD/entity rejection. The SEC adapter uses `data.sec.gov` directly, requires
+`AIC_SEC_USER_AGENT`, validates CIK, column alignment, accession/form/document identity and bounded
+pagination cursors. The GDELT DOC adapter uses the owned HTTP boundary and preserves radar status.
+No EDGAR or GDELT client library is added. CNINFO remains unregistered because a production machine
+contract was not established.
+
+Migration `20260922_0018` creates official entity identities, source-document versions, radar/event
+candidates, explicit event-document links and durable quarantine reasons. Downgrade removes this
+evidence and is destructive in production; workers must be stopped and evidence backed up before
+any separately authorized downgrade.
+
+### Checkpoint C requirement-to-test traceability
+
+| Requirement | Deterministic evidence |
+| --- | --- |
+| Immutable SourceDocument versions, publisher identity and entity collision rejection | `test_spec011_policy_events.py`; `test_policy_event_postgresql.py` |
+| Publication/observation/ingestion PIT and restart parity | `test_spec011_policy_events.py`; `test_policy_event_postgresql.py` |
+| Federal Reserve conditional RSS, bounds and malicious XML rejection | `test_policy_event_providers.py` |
+| SEC declared identity, pagination and CIK/accession/form consistency | `test_policy_event_providers.py` |
+| GDELT radar cannot establish a Tier-0 fact | `test_spec011_policy_events.py`; `test_policy_event_providers.py` |
+| Raw-before-canonical persistence and idempotent retry | `test_policy_event_ingestion.py` |
+| Invalid publisher quarantine with actionable reason | `test_policy_event_ingestion.py`; `test_policy_event_postgresql.py` |
+| Append-only radar-to-official verification links | `test_spec011_policy_events.py`; `test_policy_event_postgresql.py` |
+| Reversible migration and PostgreSQL restart | `test_policy_event_postgresql.py` |
+| Clean Architecture and Provider Runtime reuse | repository architecture tests |
+
+Source, upstream, license and dependency findings are recorded in
+`docs/data/SPEC011_CHECKPOINT_C_SOURCE_DILIGENCE.md`.
 
 ## Checkpoint B implementation review
 
@@ -229,7 +286,7 @@ Clean Architecture ownership remains unchanged:
 - Infrastructure owns PostgreSQL storage and migrations.
 - Bootstrap remains the composition root for production adapter registration.
 
-## Gaps to implement
+## Gaps identified at planning import
 
 1. A common lineage model containing `adapter_id`, `upstream_source_id`, `authority_level`,
    `source_type`, `event_time`, `published_at`, `observed_at`, `ingested_at`, `raw_hash` and
@@ -332,7 +389,8 @@ enhancement behind an explicit source and contract review.
 
 ## Scope decision
 
-This checkpoint imports the unmodified specification and records review/planning evidence only. It
-does not add provider capabilities, application ports, product code, dependencies, migrations,
-production configuration, governance events or SPEC-011 engineering state. Implementation remains
-blocked on SPEC-010 closeout and explicit development authorization.
+Checkpoint C implements the bounded policy/document/event fabric and first official/radar adapters.
+It does not implement Checkpoint D's unified Evidence Pack/query service, investment interpretation,
+sentiment, geopolitical intelligence products or recommendation behavior. Broader official source
+families remain roadmap entries behind the same source-neutral contracts and source-specific access
+review.

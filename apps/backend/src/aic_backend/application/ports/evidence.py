@@ -8,10 +8,15 @@ from aic_backend.domain.evidence import (
     AcquisitionCheckpoint,
     AcquisitionClaim,
     AcquisitionPlan,
+    EntityIdentity,
+    EventCandidate,
+    EventDocumentLink,
+    EvidenceQuarantine,
     MacroObservation,
     MacroQueryMode,
     MacroSeriesIdentity,
     ScheduledEvent,
+    SourceDocument,
 )
 
 
@@ -61,3 +66,25 @@ class AcquisitionPlanRepository(Protocol):
         retry_not_before: datetime,
         rate_limit_reset_at: datetime | None = None,
     ) -> AcquisitionCheckpoint: ...
+
+
+class PolicyEventEvidenceRepository(Protocol):
+    async def save_entity(self, value: EntityIdentity) -> SaveResult: ...
+    async def save_document(self, value: SourceDocument) -> SaveResult: ...
+    async def save_event_candidate(self, value: EventCandidate) -> SaveResult: ...
+    async def save_event_document_link(self, value: EventDocumentLink) -> SaveResult: ...
+    async def save_quarantine(self, value: EvidenceQuarantine) -> SaveResult: ...
+    async def quarantines_for_raw(
+        self, raw_observation_id: str
+    ) -> tuple[EvidenceQuarantine, ...]: ...
+    async def documents_as_of(
+        self,
+        as_of: datetime,
+        *,
+        operational_replay: bool = False,
+        publisher_entity_id: str | None = None,
+    ) -> tuple[SourceDocument, ...]: ...
+    async def event_candidates_as_of(
+        self, as_of: datetime, *, operational_replay: bool = False
+    ) -> tuple[EventCandidate, ...]: ...
+    async def links_for_candidate(self, candidate_id: str) -> tuple[EventDocumentLink, ...]: ...

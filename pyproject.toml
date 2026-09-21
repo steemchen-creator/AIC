@@ -121,6 +121,7 @@ source = [
   "aic_backend.providers.tushare",
   "aic_backend.providers.domestic_quotes",
   "aic_backend.providers.fred",
+  "aic_backend.providers.policy_events",
 ]
 
 [tool.coverage.report]

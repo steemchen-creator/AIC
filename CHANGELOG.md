@@ -8,6 +8,14 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-011 Checkpoint C policy/document/event foundation: immutable official document versions,
+  official entity identities, PIT-safe event candidates and append-only radar-to-official evidence
+  links, with durable quarantine reasons for invalid canonical promotion. Migration 0018 is
+  reversible but its downgrade removes Checkpoint C evidence.
+- Direct Federal Reserve RSS and SEC EDGAR adapters plus a discovery-only GDELT DOC adapter. The
+  SEC adapter requires a declared User-Agent; GDELT remains `RADAR_ONLY`; CNINFO stays unregistered
+  until machine-access and production-use terms are documented.
+
 - SPEC-011 Checkpoint B macro/PIT and scheduled-event foundation: immutable macro vintages,
   explicit known-at/as-published/latest-revised queries, append-only calendar versions and
   source-agency attribution distinct from the FRED/ALFRED transport identity.

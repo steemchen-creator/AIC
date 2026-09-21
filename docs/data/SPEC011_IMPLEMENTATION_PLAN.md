@@ -298,6 +298,11 @@ substitute for an official macro series with a different definition.
 
 ## Checkpoint C — Policy, People and Event Intelligence
 
+Implementation status (2026-09-22): the source-neutral document/entity/event foundation,
+Federal Reserve RSS, SEC EDGAR, discovery-only GDELT adapters and PostgreSQL migration 0018 are
+implemented for review. The remaining source universe stays on the roadmap and Checkpoint D has
+not started.
+
 ### Domain and ports
 
 - Add `SourceDocument`, immutable `DocumentVersion`, `EventCandidate`, `EntityIdentity` and explicit
