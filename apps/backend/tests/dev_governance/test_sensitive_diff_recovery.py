@@ -1,8 +1,10 @@
 """Chairman recovery traverses the real runner, repository boundary and durable reducer."""
 
+import hashlib
+import json
 from datetime import UTC, datetime, timedelta
 from itertools import count
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import httpx
 import pytest
@@ -17,6 +19,11 @@ from aic_dev_governance.store import LocalFileStateStore
 SENSITIVE = "SENSITIVE_DIFF:master_project_objective"
 OLD_HEAD = "a" * 40
 HEAD = "d" * 40
+MAIN = "c" * 40
+HEAD_BLOB = "1" * 40
+MAIN_BLOB = "2" * 40
+EQUAL_BLOB = "8" * 40
+TECHNICAL_DEBT = "docs/project/TECHNICAL_DEBT.md"
 
 
 @pytest.fixture
@@ -27,7 +34,9 @@ def recovery(tmp_path, state, item, pr, policy):
     pr.draft = True
     repository = Mock(spec=GitHubClient)
     repository.pull_request.side_effect = lambda number: pr.model_copy(deep=True)
-    repository.changed_paths.return_value = ["docs/project/TECHNICAL_DEBT.md"]
+    repository.changed_paths.return_value = [TECHNICAL_DEBT]
+    repository.ref.return_value = MAIN
+    repository.blob_sha.side_effect = lambda path, ref: HEAD_BLOB if ref == HEAD else MAIN_BLOB
     repository.ci.side_effect = lambda current, policy: CI(
         head_sha=current.head_sha, status="FAILED"
     )
@@ -101,10 +110,20 @@ def test_clean_head_preserves_latch_then_chairman_recovery_and_fresh_ci(recovery
     assert event.actor == "chairman" and event.input_sha == HEAD
     assert event.event_type == EventType.SENSITIVE_DIFF_REVALIDATED
     assert event.metadata["pr_number"] == "12"
+    assert event.metadata["pr_head_sha"] == HEAD
     assert event.metadata["base_sha"] == "b" * 40
+    assert event.metadata["captured_main_sha"] == MAIN
     assert len(event.metadata["changed_paths_sha256"]) == 64
+    assert event.metadata["raw_changed_paths_sha256"] == event.metadata["changed_paths_sha256"]
+    assert (
+        event.metadata["effective_changed_paths_sha256"]
+        == event.metadata["raw_changed_paths_sha256"]
+    )
+    assert event.metadata["equalized_sensitive_blobs"] == "{}"
     assert github.pull_request.call_count == 2
     github.changed_paths.assert_called_once_with(12)
+    assert github.ref.call_count == 2
+    github.blob_sha.assert_not_called()
     github.ci.assert_not_called()
     github.merge.assert_not_called()
     stored, new_revision = runtime.store.load()
@@ -196,6 +215,94 @@ def test_any_current_sensitive_area_rejected(recovery, tmp_path, path):
     assert runtime.store.load() == before
 
 
+def test_merge_base_only_sensitive_path_with_equal_blobs_is_excluded(recovery, tmp_path):
+    runtime, github, _, work = recovery
+    other = "apps/backend/application/example.py"
+    raw_paths = [TECHNICAL_DEBT, other]
+    github.changed_paths.return_value = raw_paths
+    github.blob_sha.side_effect = None
+    github.blob_sha.return_value = EQUAL_BLOB
+
+    recovered = command(recovery, tmp_path)
+
+    event = recovered.events[-1]
+    assert recovered.work_items[work].blocked_reasons == []
+    assert event.metadata["captured_main_sha"] == MAIN
+    assert event.metadata["raw_changed_paths_sha256"] == hashlib.sha256(
+        json.dumps(sorted(raw_paths), separators=(",", ":")).encode()
+    ).hexdigest()
+    assert event.metadata["effective_changed_paths_sha256"] == hashlib.sha256(
+        json.dumps([other], separators=(",", ":")).encode()
+    ).hexdigest()
+    assert json.loads(event.metadata["equalized_sensitive_blobs"]) == {
+        TECHNICAL_DEBT: EQUAL_BLOB
+    }
+    assert github.blob_sha.call_args_list == [
+        call(TECHNICAL_DEBT, HEAD),
+        call(TECHNICAL_DEBT, MAIN),
+    ]
+
+
+@pytest.mark.parametrize("missing_ref", [HEAD, MAIN])
+def test_sensitive_path_missing_at_either_ref_fails_closed(recovery, tmp_path, missing_ref):
+    runtime, github, _, _ = recovery
+    github.changed_paths.return_value = [TECHNICAL_DEBT]
+    github.blob_sha.side_effect = (
+        lambda path, ref: None if ref == missing_ref else EQUAL_BLOB
+    )
+    before = runtime.store.load()
+
+    with pytest.raises(GovernanceError, match="SENSITIVE_DIFF_REVALIDATION_BLOB_MISSING"):
+        command(recovery, tmp_path)
+
+    assert runtime.store.load() == before
+
+
+def test_main_move_during_revalidation_fails_closed(recovery, tmp_path):
+    runtime, github, _, _ = recovery
+    github.changed_paths.return_value = [TECHNICAL_DEBT]
+    github.blob_sha.side_effect = None
+    github.blob_sha.return_value = EQUAL_BLOB
+    github.ref.side_effect = [MAIN, "e" * 40]
+    before = runtime.store.load()
+
+    with pytest.raises(GovernanceError, match="SENSITIVE_DIFF_REVALIDATION_MAIN_CHANGED"):
+        command(recovery, tmp_path)
+
+    assert runtime.store.load() == before
+
+
+def test_only_equalized_sensitive_paths_are_removed(recovery, tmp_path):
+    runtime, github, _, _ = recovery
+    workflow = ".github/workflows/ci.yml"
+    github.changed_paths.return_value = [TECHNICAL_DEBT, workflow]
+
+    def blobs(path, ref):
+        if path == TECHNICAL_DEBT:
+            return EQUAL_BLOB
+        return HEAD_BLOB if ref == HEAD else MAIN_BLOB
+
+    github.blob_sha.side_effect = blobs
+    before = runtime.store.load()
+
+    with pytest.raises(GovernanceError, match="SENSITIVE_DIFF_STILL_PRESENT"):
+        command(recovery, tmp_path)
+
+    assert runtime.store.load() == before
+
+
+def test_blob_evidence_read_failure_fails_closed(recovery, tmp_path):
+    runtime, github, _, _ = recovery
+    github.changed_paths.return_value = [TECHNICAL_DEBT]
+    github.blob_sha.side_effect = GovernanceError("GITHUB_UNAVAILABLE")
+    before = runtime.store.load()
+
+    with pytest.raises(GovernanceError, match="GITHUB_UNAVAILABLE"):
+        command(recovery, tmp_path)
+
+    assert runtime.store.load() == before
+
+
 @pytest.mark.parametrize(
     "field,value",
     [
@@ -219,7 +326,16 @@ def test_actual_pr_identity_must_match(recovery, tmp_path, field, value):
 
 
 @pytest.mark.parametrize(
-    "field,value", [("head_sha", OLD_HEAD), ("base_sha", "f" * 40), ("state", "CLOSED")]
+    "field,value",
+    [
+        ("number", 99),
+        ("head_sha", OLD_HEAD),
+        ("base_sha", "f" * 40),
+        ("branch", "feature/another"),
+        ("head_repository", "other/AIC"),
+        ("base_branch", "other"),
+        ("state", "CLOSED"),
+    ],
 )
 def test_pr_changes_during_diff_read_abort(recovery, tmp_path, field, value):
     runtime, github, pr, _ = recovery
@@ -397,3 +513,36 @@ def test_github_diff_ceiling_fails_closed():
     github.pages = Mock(return_value=[{"filename": "module.py"}] * 3000)
     with pytest.raises(GovernanceError, match="GITHUB_DIFF_INCOMPLETE"):
         github.changed_paths(19)
+
+
+def test_github_blob_identity_uses_exact_ref_and_reports_missing():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        if request.url.params["ref"] == MAIN:
+            return httpx.Response(404)
+        return httpx.Response(200, json={"type": "file", "sha": EQUAL_BLOB})
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as transport:
+        github = GitHubClient(transport, "steemchen-creator/AIC")
+        assert github.blob_sha(TECHNICAL_DEBT, HEAD) == EQUAL_BLOB
+        assert github.blob_sha(TECHNICAL_DEBT, MAIN) is None
+
+    assert seen[0].url.params["ref"] == HEAD
+    assert seen[0].url.path.endswith("/contents/docs/project/TECHNICAL_DEBT.md")
+
+
+@pytest.mark.parametrize(
+    "ref,response",
+    [
+        ("main", {"type": "file", "sha": EQUAL_BLOB}),
+        (HEAD, {"type": "dir", "sha": EQUAL_BLOB}),
+        (HEAD, {"type": "file", "sha": "not-a-sha"}),
+    ],
+)
+def test_github_blob_identity_rejects_non_exact_evidence(ref, response):
+    github = GitHubClient(Mock(), "steemchen-creator/AIC")
+    github.request = Mock(return_value=response)
+    with pytest.raises(GovernanceError, match="GITHUB_BLOB_EVIDENCE_INVALID"):
+        github.blob_sha(TECHNICAL_DEBT, ref)

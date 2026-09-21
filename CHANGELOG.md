@@ -13,10 +13,41 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   and dependency investigation. This planning artifact starts no product code, schema migration,
   implementation PR or SPEC-011 engineering state before SPEC-010 closeout.
 
+- DEV-GOV-RECOVERY-003 effective sensitive-diff revalidation compares immutable blob identity
+  at the exact PR HEAD and a captured current `main` SHA. Only sensitive paths present with equal
+  blobs are excluded from the effective diff; missing/unequal evidence and PR/main drift fail
+  closed, with raw/effective path digests and equalized blob identities retained in audit metadata.
+
 - DEV-GOV-RECOVERY-002 Chairman-only `SENSITIVE_DIFF_REVALIDATED` event, with live PR
   identity/diff revalidation, exact-HEAD binding, append-only audit, mixed-incident rejection
   and preservation of recoverable CI failure state. Renamed source paths and incomplete
   GitHub diff evidence fail closed; existing Governance Gate and branch protection are unchanged.
+
+- SPEC-010 multi-horizon and trading-style taxonomies, immutable Trade Plan lifecycle, one-active-
+  plan-per-portfolio/instrument invariant and append-only revisions with anti-loss-relabel guards.
+- Idempotent entry, scale-in, hold, reduce and exit directives; deterministic hard/profit/trailing/
+  time/expiry/invalidation evaluation; PIT observation checks and next-eligible-open locks.
+- Existing execution/risk-chain integration with order/fill/rejection links, Champion/Shadow
+  isolation, Equity/domestic ETF/Nasdaq-QDII compatibility and fail-closed Index references.
+- Outcome/adherence evidence, in-memory/PostgreSQL repository parity, reversible migration 0014,
+  deterministic tests, design/migration documentation and recorded V1 limitations.
+- SPEC-010 Architecture Review fixes: PIT-bound directive creation and atomic terminal events,
+  authoritative position semantics and durable stop/target consumption, serialized PostgreSQL
+  appends, pending-execution outcome protection, and immutable draft instrument/portfolio identity
+  with regression coverage for all five blockers.
+- SPEC-010 follow-up execution-idempotency repair: durable deterministic-order claims and
+  authoritative outcome/account recovery receipts, reconciliation before Trade Plan position
+  checks, immutable original execution links, reversible migration 0015, and PostgreSQL
+  conflict/restart regression coverage for SCALE_IN, REDUCE, EXIT and rejected executions.
+- FIX-SPEC010-001 terminal execution isolation: cancelled/completed plans reject all pending
+  directives, expiry/invalidation allow only their audited settlement EXIT, and an unresolved
+  settlement blocks same-portfolio successors across PostgreSQL restarts. Immutable outcomes now
+  replay durable authoritative receipts and bind source identity, portfolio, instrument, `as_of`,
+  provenance and order IDs instead of accepting caller-supplied P&L or position values.
+- FIX-SPEC010-002 atomic execution/lifecycle fence: directive execution, terminal transitions,
+  terminal settlement and successor activation now serialize by portfolio/instrument across
+  PostgreSQL workers, re-read authoritative plan state after lock acquisition, and retain durable
+  receipt reconciliation without duplicate financial execution.
 
 - DEV-GOV-RECOVERY-001 protected principals-only deployment-policy rotation, with immutable
   setup preservation, chained canonical fingerprints, complete non-secret policy snapshots,
