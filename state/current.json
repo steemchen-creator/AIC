@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 155,
+  "revision": 156,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -600,7 +600,7 @@
         "remote_branch_deleted": "true",
         "workspace_clean": "true"
       },
-      "next_spec_requested": false,
+      "next_spec_requested": true,
       "memory_update_required": false
     }
   },
@@ -2356,6 +2356,16 @@
         "remote_branch_deleted": "true",
         "workspace_clean": "true"
       }
+    },
+    {
+      "event_id": "c68a363793044d69ad62ca812ca14013",
+      "event_type": "NEXT_SPEC_REQUESTED",
+      "timestamp": "2026-09-21T16:05:48.110943Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "github-actions[bot]",
+      "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+      "output_state": "CLOSED",
+      "metadata": {}
     }
   ],
   "tasks": {
