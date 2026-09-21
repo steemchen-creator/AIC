@@ -1,0 +1,10 @@
+{
+  "event_id": "0f446a5e2aa04b4e9c137371a901f14d",
+  "event_type": "CLOSEOUT_STARTED",
+  "timestamp": "2026-09-21T08:57:37.748560Z",
+  "work_item_id": "SPEC-010",
+  "actor": "github-actions[bot]",
+  "input_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+  "output_state": "CLOSEOUT",
+  "metadata": {}
+}
