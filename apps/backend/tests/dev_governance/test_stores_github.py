@@ -206,6 +206,124 @@ def client(handler, **kwargs):
     )
 
 
+def test_file_keeps_inline_base64_path_without_blob_fallback():
+    paths = []
+
+    def handle(request):
+        paths.append(request.url.path)
+        return httpx.Response(
+            200,
+            json={
+                "type": "file",
+                "encoding": "base64",
+                "content": base64.b64encode("正文".encode()).decode(),
+            },
+        )
+
+    assert client(handle).file("docs/test.md", "a" * 40) == "正文"
+    assert not any("/git/blobs/" in path for path in paths)
+
+
+def test_file_reads_encoding_none_from_immutable_blob():
+    sha = "a" * 40
+
+    def handle(request):
+        if "/contents/" in request.url.path:
+            return httpx.Response(200, json={"type": "file", "encoding": "none", "sha": sha})
+        assert request.url.path.endswith(f"/git/blobs/{sha}")
+        return httpx.Response(
+            200,
+            json={
+                "sha": sha,
+                "encoding": "base64",
+                "content": base64.b64encode("完整状态".encode()).decode(),
+            },
+        )
+
+    assert client(handle).file("state/current.json", "b" * 40) == "完整状态"
+
+
+@pytest.mark.parametrize("sha", [None, "short", "g" * 40])
+def test_file_encoding_none_rejects_missing_or_invalid_blob_sha(sha):
+    calls = []
+
+    def handle(request):
+        calls.append(request.url.path)
+        return httpx.Response(200, json={"type": "file", "encoding": "none", "sha": sha})
+
+    with pytest.raises(GovernanceError, match="ARTIFACT_ENCODING_INVALID"):
+        client(handle).file("state/current.json", "b" * 40)
+    assert not any("/git/blobs/" in path for path in calls)
+
+
+@pytest.mark.parametrize(
+    "blob",
+    [
+        {"sha": "b" * 40, "encoding": "base64", "content": "e30="},
+        {"sha": "a" * 40, "encoding": "none", "content": "e30="},
+        {"sha": "a" * 40, "encoding": "base64", "content": None},
+    ],
+)
+def test_file_encoding_none_rejects_invalid_blob_response(blob):
+    sha = "a" * 40
+
+    def handle(request):
+        if "/contents/" in request.url.path:
+            return httpx.Response(200, json={"type": "file", "encoding": "none", "sha": sha})
+        return httpx.Response(200, json=blob)
+
+    with pytest.raises(GovernanceError, match="ARTIFACT_ENCODING_INVALID"):
+        client(handle).file("state/current.json", "b" * 40)
+
+
+@pytest.mark.parametrize("failure", ["http", "transport"])
+def test_file_encoding_none_fails_closed_when_blob_read_fails(failure):
+    sha = "a" * 40
+
+    def handle(request):
+        if "/contents/" in request.url.path:
+            return httpx.Response(200, json={"type": "file", "encoding": "none", "sha": sha})
+        if failure == "http":
+            return httpx.Response(404)
+        raise httpx.ConnectError("unavailable")
+
+    expected = "GITHUB_HTTP_404" if failure == "http" else "GITHUB_UNAVAILABLE"
+    with pytest.raises(GovernanceError, match=expected):
+        client(handle, attempts=1).file("state/current.json", "b" * 40)
+
+
+def test_file_rejects_non_file_contents_response():
+    response = {"type": "dir", "encoding": "none", "sha": "a" * 40}
+    with pytest.raises(GovernanceError, match="ARTIFACT_ENCODING_INVALID"):
+        client(lambda request: httpx.Response(200, json=response)).file("state", "b" * 40)
+
+
+def test_github_state_store_loads_large_state_through_blob_fallback():
+    revision = "b" * 40
+    blob_sha = "a" * 40
+    payload = State().model_dump_json() + (" " * 1_048_577)
+    assert len(payload.encode()) > 1_048_576
+
+    def handle(request):
+        if "/git/ref/heads/automation/dev-state" in request.url.path:
+            return httpx.Response(200, json={"object": {"sha": revision}})
+        if "/contents/state/current.json" in request.url.path:
+            return httpx.Response(
+                200, json={"type": "file", "encoding": "none", "sha": blob_sha}
+            )
+        assert request.url.path.endswith(f"/git/blobs/{blob_sha}")
+        return httpx.Response(
+            200,
+            json={
+                "sha": blob_sha,
+                "encoding": "base64",
+                "content": base64.b64encode(payload.encode()).decode(),
+            },
+        )
+
+    assert GitHubStateBranchStore(client(handle)).load() == (State(), revision)
+
+
 @pytest.mark.parametrize("code", [401, 403, 404, 409, 422, 429, 500, 502, 503, 504])
 def test_http_failures_bounded_and_sanitized(code):
     calls = []
