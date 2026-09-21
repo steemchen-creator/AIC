@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 187,
+  "revision": 188,
   "current_work_item": "SPEC-011-C",
   "work_items": {
     "DEV-GOV-001": {
@@ -2798,6 +2798,16 @@
       "timestamp": "2026-09-21T17:36:39.735497Z",
       "work_item_id": "SPEC-011-C",
       "actor": "aic-architect-2",
+      "input_sha": "00ee619553313a1b97eac0ead03733d456173a56",
+      "output_state": "ARCHITECTURE_REVIEWING",
+      "metadata": {}
+    },
+    {
+      "event_id": "7da1397ca09841c095d84c711fe29dd4",
+      "event_type": "CI_PASSED",
+      "timestamp": "2026-09-21T17:36:49.159664Z",
+      "work_item_id": "SPEC-011-C",
+      "actor": "github-actions[bot]",
       "input_sha": "00ee619553313a1b97eac0ead03733d456173a56",
       "output_state": "ARCHITECTURE_REVIEWING",
       "metadata": {}
