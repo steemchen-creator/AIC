@@ -223,6 +223,11 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 - Architecture audit remediation for isolated Mock fixtures, validated immutable
   Domain Events, expanded dependency-rule tests, and explicit liveness semantics.
 
+### Fixed
+
+- Allow the GitHub governance client to read `encoding: none` Contents API responses through
+  the immutable, SHA-verified Git Blobs API while preserving the existing inline base64 path.
+
 ### Changed
 
 - Corrected DEV-GOV Bootstrap CI evaluation so non-required trusted workflows cannot block

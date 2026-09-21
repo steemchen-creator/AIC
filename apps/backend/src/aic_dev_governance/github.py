@@ -234,9 +234,29 @@ class GitHubClient:
 
     def file(self, path: str, ref: str) -> str:
         raw = self.request("GET", f"/contents/{quote(path, safe='/')}?ref={quote(ref, safe='')}")
-        if raw.get("encoding") != "base64" or raw.get("type") != "file":
+        if not isinstance(raw, dict) or raw.get("type") != "file":
             raise GovernanceError("ARTIFACT_ENCODING_INVALID")
-        return base64.b64decode(raw["content"]).decode("utf-8")
+        if raw.get("encoding") == "none":
+            sha = raw.get("sha")
+            if not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{40}", sha) is None:
+                raise GovernanceError("ARTIFACT_ENCODING_INVALID")
+            blob = self.request("GET", f"/git/blobs/{sha}")
+            if (
+                not isinstance(blob, dict)
+                or blob.get("sha") != sha
+                or blob.get("encoding") != "base64"
+                or not isinstance(blob.get("content"), str)
+            ):
+                raise GovernanceError("ARTIFACT_ENCODING_INVALID")
+            content = blob["content"]
+        elif raw.get("encoding") == "base64" and isinstance(raw.get("content"), str):
+            content = raw["content"]
+        else:
+            raise GovernanceError("ARTIFACT_ENCODING_INVALID")
+        try:
+            return base64.b64decode(content).decode("utf-8")
+        except (ValueError, UnicodeDecodeError) as error:
+            raise GovernanceError("ARTIFACT_ENCODING_INVALID") from error
 
     def merge(self, number: int, expected_head_sha: str) -> str:
         result = self.request(
