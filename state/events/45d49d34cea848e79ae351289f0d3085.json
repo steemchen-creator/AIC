@@ -1,0 +1,10 @@
+{
+  "event_id": "45d49d34cea848e79ae351289f0d3085",
+  "event_type": "ARCH_REVIEW_STARTED",
+  "timestamp": "2026-09-21T17:36:39.735497Z",
+  "work_item_id": "SPEC-011-C",
+  "actor": "aic-architect-2",
+  "input_sha": "00ee619553313a1b97eac0ead03733d456173a56",
+  "output_state": "ARCHITECTURE_REVIEWING",
+  "metadata": {}
+}
