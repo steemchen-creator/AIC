@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 110,
+  "revision": 111,
   "current_work_item": "SPEC-011",
   "work_items": {
     "DEV-GOV-001": {
@@ -1704,6 +1704,16 @@
       "event_id": "59e5e69f68ea4c1898f48548debeac34",
       "event_type": "CI_PASSED",
       "timestamp": "2026-09-21T12:49:23.954136Z",
+      "work_item_id": "SPEC-011",
+      "actor": "github-actions[bot]",
+      "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+      "output_state": "FINAL_APPROVED",
+      "metadata": {}
+    },
+    {
+      "event_id": "08fbc9d9279f45169a5a88864f673ea7",
+      "event_type": "CI_PASSED",
+      "timestamp": "2026-09-21T14:19:12.981377Z",
       "work_item_id": "SPEC-011",
       "actor": "github-actions[bot]",
       "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
