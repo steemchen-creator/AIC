@@ -1,7 +1,7 @@
 # SPEC-011 Source, Capability and Dependency Roadmap
 
-Status: approved roadmap; Checkpoint A implementation status recorded
-Review date: 2026-09-21
+Status: approved roadmap; Checkpoints A-C implementation status recorded
+Review date: 2026-09-22
 
 ## Source matrix
 
@@ -38,6 +38,12 @@ Checkpoint A implementation status (2026-09-21): the three domestic quote adapte
 fixtures exist, but all remain disabled by default. Production enablement requires a separately
 reviewed `upstream_access_authorized=true` record for the actual upstream; AKShare, efinance,
 easyquotation and other clients grant no upstream rights and do not add independent votes.
+
+Checkpoint C implementation status (2026-09-22): owned adapters now cover the Federal Reserve
+official RSS metadata contract, SEC EDGAR submissions API and GDELT DOC radar. SEC requires a
+declared `AIC_SEC_USER_AGENT`; GDELT remains `RADAR_ONLY`; CNINFO is not registered because its
+machine-access and production-use terms remain unresolved. See
+`SPEC011_CHECKPOINT_C_SOURCE_DILIGENCE.md` for upstream/license evidence.
 
 ## Global Cross-Asset Market Pulse capability universe
 

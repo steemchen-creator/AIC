@@ -14,6 +14,17 @@ from aic_backend.domain.evidence.models import (
     ScheduledEventType,
     SeasonalAdjustment,
 )
+from aic_backend.domain.evidence.policy_events import (
+    DocumentType,
+    EntityIdentity,
+    EntityType,
+    EventCandidate,
+    EventDocumentLink,
+    EventDocumentRelation,
+    EvidenceQuarantine,
+    EvidenceVerification,
+    SourceDocument,
+)
 
 __all__ = [
     "AcquisitionCadenceKind",
@@ -28,4 +39,13 @@ __all__ = [
     "ScheduledEventStatus",
     "ScheduledEventType",
     "SeasonalAdjustment",
+    "DocumentType",
+    "EntityIdentity",
+    "EntityType",
+    "EvidenceQuarantine",
+    "EventCandidate",
+    "EventDocumentLink",
+    "EventDocumentRelation",
+    "EvidenceVerification",
+    "SourceDocument",
 ]

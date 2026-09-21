@@ -6,7 +6,12 @@ from enum import StrEnum
 from typing import TypeVar
 
 from aic_backend.application.ports.persistence import PersistedDailyBar
-from aic_backend.domain.evidence import MacroObservation, ScheduledEvent
+from aic_backend.domain.evidence import (
+    EventCandidate,
+    MacroObservation,
+    ScheduledEvent,
+    SourceDocument,
+)
 from aic_backend.domain.market_data import (
     AdjustmentFactor,
     AdjustmentMode,
@@ -40,6 +45,8 @@ PITRecord = (
     | MarketQuote
     | MacroObservation
     | ScheduledEvent
+    | SourceDocument
+    | EventCandidate
 )
 
 
@@ -179,6 +186,36 @@ class DataAvailabilityPolicy:
             else "published_at+observed_at"
         )
         return self._at(value.event_version_id, available_at, source, context)
+
+    def source_document(
+        self, value: SourceDocument, context: PointInTimeContext
+    ) -> AvailabilityDecision:
+        available_at = (
+            value.ingested_at
+            if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
+            else max(value.published_at, value.observed_at)
+        )
+        source = (
+            "ingested_at"
+            if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
+            else "published_at+observed_at"
+        )
+        return self._at(value.document_version_id, available_at, source, context)
+
+    def event_candidate(
+        self, value: EventCandidate, context: PointInTimeContext
+    ) -> AvailabilityDecision:
+        available_at = (
+            value.ingested_at
+            if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
+            else max(value.detected_at, value.observed_at)
+        )
+        source = (
+            "ingested_at"
+            if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
+            else "detected_at+observed_at"
+        )
+        return self._at(value.candidate_id, available_at, source, context)
 
     def corporate_action(
         self, value: CorporateAction, context: PointInTimeContext

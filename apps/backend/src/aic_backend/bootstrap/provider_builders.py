@@ -10,6 +10,14 @@ from aic_backend.providers.domestic_quotes import (
     build_tencent_quote_provider,
 )
 from aic_backend.providers.fred import FRED_IMPLEMENTATION, build_fred_provider
+from aic_backend.providers.policy_events import (
+    FEDERAL_RESERVE_IMPLEMENTATION,
+    GDELT_IMPLEMENTATION,
+    SEC_EDGAR_IMPLEMENTATION,
+    build_federal_reserve_feed_provider,
+    build_gdelt_radar_provider,
+    build_sec_edgar_provider,
+)
 from aic_backend.providers.tushare import (
     TUSHARE_IMPLEMENTATION,
     build_tushare_daily_provider,
@@ -23,4 +31,7 @@ def provider_builders() -> dict[str, ProviderBuilder]:
         SINA_IMPLEMENTATION: build_sina_quote_provider,
         TENCENT_IMPLEMENTATION: build_tencent_quote_provider,
         FRED_IMPLEMENTATION: build_fred_provider,
+        FEDERAL_RESERVE_IMPLEMENTATION: build_federal_reserve_feed_provider,
+        SEC_EDGAR_IMPLEMENTATION: build_sec_edgar_provider,
+        GDELT_IMPLEMENTATION: build_gdelt_radar_provider,
     }

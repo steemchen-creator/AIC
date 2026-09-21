@@ -21,6 +21,23 @@ commercial-use rights for the upstream are explicitly approved; an open-source l
 never evidence of upstream data rights. Multiple adapters or libraries over one upstream remain one
 reconciliation vote.
 
+## Checkpoint C policy and event sources
+
+The Federal Reserve adapter reads only the Board's allowlisted official RSS endpoints. It supports
+conditional requests, bounds response size and item count, rejects DTD/entity expansion, and emits
+official document metadata rather than interpreted policy conclusions.
+
+The SEC EDGAR adapter calls `data.sec.gov` directly, requires `AIC_SEC_USER_AGENT`, preserves CIK,
+accession, form and acceptance time, follows only validated submissions cursors, and observes the
+SEC fair-access contract. It has no third-party EDGAR runtime dependency.
+
+The GDELT adapter calls DOC 2.0 directly and emits `RADAR_ONLY` candidates. GDELT cannot create or
+overwrite verified official evidence. A later official document is connected through an immutable
+event-document link.
+
+CNINFO remains unregistered until its machine-access and production-use terms are documented. The
+absence of an approved adapter never falls back to a reverse-engineered endpoint.
+
 ## Prohibited
 
 - Caching, persistence, event publication, calculations, or use-case decisions
