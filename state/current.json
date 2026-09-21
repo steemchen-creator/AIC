@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 182,
+  "revision": 183,
   "current_work_item": "SPEC-011-C",
   "work_items": {
     "DEV-GOV-001": {
@@ -608,7 +608,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-011-B",
       "previous_work_item": "SPEC-011-B",
-      "status": "FIXING",
+      "status": "REVIEW_REQUIRED",
       "created_at": "2026-09-21T16:15:41Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -697,7 +697,7 @@
       "blocked_reasons": [],
       "recoverable_failures": [],
       "recovery_stage": null,
-      "unresolved_fix": "ARCH-SPEC011-C-001",
+      "unresolved_fix": null,
       "governance_exception": false,
       "chairman_required": false,
       "changed_areas": [],
@@ -2745,6 +2745,16 @@
       "actor": "github-actions[bot]",
       "input_sha": "00ee619553313a1b97eac0ead03733d456173a56",
       "output_state": "FIXING",
+      "metadata": {}
+    },
+    {
+      "event_id": "b85ed450180a499280027222955e067c",
+      "event_type": "FIX_IMPLEMENTED",
+      "timestamp": "2026-09-21T17:35:02.376460Z",
+      "work_item_id": "SPEC-011-C",
+      "actor": "aic-codex-cto",
+      "input_sha": "00ee619553313a1b97eac0ead03733d456173a56",
+      "output_state": "REVIEW_REQUIRED",
       "metadata": {}
     }
   ],
