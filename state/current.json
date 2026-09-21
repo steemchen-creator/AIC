@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 119,
-  "current_work_item": "SPEC-011",
+  "revision": 120,
+  "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
       "work_item_id": "DEV-GOV-001",
@@ -479,6 +479,54 @@
         "workspace_clean": "true"
       },
       "next_spec_requested": true,
+      "memory_update_required": false
+    },
+    "SPEC-011-B": {
+      "work_item_id": "SPEC-011-B",
+      "kind": "SPEC",
+      "parent_work_item": "SPEC-011",
+      "previous_work_item": "SPEC-011",
+      "status": "PLANNED",
+      "created_at": "2026-09-21T14:31:50.028962Z",
+      "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
+      "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
+      "target_branch": "feature/spec-011-checkpoint-b",
+      "execution_authorization": "CHAIRMAN-DELEGATION-AIC-STANDARD-WORK-V1",
+      "pr_number": null,
+      "head_sha": null,
+      "base_sha": null,
+      "review_artifact": null,
+      "architecture_status": "NOT_REVIEWED",
+      "approved_head_sha": null,
+      "review_id": null,
+      "ci": {
+        "head_sha": null,
+        "status": "UNKNOWN",
+        "required_checks": {},
+        "checks": [],
+        "discovery_complete": false,
+        "branch_protection_enabled": false,
+        "workflow_runs": []
+      },
+      "budget": {
+        "architecture_calls_used": 0,
+        "review_loops": 0,
+        "duplicate_calls_avoided": 0,
+        "budget_limit_hits": 0,
+        "reserved_requests": []
+      },
+      "blocked_reasons": [],
+      "recoverable_failures": [],
+      "recovery_stage": null,
+      "unresolved_fix": null,
+      "governance_exception": false,
+      "chairman_required": false,
+      "changed_areas": [],
+      "merge_eligible": false,
+      "merge_commit": null,
+      "merge_expected_sha": null,
+      "closeout": {},
+      "next_spec_requested": false,
       "memory_update_required": false
     }
   },
@@ -1827,6 +1875,19 @@
       "output_state": "CLOSED",
       "metadata": {
         "task_id": "8e2f5812b815a7e1430b4018defbc72be260ee834e306483bd164df768e9b143"
+      }
+    },
+    {
+      "event_id": "4bf1d0ea31754440834516ec253e3f6c",
+      "event_type": "TASK_RESERVED",
+      "timestamp": "2026-09-21T14:32:14.060048Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "github-actions[bot]",
+      "input_sha": null,
+      "output_state": "PLANNED",
+      "metadata": {
+        "reason": "EXECUTION_AUTHORIZATION",
+        "authorized_actor": "aic-architect-2"
       }
     }
   ],
