@@ -1,0 +1,12 @@
+{
+  "event_id": "a2ff1fa47394421db2cf4a2769671154",
+  "event_type": "TASK_DELIVERED",
+  "timestamp": "2026-09-21T16:16:23.817620Z",
+  "work_item_id": "SPEC-011-C",
+  "actor": "github-actions[bot]",
+  "input_sha": null,
+  "output_state": "SPEC_READY",
+  "metadata": {
+    "task_id": "823fca29554669309681f6064b182afe534215dcccc63e7f46c926f59daf9251"
+  }
+}

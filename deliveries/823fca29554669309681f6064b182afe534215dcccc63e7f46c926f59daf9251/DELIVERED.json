@@ -1,0 +1,10 @@
+{
+  "task_id": "823fca29554669309681f6064b182afe534215dcccc63e7f46c926f59daf9251",
+  "work_item_id": "SPEC-011-C",
+  "kind": "ENGINEERING",
+  "head_sha": null,
+  "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
+  "manifest_path": null,
+  "status": "DELIVERED",
+  "delivery_reference": "https://github.com/steemchen-creator/AIC/issues/30"
+}
