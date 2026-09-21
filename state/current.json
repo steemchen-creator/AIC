@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 126,
+  "revision": 127,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -486,7 +486,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-011",
       "previous_work_item": "SPEC-011",
-      "status": "REVIEW_REQUIRED",
+      "status": "CHAIRMAN_DECISION_REQUIRED",
       "created_at": "2026-09-21T14:31:50.028962Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -515,12 +515,14 @@
         "budget_limit_hits": 0,
         "reserved_requests": []
       },
-      "blocked_reasons": [],
+      "blocked_reasons": [
+        "SENSITIVE_DIFF:secret_permission_model"
+      ],
       "recoverable_failures": [],
       "recovery_stage": null,
       "unresolved_fix": null,
       "governance_exception": false,
-      "chairman_required": false,
+      "chairman_required": true,
       "changed_areas": [],
       "merge_eligible": false,
       "merge_commit": null,
@@ -1954,6 +1956,18 @@
       "output_state": "REVIEW_REQUIRED",
       "metadata": {
         "review_artifact": "REVIEW-SPEC011.md"
+      }
+    },
+    {
+      "event_id": "f4678cbd14484dc8ae4abd871fc932b7",
+      "event_type": "CHAIRMAN_ESCALATION",
+      "timestamp": "2026-09-21T15:06:56.652766Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "github-actions[bot]",
+      "input_sha": "36665c5ff0555f1bc45f658bc01753f707b5701e",
+      "output_state": "CHAIRMAN_DECISION_REQUIRED",
+      "metadata": {
+        "reason": "SENSITIVE_DIFF:secret_permission_model"
       }
     }
   ],
