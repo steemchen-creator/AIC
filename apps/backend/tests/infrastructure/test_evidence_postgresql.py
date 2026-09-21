@@ -139,11 +139,62 @@ async def test_postgresql_macro_calendar_round_trip_and_restart(engine: AsyncEng
     historical = await restarted.query_macro(
         "CPIAUCSL", MacroQueryMode.AS_PUBLISHED, vintage_date=date(2026, 2, 20)
     )
+    before_observed = await restarted.query_macro(
+        "CPIAUCSL",
+        MacroQueryMode.KNOWN_AT,
+        as_of=datetime(2026, 3, 11, tzinfo=UTC),
+    )
+    known_at_observation = await restarted.query_macro(
+        "CPIAUCSL", MacroQueryMode.KNOWN_AT, as_of=NOW
+    )
     latest = await restarted.query_macro("CPIAUCSL", MacroQueryMode.LATEST_REVISED)
     events = await restarted.scheduled_events_as_of(datetime(2026, 1, 2, tzinfo=UTC))
     assert historical[0].value == Decimal("100")
+    assert before_observed == ()
+    assert known_at_observation[0].value == Decimal("100.2")
     assert latest[0].value == Decimal("100.2")
     assert events == (scheduled_event(),)
+
+
+@pytest.mark.asyncio
+async def test_postgresql_schedule_as_of_requires_observation_time(engine: AsyncEngine) -> None:
+    repository = PostgreSQLEvidenceRepository(engine)
+    value = scheduled_event()
+    observed_at = datetime(2026, 2, 1, tzinfo=UTC)
+    delayed = ScheduledEvent(
+        value.event_version_id,
+        value.event_id,
+        value.event_type,
+        value.subject_id,
+        value.scheduled_start,
+        value.scheduled_end,
+        value.timezone,
+        value.status,
+        value.version,
+        value.predecessor_version_id,
+        value.published_at,
+        observed_at,
+        observed_at,
+        value.actual_evidence_ids,
+        SourceLineage(
+            value.lineage.adapter_id,
+            value.lineage.upstream_source_id,
+            value.lineage.authority_level,
+            value.lineage.source_type,
+            value.lineage.event_time,
+            observed_at,
+            observed_at,
+            value.lineage.raw_hash,
+            value.lineage.transformation_version,
+            published_at=value.published_at,
+            source_uri=value.lineage.source_uri,
+        ),
+    )
+    await repository.save_scheduled_event(delayed)
+
+    assert not await repository.scheduled_events_as_of(datetime(2026, 1, 15, tzinfo=UTC))
+    restarted = PostgreSQLEvidenceRepository(engine)
+    assert await restarted.scheduled_events_as_of(observed_at) == (delayed,)
 
 
 @pytest.mark.asyncio

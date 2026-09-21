@@ -273,7 +273,11 @@ def _select_macro(
     if mode is MacroQueryMode.KNOWN_AT:
         if as_of is None or as_of.tzinfo is None:
             raise ValueError("KNOWN_AT requires aware as_of")
-        eligible = [value for value in values if value.source_known_at <= as_of]
+        eligible = [
+            value
+            for value in values
+            if max(value.source_known_at, value.observed_at) <= as_of
+        ]
     elif mode is MacroQueryMode.AS_PUBLISHED:
         if vintage_date is None:
             raise ValueError("AS_PUBLISHED requires vintage_date")
@@ -412,17 +416,20 @@ class PostgreSQLEvidenceRepository(
     async def scheduled_events_as_of(
         self, as_of: datetime, *, operational_replay: bool = False
     ) -> tuple[ScheduledEvent, ...]:
-        field = (
-            scheduled_events.c.ingested_at
+        predicates = (
+            (scheduled_events.c.ingested_at <= as_of,)
             if operational_replay
-            else scheduled_events.c.published_at
+            else (
+                scheduled_events.c.published_at <= as_of,
+                scheduled_events.c.observed_at <= as_of,
+            )
         )
         async with self._engine.connect() as connection:
             rows = (
                 (
                     await connection.execute(
                         select(scheduled_events)
-                        .where(field <= as_of)
+                        .where(*predicates)
                         .order_by(scheduled_events.c.event_id, scheduled_events.c.version)
                     )
                 )
@@ -685,7 +692,12 @@ class InMemoryEvidenceRepository(
         for value in sorted(
             self.events.values(), key=lambda value: (value.event_id, value.version)
         ):
-            if (value.ingested_at if operational_replay else value.published_at) <= as_of:
+            available_at = (
+                value.ingested_at
+                if operational_replay
+                else max(value.published_at, value.observed_at)
+            )
+            if available_at <= as_of:
                 latest[value.event_id] = value
         return tuple(
             sorted(latest.values(), key=lambda value: (value.scheduled_start, value.event_id))

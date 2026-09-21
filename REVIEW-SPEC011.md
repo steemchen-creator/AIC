@@ -33,9 +33,11 @@ underlying agency fact for independence purposes. Query modes are explicit:
 deterministic predecessor link; a later revision never replaces an earlier value.
 
 `ScheduledEvent` appends publication, reschedule, cancellation and completion versions. Research
-queries select the version published by the requested time; operational replay selects the version
-actually ingested by that time. Completion requires immutable links to the actual raw observation,
-macro vintage or later document evidence.
+queries select only versions both published and observed by the requested time; operational replay
+selects the version actually ingested by that time. Macro `KNOWN_AT` applies the same source-time
+plus observation-time boundary, so later backfill cannot appear in an earlier historical view.
+Completion requires immutable links to the actual raw observation, macro vintage or later document
+evidence.
 
 Acquisition plans hold normal and release-window cadence, bounded overlap, cursor, watermark,
 last-success and retry state. PostgreSQL claims lock the checkpoint row and issue a monotonically
@@ -61,7 +63,7 @@ downgrade is destructive and requires stopped workers, backup and separate opera
 | Requirement | Deterministic evidence |
 | --- | --- |
 | Latest versus historical vintage, revision chain and source-agency identity | `test_spec011_macro_calendar.py`; `test_evidence_postgresql.py` |
-| Publication/vintage/as-of boundary and future-vintage rejection | `test_spec011_macro_calendar.py` |
+| Publication/vintage/observation/as-of boundary, delayed-backfill exclusion and future-vintage rejection | `test_spec011_macro_calendar.py`; `test_evidence_postgresql.py` |
 | Schedule reschedule, cancellation and actual-release linkage | `test_spec011_macro_calendar.py`; `test_evidence_postgresql.py` |
 | Official FRED/ALFRED contract, bounded credentials and revision request | `test_fred_provider.py` |
 | Release-window cadence and bounded-overlap cursor | `test_macro_acquisition.py` |

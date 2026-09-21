@@ -160,8 +160,8 @@ class DataAvailabilityPolicy:
             return self._at(value.observation_id, value.ingested_at, "ingested_at", context)
         return self._at(
             value.observation_id,
-            value.source_known_at,
-            "release_at+vintage_date",
+            max(value.source_known_at, value.observed_at),
+            "release_at+vintage_date+observed_at",
             context,
         )
 
@@ -171,12 +171,12 @@ class DataAvailabilityPolicy:
         available_at = (
             value.ingested_at
             if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
-            else value.published_at
+            else max(value.published_at, value.observed_at)
         )
         source = (
             "ingested_at"
             if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
-            else "published_at"
+            else "published_at+observed_at"
         )
         return self._at(value.event_version_id, available_at, source, context)
 

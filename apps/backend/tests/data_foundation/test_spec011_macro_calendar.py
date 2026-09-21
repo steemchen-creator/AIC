@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
@@ -59,16 +60,18 @@ def event(
     scheduled_start: datetime,
     *,
     evidence: tuple[str, ...] = (),
+    observed_at: datetime | None = None,
 ) -> ScheduledEvent:
     version_id = f"fomc-2026-09-v{version}"
+    observed_at = observed_at or published_at
     lineage = SourceLineage(
         "federal_reserve_calendar",
         "FEDERAL_RESERVE",
         AuthorityLevel.PRIMARY,
         SourceType.OFFICIAL_API,
         published_at,
-        published_at,
-        published_at,
+        observed_at,
+        observed_at,
         f"{version:064x}",
         "scheduled-event/v1",
         published_at=published_at,
@@ -86,8 +89,8 @@ def event(
         version,
         None if version == 1 else f"fomc-2026-09-v{version - 1}",
         published_at,
-        published_at,
-        published_at,
+        observed_at,
+        observed_at,
         evidence,
         lineage,
     )
@@ -101,6 +104,30 @@ async def test_macro_latest_vintage_and_historical_as_of_are_distinct() -> None:
         observed_at=OBSERVED,
         ingested_at=OBSERVED,
         raw_hash="a" * 64,
+    )
+    first_observed = datetime(2020, 2, 8, tzinfo=UTC)
+    revised_observed = datetime(2020, 3, 7, tzinfo=UTC)
+    observations = (
+        replace(
+            observations[0],
+            observed_at=first_observed,
+            ingested_at=first_observed,
+            lineage=replace(
+                observations[0].lineage,
+                observed_at=first_observed,
+                ingested_at=first_observed,
+            ),
+        ),
+        replace(
+            observations[1],
+            observed_at=revised_observed,
+            ingested_at=revised_observed,
+            lineage=replace(
+                observations[1].lineage,
+                observed_at=revised_observed,
+                ingested_at=revised_observed,
+            ),
+        ),
     )
     repository = InMemoryEvidenceRepository()
     await repository.save_series(series)
@@ -134,6 +161,29 @@ async def test_macro_latest_vintage_and_historical_as_of_are_distinct() -> None:
     assert direct_bls.authority_key == series.authority_key
 
 
+@pytest.mark.asyncio
+async def test_macro_known_at_excludes_a_later_observed_backfill() -> None:
+    series, observations = MacroNormalizer().normalize_fred(
+        macro_payload(),
+        adapter_id="fred_official",
+        observed_at=OBSERVED,
+        ingested_at=OBSERVED,
+        raw_hash="f" * 64,
+    )
+    repository = InMemoryEvidenceRepository()
+    await repository.save_series(series)
+    for value in observations:
+        await repository.save_macro("raw-backfill", value)
+
+    assert not await repository.query_macro(
+        "PAYEMS",
+        MacroQueryMode.KNOWN_AT,
+        as_of=datetime(2020, 3, 7, tzinfo=UTC),
+    )
+    visible = await repository.query_macro("PAYEMS", MacroQueryMode.KNOWN_AT, as_of=OBSERVED)
+    assert [item.value for item in visible] == [Decimal("102")]
+
+
 def test_macro_pit_rejects_future_vintage_and_supports_operational_replay() -> None:
     _, observations = MacroNormalizer().normalize_fred(
         macro_payload(),
@@ -147,10 +197,7 @@ def test_macro_pit_rejects_future_vintage_and_supports_operational_replay() -> N
     before = PointInTimeContext(
         datetime(2020, 3, 5, 23, 59, tzinfo=UTC), AvailabilityMode.HISTORICAL_RESEARCH
     )
-    after = PointInTimeContext(
-        datetime(2020, 3, 6, 23, 59, 59, 999999, tzinfo=UTC),
-        AvailabilityMode.HISTORICAL_RESEARCH,
-    )
+    after = PointInTimeContext(OBSERVED, AvailabilityMode.HISTORICAL_RESEARCH)
     replay = PointInTimeContext(
         OBSERVED - timedelta(seconds=1), AvailabilityMode.OPERATIONAL_REPLAY
     )
@@ -201,3 +248,29 @@ async def test_schedule_history_reschedule_cancellation_and_actual_linkage() -> 
     ].actual_evidence_ids == ("raw_fomc_statement",)
     with pytest.raises(ValueError, match="actual evidence"):
         event(4, ScheduledEventStatus.COMPLETED, completed.published_at, moved_time)
+
+
+@pytest.mark.asyncio
+async def test_schedule_as_of_excludes_a_later_observed_publication() -> None:
+    repository = InMemoryEvidenceRepository()
+    published_at = datetime(2026, 1, 1, tzinfo=UTC)
+    observed_at = datetime(2026, 2, 1, tzinfo=UTC)
+    value = event(
+        1,
+        ScheduledEventStatus.SCHEDULED,
+        published_at,
+        datetime(2026, 9, 16, 18, tzinfo=UTC),
+        observed_at=observed_at,
+    )
+    await repository.save_scheduled_event(value)
+
+    assert not await repository.scheduled_events_as_of(datetime(2026, 1, 15, tzinfo=UTC))
+    assert await repository.scheduled_events_as_of(observed_at) == (value,)
+    policy = DataAvailabilityPolicy()
+    before = PointInTimeContext(
+        datetime(2026, 1, 15, tzinfo=UTC), AvailabilityMode.HISTORICAL_RESEARCH
+    )
+    assert (
+        policy.scheduled_event(value, before).classification
+        is AvailabilityClassification.NOT_YET_AVAILABLE
+    )
