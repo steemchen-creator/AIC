@@ -1,0 +1,10 @@
+{
+  "work_item": "SPEC-011",
+  "review_id": "ARCH-SPEC011-A-4bd99de",
+  "result": "FINAL_APPROVED",
+  "reviewed_head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+  "blocking_items": [],
+  "non_blocking_items": [],
+  "reviewed_at": "2026-09-21T12:48:35Z",
+  "reviewer_role": "CHIEF_INVESTMENT_ARCHITECT"
+}

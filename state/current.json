@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 108,
+  "revision": 109,
   "current_work_item": "SPEC-011",
   "work_items": {
     "DEV-GOV-001": {
@@ -363,7 +363,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-010",
       "previous_work_item": "SPEC-010",
-      "status": "ARCHITECTURE_REVIEWING",
+      "status": "FINAL_APPROVED",
       "created_at": "2026-09-21T12:02:16.343903Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -373,9 +373,9 @@
       "head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
       "base_sha": "dea338e48ccc33e22cbfb87cae6a33638b080ebe",
       "review_artifact": "REVIEW-SPEC011.md",
-      "architecture_status": "REVIEW_REQUIRED",
-      "approved_head_sha": null,
-      "review_id": null,
+      "architecture_status": "FINAL_APPROVED",
+      "approved_head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+      "review_id": "ARCH-SPEC011-A-4bd99de",
       "ci": {
         "head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
         "status": "PASSED",
@@ -1689,6 +1689,16 @@
       "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
       "output_state": "ARCHITECTURE_REVIEWING",
       "metadata": {}
+    },
+    {
+      "event_id": "a255d81399884a6780a115051baf28f2",
+      "event_type": "ARCH_FINAL_APPROVED",
+      "timestamp": "2026-09-21T12:48:35Z",
+      "work_item_id": "SPEC-011",
+      "actor": "aic-architect-2",
+      "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+      "output_state": "FINAL_APPROVED",
+      "metadata": {}
     }
   ],
   "tasks": {
@@ -1866,6 +1876,16 @@
         }
       ],
       "reviewed_at": "2026-09-21T16:48:58+08:00",
+      "reviewer_role": "CHIEF_INVESTMENT_ARCHITECT"
+    },
+    "ARCH-SPEC011-A-4bd99de": {
+      "work_item": "SPEC-011",
+      "review_id": "ARCH-SPEC011-A-4bd99de",
+      "result": "FINAL_APPROVED",
+      "reviewed_head_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+      "blocking_items": [],
+      "non_blocking_items": [],
+      "reviewed_at": "2026-09-21T12:48:35Z",
       "reviewer_role": "CHIEF_INVESTMENT_ARCHITECT"
     }
   },
