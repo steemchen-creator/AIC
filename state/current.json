@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 143,
+  "revision": 144,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -486,7 +486,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-011",
       "previous_work_item": "SPEC-011",
-      "status": "RECOVERABLE_FAILURE",
+      "status": "REVIEW_REQUIRED",
       "created_at": "2026-09-21T14:31:50.028962Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -501,7 +501,7 @@
       "review_id": null,
       "ci": {
         "head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
-        "status": "FAILED",
+        "status": "PASSED",
         "required_checks": {
           "Governance baseline": 15368,
           "Backend tests": 15368,
@@ -515,36 +515,36 @@
             "conclusion": "success",
             "run_id": 35620689540,
             "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35620689540/job/106402694292"
-          },
-          {
-            "name": "Backend tests",
-            "head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
-            "conclusion": "pending",
-            "run_id": 35620689540,
-            "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35620689540/job/106402694285"
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35620689540/job/106403934822"
           },
           {
             "name": "Desktop build",
             "head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
-            "conclusion": "pending",
+            "conclusion": "success",
             "run_id": 35620689540,
             "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35620689540/job/106402694240"
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35620689540/job/106403934752"
+          },
+          {
+            "name": "Backend tests",
+            "head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+            "conclusion": "success",
+            "run_id": 35620689540,
+            "app_id": 15368,
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35620689540/job/106403934603"
           },
           {
             "name": "AIC Development Governance Gate",
             "head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
-            "conclusion": "failure",
+            "conclusion": "success",
             "run_id": 35620689540,
             "app_id": 15368,
-            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35620689540/job/106402693956"
+            "url": "https://github.com/steemchen-creator/AIC/actions/runs/35620689540/job/106403934584"
           },
           {
             "name": "orchestrate",
             "head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
-            "conclusion": "pending",
+            "conclusion": "success",
             "run_id": 106402685877,
             "app_id": 15368,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/35620686535/job/106402685877"
@@ -556,9 +556,9 @@
           {
             "run_id": 35620689540,
             "head_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
-            "status": "in_progress",
-            "conclusion": null,
-            "attempt": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "attempt": 2,
             "url": "https://github.com/steemchen-creator/AIC/actions/runs/35620689540"
           }
         ]
@@ -573,10 +573,8 @@
         ]
       },
       "blocked_reasons": [],
-      "recoverable_failures": [
-        "CI_FAILED"
-      ],
-      "recovery_stage": "REVIEW_REQUIRED",
+      "recoverable_failures": [],
+      "recovery_stage": null,
       "unresolved_fix": null,
       "governance_exception": false,
       "chairman_required": false,
@@ -2208,6 +2206,16 @@
       "actor": "github-actions[bot]",
       "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
       "output_state": "RECOVERABLE_FAILURE",
+      "metadata": {}
+    },
+    {
+      "event_id": "678679a7aae2470cae1af5ab49e19325",
+      "event_type": "CI_PASSED",
+      "timestamp": "2026-09-21T15:48:29.652048Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "github-actions[bot]",
+      "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+      "output_state": "REVIEW_REQUIRED",
       "metadata": {}
     }
   ],
