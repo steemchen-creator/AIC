@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 156,
+  "revision": 157,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -575,7 +575,7 @@
         "architecture_calls_used": 2,
         "review_loops": 2,
         "duplicate_calls_avoided": 0,
-        "budget_limit_hits": 0,
+        "budget_limit_hits": 1,
         "reserved_requests": [
           "cf9529044dd4224de6dee786539c49f320ec27291c9784e72afd4b10e4db1861",
           "2240f2648d35b4f2f26333a87bc7244b33b220ed8f73a577a8fc388b35576130"
@@ -2366,6 +2366,18 @@
       "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
       "output_state": "CLOSED",
       "metadata": {}
+    },
+    {
+      "event_id": "c935055110534e9aacea4ba78b1ee2b4",
+      "event_type": "BUDGET_LIMIT_REACHED",
+      "timestamp": "2026-09-21T16:06:02.104721Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "github-actions[bot]",
+      "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+      "output_state": "CLOSED",
+      "metadata": {
+        "reason": "DAILY_SPEC_LIMIT"
+      }
     }
   ],
   "tasks": {
@@ -2697,9 +2709,11 @@
     "2026-09-08": 1,
     "2026-09-21": 2
   },
-  "paused": false,
+  "paused": true,
   "auto_merge_disabled": false,
-  "project_blocked_reasons": [],
+  "project_blocked_reasons": [
+    "DAILY_SPEC_LIMIT"
+  ],
   "deployment_setup": {
     "status": "COMPLETE",
     "authorized_by": "steemchen-creator",

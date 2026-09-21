@@ -1,0 +1,12 @@
+{
+  "event_id": "c935055110534e9aacea4ba78b1ee2b4",
+  "event_type": "BUDGET_LIMIT_REACHED",
+  "timestamp": "2026-09-21T16:06:02.104721Z",
+  "work_item_id": "SPEC-011-B",
+  "actor": "github-actions[bot]",
+  "input_sha": "ac791d707eac1dac0c24ead2c94e54035ff62fa5",
+  "output_state": "CLOSED",
+  "metadata": {
+    "reason": "DAILY_SPEC_LIMIT"
+  }
+}
