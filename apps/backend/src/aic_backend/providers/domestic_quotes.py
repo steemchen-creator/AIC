@@ -53,7 +53,10 @@ class HttpGetClient(Protocol):
 
 class DomesticQuoteProvider:
     _ENDPOINTS = {
-        QuoteUpstream.EASTMONEY: "https://push2.eastmoney.com/api/qt/stock/get?secid={secid}",
+        QuoteUpstream.EASTMONEY: (
+            "https://push2.eastmoney.com/api/qt/stock/get?secid={secid}"
+            "&fields=f19,f20,f43,f47,f48,f57,f60,f86"
+        ),
         QuoteUpstream.SINA: "https://hq.sinajs.cn/list={exchange}{symbol}",
         QuoteUpstream.TENCENT: "https://qt.gtimg.cn/q={exchange}{symbol}",
     }

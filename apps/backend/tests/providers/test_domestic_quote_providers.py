@@ -62,11 +62,14 @@ def index_request(provider_id: str) -> ProviderInvocationRequest:
 
 
 class ResponseClient:
-    def __init__(self, response: httpx.Response) -> None:
+    def __init__(self, response: httpx.Response, expected_url_fragment: str | None = None) -> None:
         self.response = response
+        self.expected_url_fragment = expected_url_fragment
 
     async def get(self, url: str, *, timeout: float) -> httpx.Response:
         assert url.startswith("https://")
+        if self.expected_url_fragment is not None:
+            assert self.expected_url_fragment in url
         assert timeout == 1
         return self.response
 
@@ -93,7 +96,7 @@ async def test_eastmoney_fixture_maps_owned_quote_contract() -> None:
         definition(),
         QuoteUpstream.EASTMONEY,
         access_authorized=True,
-        client=ResponseClient(response),
+        client=ResponseClient(response, "fields=f19,f20,f43,f47,f48,f57,f60,f86"),
     )
     await provider.initialize()
     result = await provider.invoke(request("eastmoney_quote"))
