@@ -8,7 +8,7 @@ Imported-file SHA-256: `fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a163
 Import normalization: trailing Markdown whitespace and the extra final blank line were removed;
 the specification text and requirements are unchanged.
 Decision: **APPROVED FOR REPOSITORY IMPORT AND IMPLEMENTATION PLANNING**
-Development status: **CHECKPOINT C IMPLEMENTED — validation and independent Architecture Review pending**
+Development status: **CHECKPOINT C IMPLEMENTED — BLOCKER-C01 remediated; revalidation pending**
 
 ## Checkpoint C implementation review
 
@@ -37,6 +37,12 @@ actual ingestion time.
 record. A later Tier-0 document is joined through an immutable `EventDocumentLink`, preserving both
 records and their original authority.
 
+Tier-0 promotion is bound to an application-owned mapping from the selected Provider Runtime
+`provider_id` to its trusted `upstream_source_id`. Provider-returned upstream text is only a claim:
+an unbound provider or a claim that differs from the trusted binding is rejected before raw or
+canonical persistence. This closes BLOCKER-C01 without coupling the application layer to a vendor
+adapter implementation.
+
 The Federal Reserve adapter uses allowlisted official RSS URLs, conditional headers, response/item
 bounds and XML DTD/entity rejection. The SEC adapter uses `data.sec.gov` directly, requires
 `AIC_SEC_USER_AGENT`, validates CIK, column alignment, accession/form/document identity and bounded
@@ -60,6 +66,7 @@ any separately authorized downgrade.
 | GDELT radar cannot establish a Tier-0 fact | `test_spec011_policy_events.py`; `test_policy_event_providers.py` |
 | Raw-before-canonical persistence and idempotent retry | `test_policy_event_ingestion.py` |
 | Invalid publisher quarantine with actionable reason | `test_policy_event_ingestion.py`; `test_policy_event_postgresql.py` |
+| Application-owned upstream binding; untrusted/self-asserted Tier-0 rejection (BLOCKER-C01) | `test_policy_event_ingestion.py` |
 | Append-only radar-to-official verification links | `test_spec011_policy_events.py`; `test_policy_event_postgresql.py` |
 | Reversible migration and PostgreSQL restart | `test_policy_event_postgresql.py` |
 | Clean Architecture and Provider Runtime reuse | repository architecture tests |

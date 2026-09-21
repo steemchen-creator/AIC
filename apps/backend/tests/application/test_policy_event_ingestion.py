@@ -14,6 +14,11 @@ from aic_backend.provider_runtime import ProviderInvocationResult, ProviderReque
 from aic_backend.providers.policy_events import EVENT_RADAR_READ, OFFICIAL_FEED_READ
 
 NOW = datetime(2026, 9, 22, 12, tzinfo=UTC)
+TRUSTED_SOURCES = {
+    "fed_official": "FEDERAL_RESERVE",
+    "sec_edgar": "SEC_EDGAR",
+    "gdelt_radar": "GDELT",
+}
 
 
 class Clock:
@@ -82,6 +87,7 @@ async def test_official_ingestion_persists_raw_before_canonical_and_is_idempoten
         evidence,
         PolicyEventNormalizer(),
         Clock(),
+        TRUSTED_SOURCES,
     )
     first = await service.ingest(OFFICIAL_FEED_READ, {}, request_id="fed-1")
     second = await service.ingest(OFFICIAL_FEED_READ, {}, request_id="fed-2")
@@ -98,6 +104,7 @@ async def test_official_ingestion_persists_raw_before_canonical_and_is_idempoten
         evidence,
         PolicyEventNormalizer(),
         Clock(),
+        TRUSTED_SOURCES,
     ).ingest(OFFICIAL_FEED_READ, {}, request_id="fed-empty")
     assert len(evidence.documents) == 1
 
@@ -126,6 +133,7 @@ async def test_radar_ingestion_retains_discovery_authority() -> None:
         evidence,
         PolicyEventNormalizer(),
         Clock(),
+        TRUSTED_SOURCES,
     ).ingest(EVENT_RADAR_READ, {"query": "policy"}, request_id="radar-1")
     assert result.documents == ()
     assert len(result.candidates) == 1
@@ -133,17 +141,38 @@ async def test_radar_ingestion_retains_discovery_authority() -> None:
 
 
 @pytest.mark.asyncio
-async def test_unsupported_upstream_never_reaches_canonical_persistence() -> None:
+async def test_untrusted_provider_cannot_self_assert_official_upstream() -> None:
     evidence = InMemoryEvidenceRepository()
+    raw = InMemoryMarketIntelligenceRepository()
     service = PolicyEventIngestionService(
-        Runtime({"upstream_source_id": "USER_SUPPLIED"}, "unknown_provider"),
-        InMemoryMarketIntelligenceRepository(),
+        Runtime(official_payload(), "compatible_but_untrusted"),
+        raw,
         evidence,
         PolicyEventNormalizer(),
         Clock(),
+        TRUSTED_SOURCES,
     )
-    with pytest.raises(ValueError, match="unsupported"):
+    with pytest.raises(ValueError, match="no trusted upstream binding"):
         await service.ingest(OFFICIAL_FEED_READ, {}, request_id="bad-1")
+    assert not raw.raw
+    assert not evidence.documents
+
+
+@pytest.mark.asyncio
+async def test_trusted_provider_claim_must_match_application_owned_binding() -> None:
+    evidence = InMemoryEvidenceRepository()
+    raw = InMemoryMarketIntelligenceRepository()
+    service = PolicyEventIngestionService(
+        Runtime(official_payload(), "sec_edgar"),
+        raw,
+        evidence,
+        PolicyEventNormalizer(),
+        Clock(),
+        TRUSTED_SOURCES,
+    )
+    with pytest.raises(ValueError, match="upstream identity mismatch"):
+        await service.ingest(OFFICIAL_FEED_READ, {}, request_id="bad-claim")
+    assert not raw.raw
     assert not evidence.documents
 
 
@@ -164,6 +193,7 @@ async def test_unverifiable_official_publisher_retains_raw_quarantine_reason() -
         evidence,
         PolicyEventNormalizer(),
         Clock(),
+        TRUSTED_SOURCES,
     )
     with pytest.raises(ValueError, match="publisher"):
         await service.ingest(OFFICIAL_FEED_READ, {}, request_id="quarantine-1")

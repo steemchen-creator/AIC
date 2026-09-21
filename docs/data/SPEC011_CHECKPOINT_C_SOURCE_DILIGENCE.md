@@ -35,6 +35,9 @@ Open-source review:
   explicit Provider Runtime failures. Existing evidence is never deleted.
 - Official identity mismatches fail closed before canonical persistence. Unknown or ambiguous
   entities are not guessed from titles.
+- Tier-0 upstream identity is bound to the selected runtime `provider_id` by trusted application
+  composition. A provider payload cannot grant itself official authority by claiming an allowlisted
+  `upstream_source_id`.
 - Raw observations persist before canonical documents/candidates. Deterministic identities make
   retries idempotent.
 - Corrections append a document version only with a publisher version identity or an explicit,

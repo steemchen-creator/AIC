@@ -46,6 +46,7 @@ class PolicyEventIngestionService:
         evidence_repository: PolicyEventEvidenceRepository,
         normalizer: PolicyEventNormalizer,
         clock: Clock,
+        trusted_provider_upstreams: Mapping[str, str],
         *,
         timeout_ms: int = 5000,
     ) -> None:
@@ -55,6 +56,9 @@ class PolicyEventIngestionService:
         self._normalizer = normalizer
         self._clock = clock
         self._timeout_ms = timeout_ms
+        self._trusted_provider_upstreams = self._validate_trusted_provider_upstreams(
+            trusted_provider_upstreams
+        )
 
     async def ingest(
         self,
@@ -64,6 +68,9 @@ class PolicyEventIngestionService:
         request_id: str,
         preferred_provider_ids: tuple[str, ...] = (),
     ) -> PolicyEventIngestionResult:
+        unknown_preferred = set(preferred_provider_ids).difference(self._trusted_provider_upstreams)
+        if unknown_preferred:
+            raise ValueError("preferred policy/event provider has no trusted upstream binding")
         result = await self._runtime.execute(
             ProviderRequestContext(
                 request_id,
@@ -76,9 +83,13 @@ class PolicyEventIngestionService:
         if not result.success or result.data is None:
             raise RuntimeError("policy/event provider invocation failed")
         payload = dict(result.data)
-        upstream = str(payload.get("upstream_source_id", "")).strip()
-        if upstream not in {"FEDERAL_RESERVE", "SEC_EDGAR", "GDELT"}:
-            raise ValueError("policy/event upstream identity is unsupported")
+        expected_upstream = self._trusted_provider_upstreams.get(result.provider_id)
+        if expected_upstream is None:
+            raise ValueError("selected policy/event provider has no trusted upstream binding")
+        claimed_upstream = str(payload.get("upstream_source_id", "")).strip()
+        if claimed_upstream != expected_upstream:
+            raise ValueError("policy/event provider upstream identity mismatch")
+        upstream = expected_upstream
         observed_at = result.finished_at.astimezone(UTC)
         ingested_at = max(observed_at, self._clock.now().astimezone(UTC))
         raw_hash = raw_payload_hash(result.data)
@@ -166,6 +177,24 @@ class PolicyEventIngestionService:
             await self._quarantine(raw_id, upstream, observed_at, ingested_at, error)
             raise
         return PolicyEventIngestionResult(raw_id, entities, documents)
+
+    @staticmethod
+    def _validate_trusted_provider_upstreams(
+        bindings: Mapping[str, str],
+    ) -> dict[str, str]:
+        allowed_upstreams = {"FEDERAL_RESERVE", "SEC_EDGAR", "GDELT"}
+        trusted: dict[str, str] = {}
+        for provider_id, upstream_source_id in bindings.items():
+            provider = str(provider_id).strip()
+            upstream = str(upstream_source_id).strip()
+            if not provider:
+                raise ValueError("trusted policy/event provider id must not be empty")
+            if upstream not in allowed_upstreams:
+                raise ValueError("trusted policy/event upstream identity is unsupported")
+            trusted[provider] = upstream
+        if not trusted:
+            raise ValueError("at least one trusted policy/event provider binding is required")
+        return trusted
 
     async def _quarantine(
         self,
