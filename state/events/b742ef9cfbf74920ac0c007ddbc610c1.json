@@ -1,0 +1,10 @@
+{
+  "event_id": "b742ef9cfbf74920ac0c007ddbc610c1",
+  "event_type": "CODEX_STARTED",
+  "timestamp": "2026-09-21T16:17:35.246153Z",
+  "work_item_id": "SPEC-011-C",
+  "actor": "aic-codex-cto",
+  "input_sha": null,
+  "output_state": "IMPLEMENTING",
+  "metadata": {}
+}
