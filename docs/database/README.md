@@ -110,3 +110,15 @@ Downgrade to `20260910_0015` drops all Checkpoint A market evidence. This destro
 canonical quotes, reconciliation decisions and pulse observations, so production downgrade requires
 an approved stop, backup and recovery plan. The automated downgrade/upgrade test uses an isolated
 test database only.
+
+# SPEC-011 Checkpoint B macro and calendar evidence
+
+Migration `20260921_0017` adds immutable macro-series definitions and vintage observations,
+append-only scheduled-event versions, versioned acquisition plans and durable acquisition
+checkpoints. Checkpoints use PostgreSQL row locks and monotonically increasing fencing tokens so
+only one worker can advance a plan. Cursor and watermark changes occur only after raw and canonical
+evidence persistence succeeds; failure retains prior progress for bounded-overlap recovery.
+
+Downgrade to `20260921_0016` drops all Checkpoint B macro, schedule and acquisition state. This is
+destructive: stop workers and back up the tables before any separately authorized production
+downgrade. Automated upgrade/downgrade/round-trip validation runs only against an isolated database.

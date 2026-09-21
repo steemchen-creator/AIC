@@ -1,14 +1,75 @@
 # Engineering Review — SPEC-011 Global Data Fabric and Event Intelligence Foundation
 
 Review date: 2026-09-21
-Repository baseline for implementation: `origin/main` at `dea338e48ccc33e22cbfb87cae6a33638b080ebe`
+Repository baseline for Checkpoint B: `origin/main` at `8839eadc0dae5b7be0654531ef49aa76da2ced0e`
 Reviewed artifact: `SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md`
 Source-file SHA-256: `7b4d788cede5863be20197da2072e714fa7f1164b443e69d9b6c096bd4ccbc8b`
 Imported-file SHA-256: `fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581`
 Import normalization: trailing Markdown whitespace and the extra final blank line were removed;
 the specification text and requirements are unchanged.
 Decision: **APPROVED FOR REPOSITORY IMPORT AND IMPLEMENTATION PLANNING**
-Development status: **CHECKPOINT A IMPLEMENTED — Draft PR and independent Architecture Review pending**
+Development status: **CHECKPOINT B IMPLEMENTED — validation and independent Architecture Review pending**
+
+## Checkpoint B implementation review
+
+Checkpoint B adds source-neutral macro vintage, scheduled-event and continuous-acquisition
+foundations while preserving the existing Provider Runtime and PIT architecture:
+
+```text
+MacroAcquisitionService (cadence/checkpoint owner)
+  -> existing ProviderRuntimePort (selection/health/failover owner)
+  -> official FRED/ALFRED adapter
+  -> existing immutable RawObservation + SourceLineage
+  -> MacroNormalizer
+  -> immutable MacroSeriesIdentity / MacroObservation repository
+  -> existing DataAvailabilityPolicy
+```
+
+`MacroSeriesIdentity` binds series, unit, frequency, seasonal adjustment, geography and the factual
+source agency. `SourceLineage.upstream_source_id=FRED_ALFRED` separately identifies the transport
+and historical-version platform. A BLS or BEA fact obtained directly and through FRED remains one
+underlying agency fact for independence purposes. Query modes are explicit:
+`KNOWN_AT(as_of)`, `AS_PUBLISHED(vintage_date)` and `LATEST_REVISED`. Revision values append with a
+deterministic predecessor link; a later revision never replaces an earlier value.
+
+`ScheduledEvent` appends publication, reschedule, cancellation and completion versions. Research
+queries select only versions both published and observed by the requested time; operational replay
+selects the version actually ingested by that time. Macro `KNOWN_AT` applies the same source-time
+plus observation-time boundary, so later backfill cannot appear in an earlier historical view.
+Completion requires immutable links to the actual raw observation, macro vintage or later document
+evidence.
+
+Acquisition plans hold normal and release-window cadence, bounded overlap, cursor, watermark,
+last-success and retry state. PostgreSQL claims lock the checkpoint row and issue a monotonically
+increasing fencing token. Evidence is persisted before cursor advancement. Failed persistence
+releases the lease but retains the old cursor/watermark, and restart resumes through the same
+deterministic raw and canonical identities. Provider health, selection and failover remain owned by
+the existing Runtime.
+
+The direct FRED/ALFRED adapter uses only official REST endpoints and the existing `httpx`
+dependency. It requires an API key when enabled, applies explicit timeout and payload bounds,
+sanitizes errors and never records the key in source URIs. ALFRED revision intervals are requested
+explicitly. FRED is the transport; the series producer remains separately attributed. BLS, BEA and
+Federal Reserve calendar adapters remain subsequent bounded source integrations over the delivered
+source-neutral `ScheduledEvent` contract; Checkpoint B does not introduce a broad crawler or any
+Checkpoint C behavior.
+
+Migration `20260921_0017` creates macro series/observations, scheduled-event versions, acquisition
+plans and fenced checkpoints. Downgrade removes this evidence and progress state, so a production
+downgrade is destructive and requires stopped workers, backup and separate operational approval.
+
+### Checkpoint B requirement-to-test traceability
+
+| Requirement | Deterministic evidence |
+| --- | --- |
+| Latest versus historical vintage, revision chain and source-agency identity | `test_spec011_macro_calendar.py`; `test_evidence_postgresql.py` |
+| Publication/vintage/observation/as-of boundary, delayed-backfill exclusion and future-vintage rejection | `test_spec011_macro_calendar.py`; `test_evidence_postgresql.py` |
+| Schedule reschedule, cancellation and actual-release linkage | `test_spec011_macro_calendar.py`; `test_evidence_postgresql.py` |
+| Official FRED/ALFRED contract, bounded credentials and revision request | `test_fred_provider.py` |
+| Release-window cadence and bounded-overlap cursor | `test_macro_acquisition.py` |
+| Persistence-before-cursor, failure recovery and idempotent restart | `test_macro_acquisition.py`; `test_evidence_postgresql.py` |
+| Multi-worker lease/fencing and PostgreSQL/in-memory parity | `test_macro_acquisition.py`; `test_evidence_postgresql.py` |
+| Clean Architecture and reuse of Provider Runtime | repository architecture tests |
 
 ## Checkpoint A implementation review
 

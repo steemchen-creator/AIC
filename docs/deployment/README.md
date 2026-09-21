@@ -12,3 +12,8 @@ Inject `AIC_TUSHARE_TOKEN` through the deployment secret store. Example environm
 files contain only an empty placeholder. Missing credentials leave the Provider
 unavailable without exposing a token or crashing composition. Never pass the token on
 the command line or commit a populated environment file.
+
+Inject `AIC_FRED_API_KEY` through the same secret-store boundary before enabling the
+`fred_official` provider. The key is used only as an HTTPS query parameter at the adapter boundary
+and is never retained in source lineage or a source URI. Keep the provider disabled when the key is
+absent.

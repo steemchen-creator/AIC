@@ -14,6 +14,11 @@ from aic_backend.application.ports.corporate_actions import (
 )
 from aic_backend.application.ports.etf import ETFDataRepository
 from aic_backend.application.ports.event_bus import Event, EventBus
+from aic_backend.application.ports.evidence import (
+    AcquisitionPlanRepository,
+    MacroObservationRepository,
+    ScheduledEventRepository,
+)
 from aic_backend.application.ports.historical import (
     BackfillAttempt,
     BackfillAttemptStatus,
@@ -46,6 +51,7 @@ from aic_backend.application.ports.provider import DataProvider
 from aic_backend.application.ports.repository import DataRepository
 
 __all__ = [
+    "AcquisitionPlanRepository",
     "AdjustmentCoverageRepository",
     "AdjustmentFactorRepository",
     "CorporateActionRepository",
@@ -71,6 +77,7 @@ __all__ = [
     "InstrumentTradingStatusRepository",
     "MarketPulseRepository",
     "MarketQuoteRepository",
+    "MacroObservationRepository",
     "PersistedDailyBar",
     "PersistedMarketQuote",
     "RawObservationRepository",
@@ -78,5 +85,6 @@ __all__ = [
     "PersistenceErrorCode",
     "SaveResult",
     "SaveStatus",
+    "ScheduledEventRepository",
     "TradingCalendarRepository",
 ]

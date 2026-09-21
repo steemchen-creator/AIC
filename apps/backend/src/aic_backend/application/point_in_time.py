@@ -6,6 +6,7 @@ from enum import StrEnum
 from typing import TypeVar
 
 from aic_backend.application.ports.persistence import PersistedDailyBar
+from aic_backend.domain.evidence import MacroObservation, ScheduledEvent
 from aic_backend.domain.market_data import (
     AdjustmentFactor,
     AdjustmentMode,
@@ -37,6 +38,8 @@ PITRecord = (
     | TradingSessionDay
     | MarketPulseObservation
     | MarketQuote
+    | MacroObservation
+    | ScheduledEvent
 )
 
 
@@ -150,6 +153,33 @@ class DataAvailabilityPolicy:
         )
         return self._at(value.observation_id, available_at, source, context)
 
+    def macro_observation(
+        self, value: MacroObservation, context: PointInTimeContext
+    ) -> AvailabilityDecision:
+        if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY:
+            return self._at(value.observation_id, value.ingested_at, "ingested_at", context)
+        return self._at(
+            value.observation_id,
+            max(value.source_known_at, value.observed_at),
+            "release_at+vintage_date+observed_at",
+            context,
+        )
+
+    def scheduled_event(
+        self, value: ScheduledEvent, context: PointInTimeContext
+    ) -> AvailabilityDecision:
+        available_at = (
+            value.ingested_at
+            if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
+            else max(value.published_at, value.observed_at)
+        )
+        source = (
+            "ingested_at"
+            if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
+            else "published_at+observed_at"
+        )
+        return self._at(value.event_version_id, available_at, source, context)
+
     def corporate_action(
         self, value: CorporateAction, context: PointInTimeContext
     ) -> AvailabilityDecision:
@@ -200,9 +230,7 @@ class DataAvailabilityPolicy:
     def etf_profile(
         self, value: ETFInstrumentProfile, context: PointInTimeContext
     ) -> AvailabilityDecision:
-        return self._at(
-            value.instrument.canonical_key, value.available_at, "available_at", context
-        )
+        return self._at(value.instrument.canonical_key, value.available_at, "available_at", context)
 
     def index_reference(
         self, value: IndexReference, context: PointInTimeContext
