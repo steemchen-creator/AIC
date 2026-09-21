@@ -28,6 +28,12 @@ from aic_backend.application.ports.instruments import (
     InstrumentTradingStatusNormalizer,
     InstrumentTradingStatusRepository,
 )
+from aic_backend.application.ports.market_intelligence import (
+    MarketPulseRepository,
+    MarketQuoteRepository,
+    PersistedMarketQuote,
+    RawObservationRepository,
+)
 from aic_backend.application.ports.persistence import (
     CanonicalDailyBarRepository,
     PersistedDailyBar,
@@ -63,7 +69,11 @@ __all__ = [
     "InstrumentMasterRepository",
     "InstrumentTradingStatusNormalizer",
     "InstrumentTradingStatusRepository",
+    "MarketPulseRepository",
+    "MarketQuoteRepository",
     "PersistedDailyBar",
+    "PersistedMarketQuote",
+    "RawObservationRepository",
     "PersistenceError",
     "PersistenceErrorCode",
     "SaveResult",

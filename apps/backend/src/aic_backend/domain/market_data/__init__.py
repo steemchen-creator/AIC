@@ -44,6 +44,7 @@ from aic_backend.domain.market_data.instrument import (
     InstrumentTradingStatus,
     ListingStatus,
 )
+from aic_backend.domain.market_data.lineage import AuthorityLevel, SourceLineage, SourceType
 from aic_backend.domain.market_data.models import (
     CanonicalRecord,
     DailyBar,
@@ -51,9 +52,20 @@ from aic_backend.domain.market_data.models import (
     InstrumentIdentity,
     RawObservation,
 )
+from aic_backend.domain.market_data.quotes import (
+    MarketPulseFamily,
+    MarketPulseObservation,
+    MarketQuote,
+    MarketSeriesIdentity,
+    PublicationMode,
+    QuoteReconciliation,
+    QuoteSessionStatus,
+    ReconciliationStatus,
+)
 
 __all__ = [
     "AdjustedDailyBar",
+    "AuthorityLevel",
     "AdjustmentFactor",
     "AdjustmentMode",
     "CorporateAction",
@@ -84,8 +96,18 @@ __all__ = [
     "InvalidProvenanceError",
     "InvalidTimestampError",
     "Market",
+    "MarketPulseFamily",
+    "MarketPulseObservation",
+    "MarketQuote",
+    "MarketSeriesIdentity",
     "ListingStatus",
     "RawObservation",
+    "PublicationMode",
+    "QuoteReconciliation",
+    "QuoteSessionStatus",
+    "ReconciliationStatus",
+    "SourceLineage",
+    "SourceType",
     "SettlementCapability",
     "TradingSession",
     "TradingSessionDay",

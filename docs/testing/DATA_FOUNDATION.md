@@ -236,3 +236,18 @@ infrastructure.etf_persistence >= 90%
 
 除全仓 pytest/branch coverage、Ruff、Mypy strict 和 Architecture Tests 外，还执行迁移 round-trip、
 WPF Release、Compose config、`git diff --check` 与 secret/governance checks。
+
+# SPEC-011 Checkpoint A evidence
+
+Deterministic tests cover complete SourceLineage validation, secret-free locators, immutable raw
+evidence, Equity/ETF/index-reference identity resolution, quote normalization, numeric and timestamp
+boundaries, PIT availability, freshness and quality. Eastmoney, Sina and Tencent adapter fixtures
+cover their separate wire shapes, malformed/truncated/empty and rate-limited responses, payload
+limits, timezone handling and the disabled-by-default production authorization gate.
+
+Reconciliation tests permute input order, collapse multiple adapters over one upstream, exclude stale
+observations and fail closed on price/session conflict. Provider Runtime fallback cannot create a
+second independent vote. PostgreSQL 17 tests verify raw/quote/reconciliation/pulse round trips,
+restart idempotency, insert-or-verify identity and the reversible 0015 ↔ 0016 migration. Architecture
+tests keep Domain source-neutral, Application on the existing Provider Runtime port, SQL in
+Infrastructure and cross-asset reference series out of Execution.

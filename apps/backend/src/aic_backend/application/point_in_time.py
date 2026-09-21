@@ -17,6 +17,8 @@ from aic_backend.domain.market_data import (
     InstrumentExecutionProfile,
     InstrumentMaster,
     InstrumentTradingStatus,
+    MarketPulseObservation,
+    MarketQuote,
     TradingSessionDay,
 )
 
@@ -33,6 +35,8 @@ PITRecord = (
     | InstrumentMaster
     | InstrumentTradingStatus
     | TradingSessionDay
+    | MarketPulseObservation
+    | MarketQuote
 )
 
 
@@ -117,6 +121,34 @@ class DataAvailabilityPolicy:
             "provider_timestamp",
             context,
         )
+
+    def market_quote(self, value: MarketQuote, context: PointInTimeContext) -> AvailabilityDecision:
+        available_at = (
+            value.ingested_at
+            if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
+            else max(value.event_time, value.observed_at)
+        )
+        source = (
+            "ingested_at"
+            if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
+            else "event_time+observed_at"
+        )
+        return self._at(value.quote_id, available_at, source, context)
+
+    def market_pulse(
+        self, value: MarketPulseObservation, context: PointInTimeContext
+    ) -> AvailabilityDecision:
+        available_at = (
+            value.ingested_at
+            if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
+            else max(value.lineage.published_at or value.event_time, value.observed_at)
+        )
+        source = (
+            "ingested_at"
+            if context.availability_mode is AvailabilityMode.OPERATIONAL_REPLAY
+            else "published_at+observed_at"
+        )
+        return self._at(value.observation_id, available_at, source, context)
 
     def corporate_action(
         self, value: CorporateAction, context: PointInTimeContext

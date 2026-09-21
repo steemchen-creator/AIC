@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from datetime import datetime
 
 from aic_backend.data_foundation.identity import raw_payload_hash
-from aic_backend.domain.market_data import DataCapability, RawObservation
+from aic_backend.domain.market_data import DataCapability, RawObservation, SourceLineage
 from aic_backend.domain.market_data.models import InputValue, RawPayload
 
 
@@ -16,6 +16,7 @@ def create_raw_observation(
     received_at: datetime,
     payload: RawPayload,
     source_metadata: Mapping[str, InputValue],
+    lineage: SourceLineage | None = None,
 ) -> RawObservation:
     return RawObservation(
         observation_id=observation_id,
@@ -25,4 +26,5 @@ def create_raw_observation(
         payload=payload,
         payload_hash=raw_payload_hash(payload),
         source_metadata=source_metadata,
+        lineage=lineage,
     )

@@ -18,6 +18,7 @@ from aic_backend.domain.market_data.errors import (
     InvalidProvenanceError,
     InvalidTimestampError,
 )
+from aic_backend.domain.market_data.lineage import SourceLineage
 
 type ScalarValue = None | bool | int | str | Decimal | date | datetime
 type ImmutableValue = ScalarValue | tuple["ImmutableValue", ...] | Mapping[
@@ -153,6 +154,7 @@ class RawObservation:
     payload: RawPayload
     payload_hash: str
     source_metadata: Mapping[str, InputValue]
+    lineage: SourceLineage | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -175,6 +177,13 @@ class RawObservation:
             "source_metadata",
             _freeze_mapping(self.source_metadata, "source_metadata"),
         )
+        if self.lineage is not None:
+            if self.lineage.adapter_id != self.provider_id:
+                raise InvalidProvenanceError("lineage adapter_id must match provider_id")
+            if self.lineage.raw_hash != self.payload_hash:
+                raise InvalidProvenanceError("lineage raw_hash must match payload_hash")
+            if self.lineage.ingested_at != self.received_at:
+                raise InvalidProvenanceError("lineage ingested_at must match received_at")
 
 
 @dataclass(frozen=True, slots=True)

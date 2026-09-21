@@ -97,3 +97,16 @@ FIX-SPEC010-001 adds no migration. Terminal-isolation state uses the existing pl
 records, and authoritative outcome attribution fields use the existing JSON outcome and recovery
 payloads. They replay completed migration-0015 receipts; no historical row is rewritten. The
 destructive downgrade risks for migrations 0014 and 0015 therefore remain exactly as documented.
+
+# SPEC-011 Checkpoint A market evidence
+
+Migration `20260921_0016` adds `raw_observations`, `canonical_market_quotes`,
+`quote_reconciliations` and `market_pulse_observations`. Raw payload bytes and typed metadata retain
+their deterministic hash and complete `SourceLineage`; quote and pulse rows keep source identity,
+PIT timestamps and transformation version. Stable IDs are insert-or-verify and never overwrite a
+different immutable fact. Restart tests reconstruct the same domain values from PostgreSQL 17.
+
+Downgrade to `20260910_0015` drops all Checkpoint A market evidence. This destroys raw audit payloads,
+canonical quotes, reconciliation decisions and pulse observations, so production downgrade requires
+an approved stop, backup and recovery plan. The automated downgrade/upgrade test uses an isolated
+test database only.

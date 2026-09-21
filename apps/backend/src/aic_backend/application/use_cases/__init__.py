@@ -20,6 +20,12 @@ from aic_backend.application.use_cases.ingest_daily_bars import (
     IngestDailyBars,
 )
 from aic_backend.application.use_cases.persist_ingestion import PersistIngestionSuccess
+from aic_backend.application.use_cases.realtime_market_quotes import (
+    QuoteInstrumentResolver,
+    QuoteSourceConfig,
+    RealtimeMarketQuoteService,
+    RealtimeQuoteResult,
+)
 from aic_backend.application.use_cases.trading_calendar import (
     BackfillTradingCalendar,
     CalendarBackfillResult,
@@ -42,6 +48,10 @@ __all__ = [
     "HistoricalDailyBarService",
     "PersistIngestionSuccess",
     "TradingCalendarService",
+    "QuoteInstrumentResolver",
+    "QuoteSourceConfig",
+    "RealtimeMarketQuoteService",
+    "RealtimeQuoteResult",
     "chunk_intervals",
     "missing_intervals",
 ]
