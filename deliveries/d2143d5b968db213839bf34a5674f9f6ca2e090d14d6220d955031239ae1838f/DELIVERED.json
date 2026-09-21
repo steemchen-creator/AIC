@@ -1,0 +1,10 @@
+{
+  "task_id": "d2143d5b968db213839bf34a5674f9f6ca2e090d14d6220d955031239ae1838f",
+  "work_item_id": "SPEC-010",
+  "kind": "ARCHITECTURE_REVIEW",
+  "head_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+  "artifact_path": "SPEC-010-Multi-Horizon-Trade-Plan-and-Swing-Management-Foundation.md",
+  "manifest_path": "requests/d2143d5b968db213839bf34a5674f9f6ca2e090d14d6220d955031239ae1838f/REVIEW_CONTEXT.json",
+  "status": "DELIVERED",
+  "delivery_reference": "https://github.com/steemchen-creator/AIC/pull/19#issuecomment-5757598482"
+}
