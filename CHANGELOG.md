@@ -8,6 +8,11 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- Imported the architect-prepared SPEC-011 Global Data Fabric and Event Intelligence Foundation,
+  with an engineering reuse review, checkpoint A-D implementation plan, source-authority matrix
+  and dependency investigation. This planning artifact starts no product code, schema migration,
+  implementation PR or SPEC-011 engineering state before SPEC-010 closeout.
+
 - DEV-GOV-RECOVERY-003 effective sensitive-diff revalidation compares immutable blob identity
   at the exact PR HEAD and a captured current `main` SHA. Only sensitive paths present with equal
   blobs are excluded from the effective diff; missing/unequal evidence and PR/main drift fail
