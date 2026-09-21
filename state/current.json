@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 78,
+  "revision": 79,
   "current_work_item": "SPEC-010",
   "work_items": {
     "DEV-GOV-001": {
@@ -240,7 +240,7 @@
       "kind": "SPEC",
       "parent_work_item": "DEV-GOV-VALIDATION-001",
       "previous_work_item": "DEV-GOV-VALIDATION-001",
-      "status": "REVIEW_REQUIRED",
+      "status": "ARCHITECTURE_REVIEWING",
       "created_at": "2026-09-08T19:31:07Z",
       "artifact_path": "SPEC-010-Multi-Horizon-Trade-Plan-and-Swing-Management-Foundation.md",
       "artifact_sha256": "b786de248003685aa91be001ad7e17101c4312d71d676225c9f2537e687db403",
@@ -1239,6 +1239,16 @@
       "metadata": {
         "task_id": "d2143d5b968db213839bf34a5674f9f6ca2e090d14d6220d955031239ae1838f"
       }
+    },
+    {
+      "event_id": "a2f8c68adb854f0e8b21a9a4b5b4881e",
+      "event_type": "ARCH_REVIEW_STARTED",
+      "timestamp": "2026-09-21T08:47:29.982390Z",
+      "work_item_id": "SPEC-010",
+      "actor": "aic-architect-2",
+      "input_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+      "output_state": "ARCHITECTURE_REVIEWING",
+      "metadata": {}
     }
   ],
   "tasks": {
