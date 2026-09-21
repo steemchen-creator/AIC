@@ -1,0 +1,10 @@
+{
+  "event_id": "4593033d749b4e3a9d728b2e3f45c0da",
+  "event_type": "PR_MERGED",
+  "timestamp": "2026-09-21T14:24:31.087787Z",
+  "work_item_id": "SPEC-011",
+  "actor": "github-actions[bot]",
+  "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+  "output_state": "MERGED",
+  "metadata": {}
+}

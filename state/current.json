@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 113,
+  "revision": 114,
   "current_work_item": "SPEC-011",
   "work_items": {
     "DEV-GOV-001": {
@@ -363,7 +363,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-010",
       "previous_work_item": "SPEC-010",
-      "status": "MERGE_ELIGIBLE",
+      "status": "MERGED",
       "created_at": "2026-09-21T12:02:16.343903Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -466,7 +466,7 @@
       "chairman_required": false,
       "changed_areas": [],
       "merge_eligible": true,
-      "merge_commit": null,
+      "merge_commit": "8839eadc0dae5b7be0654531ef49aa76da2ced0e",
       "merge_expected_sha": null,
       "closeout": {},
       "next_spec_requested": false,
@@ -1746,6 +1746,16 @@
       "actor": "github-actions[bot]",
       "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
       "output_state": "MERGE_ELIGIBLE",
+      "metadata": {}
+    },
+    {
+      "event_id": "4593033d749b4e3a9d728b2e3f45c0da",
+      "event_type": "PR_MERGED",
+      "timestamp": "2026-09-21T14:24:31.087787Z",
+      "work_item_id": "SPEC-011",
+      "actor": "github-actions[bot]",
+      "input_sha": "4bd99de296fb5ed3dee4ccc74ed071cf8673ade1",
+      "output_state": "MERGED",
       "metadata": {}
     }
   ],
