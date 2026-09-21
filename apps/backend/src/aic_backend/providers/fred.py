@@ -1,5 +1,6 @@
 """Official FRED/ALFRED adapter using the existing Provider Runtime contract."""
 
+import os
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, time
 from typing import Protocol
@@ -25,7 +26,6 @@ from aic_backend.provider_runtime.models import (
     ProviderMetadata,
     ProviderType,
 )
-from aic_backend.shared.config import get_settings
 
 MACRO_SERIES_READ = ProviderCapability("macro.series.read", "1.0.0", CapabilityMode.SNAPSHOT)
 MACRO_RELEASE_READ = ProviderCapability("macro.release.read", "1.0.0", CapabilityMode.SNAPSHOT)
@@ -222,7 +222,7 @@ class FredProvider:
 
 
 def build_fred_provider(definition: ProviderDefinition) -> FredProvider:
-    configured = get_settings().fred_api_key
+    configured = os.getenv("AIC_FRED_API_KEY")
     api_key = configured.strip() if configured and configured.strip() else None
     if definition.enabled and api_key is None:
         raise ValueError("enabled FRED provider requires api_key")
