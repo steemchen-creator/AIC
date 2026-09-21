@@ -105,6 +105,27 @@ class GitHubClient:
         )
         return sorted(paths)
 
+    def blob_sha(self, path: str, ref: str) -> str | None:
+        """Return immutable blob identity for one path at one exact commit."""
+        if not path or re.fullmatch(r"[0-9a-f]{40}", ref) is None:
+            raise GovernanceError("GITHUB_BLOB_EVIDENCE_INVALID")
+        try:
+            raw = self.request(
+                "GET", f"/contents/{quote(path, safe='/')}?ref={quote(ref, safe='')}"
+            )
+        except GovernanceError as error:
+            if error.reason == "GITHUB_HTTP_404":
+                return None
+            raise
+        if not isinstance(raw, dict):
+            raise GovernanceError("GITHUB_BLOB_EVIDENCE_INVALID")
+        sha = raw.get("sha")
+        if raw.get("type") != "file" or not isinstance(sha, str):
+            raise GovernanceError("GITHUB_BLOB_EVIDENCE_INVALID")
+        if re.fullmatch(r"[0-9a-f]{40}", sha) is None:
+            raise GovernanceError("GITHUB_BLOB_EVIDENCE_INVALID")
+        return sha
+
     def required_checks(self, policy: Policy) -> dict[str, int | None]:
         required: dict[str, int | None] = {
             name: policy.trusted_check_app_id for name in policy.required_checks

@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import re
 from collections.abc import Callable
 from datetime import UTC, datetime
 from time import monotonic
@@ -47,6 +48,7 @@ class Repository(Protocol):
     def mark_ready(self, number: int, expected_head_sha: str) -> None: ...
     def mark_draft(self, number: int, expected_head_sha: str) -> None: ...
     def changed_paths(self, number: int) -> list[str]: ...
+    def blob_sha(self, path: str, ref: str) -> str | None: ...
 
 
 class Workspace(Protocol):
@@ -120,21 +122,48 @@ class Orchestrator:
                 raise GovernanceError("PR_IDENTITY_MISMATCH")
             if pr.head_sha != event.input_sha:
                 raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_STALE_HEAD")
-            revalidated_paths = self.repository.changed_paths(pr.number)
-            if classify_changed_paths(revalidated_paths):
-                raise GovernanceError("SENSITIVE_DIFF_STILL_PRESENT")
-            # The files endpoint is mutable. Refuse a head/base/identity change while reading it.
+            raw_paths = self.repository.changed_paths(pr.number)
+            sensitive_paths = [path for path in raw_paths if classify_changed_paths([path])]
+            main_sha = self.repository.ref("main")
+            if main_sha is None or re.fullmatch(r"[0-9a-f]{40}", main_sha) is None:
+                raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_MAIN_EVIDENCE_INVALID")
+            equalized: dict[str, str] = {}
+            for path in sensitive_paths:
+                head_blob = self.repository.blob_sha(path, pr.head_sha)
+                main_blob = self.repository.blob_sha(path, main_sha)
+                if head_blob is None or main_blob is None:
+                    raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_BLOB_MISSING")
+                if head_blob == main_blob:
+                    equalized[path] = head_blob
+            revalidated_paths = [path for path in raw_paths if path not in equalized]
+            # PR files and main are mutable. Refuse identity drift during evidence collection.
             if self.repository.pull_request(pr.number) != pr:
                 raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_PR_CHANGED")
+            if self.repository.ref("main") != main_sha:
+                raise GovernanceError("SENSITIVE_DIFF_REVALIDATION_MAIN_CHANGED")
+            if classify_changed_paths(revalidated_paths):
+                raise GovernanceError("SENSITIVE_DIFF_STILL_PRESENT")
+            raw_paths_sha256 = hashlib.sha256(
+                json.dumps(sorted(raw_paths), separators=(",", ":")).encode()
+            ).hexdigest()
+            effective_paths_sha256 = hashlib.sha256(
+                json.dumps(sorted(revalidated_paths), separators=(",", ":")).encode()
+            ).hexdigest()
             event = event.model_copy(
                 update={
                     "metadata": {
                         "pr_number": str(pr.number),
+                        "pr_head_sha": pr.head_sha,
                         "base_sha": pr.base_sha,
-                        "changed_paths_sha256": hashlib.sha256(
-                            json.dumps(sorted(revalidated_paths), separators=(",", ":")).encode()
-                        ).hexdigest(),
-                        "changed_path_count": str(len(revalidated_paths)),
+                        "captured_main_sha": main_sha,
+                        "changed_paths_sha256": raw_paths_sha256,
+                        "raw_changed_paths_sha256": raw_paths_sha256,
+                        "effective_changed_paths_sha256": effective_paths_sha256,
+                        "changed_path_count": str(len(raw_paths)),
+                        "effective_changed_path_count": str(len(revalidated_paths)),
+                        "equalized_sensitive_blobs": json.dumps(
+                            equalized, sort_keys=True, separators=(",", ":")
+                        ),
                     }
                 }
             )

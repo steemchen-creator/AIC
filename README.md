@@ -40,8 +40,10 @@ the autonomous runner. See the [policy rotation runbook](docs/dev-governance/POL
 
 Sensitive-diff recovery uses the existing authenticated `event` command. A Chairman may
 request `SENSITIVE_DIFF_REVALIDATED` for an explicit current HEAD; trusted-main code rechecks
-the live PR identity and complete diff before removing a solely sensitive-diff latch. Other
-incidents and CI failure evidence remain protected. See the
+the live PR identity and complete raw diff before removing a solely sensitive-diff latch. A
+merge-base-only sensitive path is ignored only when its immutable blob SHA is identical at the
+exact PR HEAD and a captured, stable current `main` SHA. Missing evidence, unequal blobs, or PR/
+main drift fail closed. Other incidents and CI failure evidence remain protected. See the
 [recovery procedure](docs/dev-governance/DISASTER_RECOVERY.md#sensitive-diff-revalidation).
 
 ## Data Foundation architecture

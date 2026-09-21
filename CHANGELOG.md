@@ -8,6 +8,11 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- DEV-GOV-RECOVERY-003 effective sensitive-diff revalidation compares immutable blob identity
+  at the exact PR HEAD and a captured current `main` SHA. Only sensitive paths present with equal
+  blobs are excluded from the effective diff; missing/unequal evidence and PR/main drift fail
+  closed, with raw/effective path digests and equalized blob identities retained in audit metadata.
+
 - DEV-GOV-RECOVERY-002 Chairman-only `SENSITIVE_DIFF_REVALIDATED` event, with live PR
   identity/diff revalidation, exact-HEAD binding, append-only audit, mixed-incident rejection
   and preservation of recoverable CI failure state. Renamed source paths and incomplete
