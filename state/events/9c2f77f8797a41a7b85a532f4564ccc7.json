@@ -1,0 +1,10 @@
+{
+  "event_id": "9c2f77f8797a41a7b85a532f4564ccc7",
+  "event_type": "ENGINEERING_RETRY",
+  "timestamp": "2026-09-21T17:29:54.036203Z",
+  "work_item_id": "SPEC-011-C",
+  "actor": "aic-codex-cto",
+  "input_sha": "00ee619553313a1b97eac0ead03733d456173a56",
+  "output_state": "FIXING",
+  "metadata": {}
+}

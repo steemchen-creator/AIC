@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 179,
+  "revision": 180,
   "current_work_item": "SPEC-011-C",
   "work_items": {
     "DEV-GOV-001": {
@@ -608,7 +608,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-011-B",
       "previous_work_item": "SPEC-011-B",
-      "status": "RECOVERABLE_FAILURE",
+      "status": "FIXING",
       "created_at": "2026-09-21T16:15:41Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -695,10 +695,8 @@
         ]
       },
       "blocked_reasons": [],
-      "recoverable_failures": [
-        "CI_FAILED"
-      ],
-      "recovery_stage": "FIXING",
+      "recoverable_failures": [],
+      "recovery_stage": null,
       "unresolved_fix": "ARCH-SPEC011-C-001",
       "governance_exception": false,
       "chairman_required": false,
@@ -2717,6 +2715,16 @@
       "actor": "github-actions[bot]",
       "input_sha": "00ee619553313a1b97eac0ead03733d456173a56",
       "output_state": "RECOVERABLE_FAILURE",
+      "metadata": {}
+    },
+    {
+      "event_id": "9c2f77f8797a41a7b85a532f4564ccc7",
+      "event_type": "ENGINEERING_RETRY",
+      "timestamp": "2026-09-21T17:29:54.036203Z",
+      "work_item_id": "SPEC-011-C",
+      "actor": "aic-codex-cto",
+      "input_sha": "00ee619553313a1b97eac0ead03733d456173a56",
+      "output_state": "FIXING",
       "metadata": {}
     }
   ],
