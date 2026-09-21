@@ -1,0 +1,21 @@
+{
+  "event_id": "3a3b23b40e31483c8da02275c8845eb9",
+  "event_type": "SENSITIVE_DIFF_REVALIDATED",
+  "timestamp": "2026-09-21T08:13:27.325167Z",
+  "work_item_id": "SPEC-010",
+  "actor": "steemchen-creator",
+  "input_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+  "output_state": "RECOVERABLE_FAILURE",
+  "metadata": {
+    "pr_number": "19",
+    "pr_head_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+    "base_sha": "395e3875e709d245a04f4043b01d1bb56935b10a",
+    "captured_main_sha": "395e3875e709d245a04f4043b01d1bb56935b10a",
+    "changed_paths_sha256": "3d7c4c8319a5798b2b09ddb71e5c7777ae45a26a461d79507dbb08f9f39aea6f",
+    "raw_changed_paths_sha256": "3d7c4c8319a5798b2b09ddb71e5c7777ae45a26a461d79507dbb08f9f39aea6f",
+    "effective_changed_paths_sha256": "3d7c4c8319a5798b2b09ddb71e5c7777ae45a26a461d79507dbb08f9f39aea6f",
+    "changed_path_count": "24",
+    "effective_changed_path_count": "24",
+    "equalized_sensitive_blobs": "{}"
+  }
+}
