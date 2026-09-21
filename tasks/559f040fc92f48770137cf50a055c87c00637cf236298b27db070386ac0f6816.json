@@ -1,0 +1,10 @@
+{
+  "task_id": "559f040fc92f48770137cf50a055c87c00637cf236298b27db070386ac0f6816",
+  "work_item_id": "SPEC-010",
+  "kind": "NEXT_SPEC",
+  "head_sha": "a86eff6623ee789051c1870984a7a5a892ba1fd8",
+  "artifact_path": "SPEC-010-Multi-Horizon-Trade-Plan-and-Swing-Management-Foundation.md",
+  "manifest_path": "requests/559f040fc92f48770137cf50a055c87c00637cf236298b27db070386ac0f6816/REVIEW_CONTEXT.json",
+  "status": "RESERVED",
+  "delivery_reference": null
+}
