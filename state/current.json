@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 133,
+  "revision": 134,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -562,16 +562,14 @@
         "budget_limit_hits": 0,
         "reserved_requests": []
       },
-      "blocked_reasons": [
-        "SENSITIVE_DIFF:secret_permission_model"
-      ],
+      "blocked_reasons": [],
       "recoverable_failures": [
         "CI_FAILED"
       ],
       "recovery_stage": "REVIEW_REQUIRED",
       "unresolved_fix": null,
       "governance_exception": false,
-      "chairman_required": true,
+      "chairman_required": false,
       "changed_areas": [],
       "merge_eligible": false,
       "merge_commit": null,
@@ -2086,6 +2084,27 @@
       "input_sha": "210710051ab048ec87b7423208c625cd1fcccd64",
       "output_state": "RECOVERABLE_FAILURE",
       "metadata": {}
+    },
+    {
+      "event_id": "9fbfa081b5be4116900c4c1519eb67c5",
+      "event_type": "SENSITIVE_DIFF_REVALIDATED",
+      "timestamp": "2026-09-21T15:17:01.082192Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "steemchen-creator",
+      "input_sha": "210710051ab048ec87b7423208c625cd1fcccd64",
+      "output_state": "RECOVERABLE_FAILURE",
+      "metadata": {
+        "pr_number": "29",
+        "pr_head_sha": "210710051ab048ec87b7423208c625cd1fcccd64",
+        "base_sha": "8839eadc0dae5b7be0654531ef49aa76da2ced0e",
+        "captured_main_sha": "8839eadc0dae5b7be0654531ef49aa76da2ced0e",
+        "changed_paths_sha256": "d89635d2c1e93a84fd094521a04fc266702ecc89b33ad0f26a25862f874dc79f",
+        "raw_changed_paths_sha256": "d89635d2c1e93a84fd094521a04fc266702ecc89b33ad0f26a25862f874dc79f",
+        "effective_changed_paths_sha256": "d89635d2c1e93a84fd094521a04fc266702ecc89b33ad0f26a25862f874dc79f",
+        "changed_path_count": "28",
+        "effective_changed_path_count": "28",
+        "equalized_sensitive_blobs": "{}"
+      }
     }
   ],
   "tasks": {
