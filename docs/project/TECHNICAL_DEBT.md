@@ -10,6 +10,7 @@ Required fields: debt_id, origin_spec, description, severity, blocking, target_p
 | DEV-GOV-BRIDGE-SETUP | DEV-GOV-001 | Authorize an external Work consumer or API credential/model and review principal. | MEDIUM | No for bootstrap implementation; blocks autonomous review delivery | Chairman setup | OPEN |
 | DEV-GOV-DEPLOYMENT-SETUP | DEV-GOV-001 | Configure protected deployment environment, fingerprinted non-secret policy, identities and external activation switch after reviewed closeout. | MEDIUM | No for implementation review; activation prerequisite | Chairman setup | OPEN |
 | DEV-GOV-ACTIONS-RUNTIME | DEV-GOV-001 | Upgrade GitHub actions that declare the deprecated Node 20 runtime. | LOW | No; GitHub currently forces Node 24 and all checks pass | Maintenance | OPEN |
+| SPEC010-EXECUTION-CLAIM-RECONCILIATION | FIX-SPEC010-001 | A durable execution claim without a completed receipt has unknown financial disposition. Operations must reconcile it against authoritative execution/account evidence before execution can resume; automatic expiry, takeover, deletion and blind retry remain prohibited. | HIGH | Blocks the affected deterministic order and portfolio execution until reconciled; does not block implementation review | Operational reconciliation before execution resume | OPEN |
 
 These entries are implementation-reported limitations, not a claim that Architecture
 Review has accepted DEV-GOV-001 with non-blocking debt. Unknown approval remains unknown.
