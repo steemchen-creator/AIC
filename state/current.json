@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 129,
+  "revision": 130,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -486,7 +486,7 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-011",
       "previous_work_item": "SPEC-011",
-      "status": "REVIEW_REQUIRED",
+      "status": "CHAIRMAN_DECISION_REQUIRED",
       "created_at": "2026-09-21T14:31:50.028962Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
@@ -1992,6 +1992,18 @@
       "input_sha": "fd5af19d28b8d5cd32d2a17c4285e7f88743c796",
       "output_state": "REVIEW_REQUIRED",
       "metadata": {}
+    },
+    {
+      "event_id": "d659456103c34d67a2b15edecc023156",
+      "event_type": "CHAIRMAN_ESCALATION",
+      "timestamp": "2026-09-21T15:09:14.178398Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "github-actions[bot]",
+      "input_sha": "fd5af19d28b8d5cd32d2a17c4285e7f88743c796",
+      "output_state": "CHAIRMAN_DECISION_REQUIRED",
+      "metadata": {
+        "reason": "SENSITIVE_DIFF:secret_permission_model"
+      }
     }
   ],
   "tasks": {
