@@ -1,0 +1,12 @@
+{
+  "event_id": "56adc4756eea4d33b4503b4daed647c1",
+  "event_type": "CHAIRMAN_ESCALATION",
+  "timestamp": "2026-09-21T07:43:11.573668Z",
+  "work_item_id": "SPEC-010",
+  "actor": "github-actions[bot]",
+  "input_sha": "5b48a6d3f1ccc8550ee72b9f77df2e9c1bb5063c",
+  "output_state": "CHAIRMAN_DECISION_REQUIRED",
+  "metadata": {
+    "reason": "SENSITIVE_DIFF:master_project_objective"
+  }
+}
