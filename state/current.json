@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "AIC",
-  "revision": 125,
+  "revision": 126,
   "current_work_item": "SPEC-011-B",
   "work_items": {
     "DEV-GOV-001": {
@@ -486,16 +486,16 @@
       "kind": "SPEC",
       "parent_work_item": "SPEC-011",
       "previous_work_item": "SPEC-011",
-      "status": "IMPLEMENTATION_COMPLETE",
+      "status": "REVIEW_REQUIRED",
       "created_at": "2026-09-21T14:31:50.028962Z",
       "artifact_path": "SPEC-011-Global-Data-Fabric-and-Event-Intelligence-Foundation.md",
       "artifact_sha256": "fba814629eeb1c947dc82ea937f1ee0b46a72e2d033d7246abb1a1631ffd4581",
       "target_branch": "feature/spec-011-checkpoint-b",
       "execution_authorization": "CHAIRMAN-DELEGATION-AIC-STANDARD-WORK-V1",
-      "pr_number": null,
-      "head_sha": null,
-      "base_sha": null,
-      "review_artifact": null,
+      "pr_number": 29,
+      "head_sha": "36665c5ff0555f1bc45f658bc01753f707b5701e",
+      "base_sha": "8839eadc0dae5b7be0654531ef49aa76da2ced0e",
+      "review_artifact": "REVIEW-SPEC011.md",
       "architecture_status": "NOT_REVIEWED",
       "approved_head_sha": null,
       "review_id": null,
@@ -1943,6 +1943,18 @@
       "input_sha": null,
       "output_state": "IMPLEMENTATION_COMPLETE",
       "metadata": {}
+    },
+    {
+      "event_id": "9f920e327c0d492aa674255f3fb3f64b",
+      "event_type": "PR_CREATED",
+      "timestamp": "2026-09-21T15:06:49.003426Z",
+      "work_item_id": "SPEC-011-B",
+      "actor": "github-actions[bot]",
+      "input_sha": "36665c5ff0555f1bc45f658bc01753f707b5701e",
+      "output_state": "REVIEW_REQUIRED",
+      "metadata": {
+        "review_artifact": "REVIEW-SPEC011.md"
+      }
     }
   ],
   "tasks": {
