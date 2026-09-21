@@ -15,6 +15,13 @@ the only identity used to count independent confirmations.
 | A-share/ETF/index quote | `tencent.quote.http.v1` | `TENCENT` | Tier 1 / public market feed | Free public web endpoint; no stable official developer contract found | Independent quote observation | Same controls; encoding/schema drift fixtures required |
 | Daily/reference data | existing Tushare adapter | `TUSHARE` | Tier 3 / commercial-enhanced API | Existing token and plan constraints | Historical/reference; not realtime quorum by default | Preserve current production adapter and capability boundaries |
 | US macro / vintages | `fred.api.v1` | `FRED_ALFRED` | Tier 0 / official API | Official API; free key required | `release_at`, realtime period and vintage identity | First macro adapter; direct official REST |
+
+Checkpoint B implements `fred.api.v1` as a direct owned adapter over the official API. It is
+disabled unless a FRED key is configured, sends bounded requests through the existing Provider
+Runtime, and requests ALFRED revision intervals explicitly. `FRED_ALFRED` identifies the transport
+and historical-version service; each `MacroSeriesIdentity.source_agency_id` continues to identify
+the originating producer such as BLS or BEA. A BLS series obtained through FRED and the same BLS
+fact obtained directly are one upstream fact for independence purposes, not corroborating sources.
 | OECD macro | `oecd.sdmx.v1` | `OECD` | Tier 0 / official SDMX API | Public/free, documented rate limits | Official series/release observations | Shared SDMX transport, OECD-owned dataset mapping |
 | IMF macro | `imf.sdmx.v1` | `IMF` | Tier 0 / official SDMX API | Official SDMX; current portal/auth details require validation | Official series/release observations | Contract spike before production; fail closed on access/schema uncertainty |
 | BIS macro | `bis.sdmx.v1` | `BIS` | Tier 0 / official SDMX API | Public/free, documented SDMX endpoints | Official rates/credit/liquidity series | Direct official endpoint; preserve terms/attribution |

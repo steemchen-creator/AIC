@@ -8,6 +8,13 @@ The project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- SPEC-011 Checkpoint B macro/PIT and scheduled-event foundation: immutable macro vintages,
+  explicit known-at/as-published/latest-revised queries, append-only calendar versions and
+  source-agency attribution distinct from the FRED/ALFRED transport identity.
+- Official FRED/ALFRED adapter and durable continuous-acquisition plans with normal/release-window
+  cadence, bounded overlap, cursors/watermarks, retry checkpoints and PostgreSQL multi-worker
+  lease fencing. Migration 0017 is reversible and preserves cursor-after-persistence ordering.
+
 - SPEC-011 Checkpoint A auditable market-data foundation: source/upstream lineage,
   immutable raw evidence, PIT-safe domestic Equity/ETF/index-reference quotes,
   deterministic independent-source reconciliation and reference-only global

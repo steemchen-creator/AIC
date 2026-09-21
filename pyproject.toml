@@ -64,6 +64,8 @@ source = [
   "aic_dev_governance",
   "aic_backend.application.ports.persistence",
   "aic_backend.application.ports.market_intelligence",
+  "aic_backend.application.ports.evidence",
+  "aic_backend.application.acquisition",
   "aic_backend.application.point_in_time",
   "aic_backend.application.ports.calendar",
   "aic_backend.application.ports.historical",
@@ -82,6 +84,7 @@ source = [
   "aic_backend.application.ports.experiments",
   "aic_backend.application.experiments",
   "aic_backend.domain.trade_plan",
+  "aic_backend.domain.evidence",
   "aic_backend.application.ports.trade_plan",
   "aic_backend.application.trade_plan_record",
   "aic_backend.application.trade_plan",
@@ -113,9 +116,11 @@ source = [
   "aic_backend.infrastructure.paper_persistence",
   "aic_backend.infrastructure.experiment_persistence",
   "aic_backend.infrastructure.market_intelligence_persistence",
+  "aic_backend.infrastructure.evidence_persistence",
   "aic_backend.provider_runtime",
   "aic_backend.providers.tushare",
   "aic_backend.providers.domestic_quotes",
+  "aic_backend.providers.fred",
 ]
 
 [tool.coverage.report]

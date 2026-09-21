@@ -1071,3 +1071,36 @@ def test_spec_011_checkpoint_a_extends_existing_data_and_runtime_boundaries() ->
     )
     assert "MarketSeriesIdentity" not in execution_source
     assert "MarketPulseObservation" not in execution_source
+
+
+def test_spec011_checkpoint_b_keeps_owned_layer_boundaries() -> None:
+    domain_imports = package_imports("domain/evidence")
+    normalizer_imports = imported_modules(PACKAGE_ROOT / "data_foundation/macro.py")
+    acquisition_imports = imported_modules(PACKAGE_ROOT / "application/acquisition/macro.py")
+    provider_imports = imported_modules(PACKAGE_ROOT / "providers/fred.py")
+    persistence_imports = imported_modules(PACKAGE_ROOT / "infrastructure/evidence_persistence.py")
+
+    forbidden_pure = (
+        "aic_backend.application",
+        "aic_backend.infrastructure",
+        "httpx",
+        "sqlalchemy",
+    )
+    assert not {
+        module
+        for module in domain_imports | normalizer_imports
+        if module.startswith(forbidden_pure)
+    }
+    assert not {
+        module
+        for module in acquisition_imports
+        if module.startswith(("aic_backend.infrastructure", "aic_backend.providers", "sqlalchemy"))
+    }
+    assert "httpx" in provider_imports
+    assert not {
+        module
+        for module in provider_imports
+        if module.startswith(("aic_backend.infrastructure", "sqlalchemy"))
+    }
+    assert "aic_backend.application.ports.evidence" in persistence_imports
+    assert any(module.startswith("sqlalchemy") for module in persistence_imports)

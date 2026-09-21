@@ -9,6 +9,7 @@ from aic_backend.providers.domestic_quotes import (
     build_sina_quote_provider,
     build_tencent_quote_provider,
 )
+from aic_backend.providers.fred import FRED_IMPLEMENTATION, build_fred_provider
 from aic_backend.providers.tushare import (
     TUSHARE_IMPLEMENTATION,
     build_tushare_daily_provider,
@@ -21,4 +22,5 @@ def provider_builders() -> dict[str, ProviderBuilder]:
         EASTMONEY_IMPLEMENTATION: build_eastmoney_quote_provider,
         SINA_IMPLEMENTATION: build_sina_quote_provider,
         TENCENT_IMPLEMENTATION: build_tencent_quote_provider,
+        FRED_IMPLEMENTATION: build_fred_provider,
     }
